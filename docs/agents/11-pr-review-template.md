@@ -10,7 +10,12 @@
 
 - Issue:
 - PR closes issue: yes/no
+- Closure reference:
 - Branch follows issue naming convention: yes/no
+
+## Files Changed
+
+- Files changed:
 
 ## Scope Confirmation
 
@@ -44,6 +49,7 @@
 
 - Commands run:
 - Results:
+- Tests added or updated:
 - Validation not run and reason:
 - Remaining test gaps:
 
@@ -52,6 +58,7 @@
 - Documentation updated:
 - Progress records updated:
 - ADR or contract change required:
+- Deferred follow-up, if applicable:
 
 ## Risk / Follow-Up Notes
 
@@ -64,5 +71,6 @@
 - [ ] No unapproved MVP expansion is present.
 - [ ] Relevant validation evidence is reported honestly.
 - [ ] Implementation guardrails and Definition of Done are satisfied.
+- [ ] No secrets, credentials, real data, or production connection strings were committed.
+- [ ] Related issue is referenced and closed by this pull request.
 - [ ] Merge recommendation is stated with any blockers.
-

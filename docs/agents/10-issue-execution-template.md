@@ -15,6 +15,7 @@ After verified implementation progress, update each applicable progress record a
 
 - Issue ID/title:
 - Related roadmap sprint:
+- Related milestone, if applicable:
 - Objective:
 - Expected outcome:
 
@@ -30,6 +31,7 @@ After verified implementation progress, update each applicable progress record a
 
 ## Required Context
 
+- Related documentation and context:
 - Agent context files to read:
 - Canonical documents to read for exact contracts:
 - Progress files to read:
@@ -39,11 +41,14 @@ After verified implementation progress, update each applicable progress record a
 
 - In scope:
 - Behavioral/contracts affected:
+- Architecture boundaries affected:
+- Security or data risks:
 - Files or areas expected to change:
 
 ## Out Of Scope
 
 - Deferred phase behavior excluded:
+- Explicit deferred functionality, if applicable:
 - Architecture/contracts not being changed:
 - Prohibited expansion:
 
@@ -70,6 +75,7 @@ After verified implementation progress, update each applicable progress record a
 ## Validation Plan
 
 - Commands/checks to run:
+- Testing expectations by affected area:
 - Negative/security/cross-scope cases:
 - Expected limitations or commands unavailable:
 
