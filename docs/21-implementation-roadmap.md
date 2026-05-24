@@ -94,12 +94,15 @@ The v2 audit status is `PASS WITH FINDINGS` and its roadmap readiness decision i
 - Accepted ADRs are canonical for architecture decisions.
 - Markdown Mermaid diagrams are the diagram source of truth; PNGs are rendered artifacts only.
 
-### Optional Pending Guidance
+### Active Agent Harness Guidance
 
-- `docs/agent/prompt_classifier.txt` is not present.
-- `docs/agent/codex_prompt_levels_templates.txt` is not present.
+- `docs/agents/00-agent-operating-protocol.md` defines the mandatory entry flow for implementation work.
+- `docs/agents/13-prompt-classifier.md` is the required classify-first routing entry point.
+- `docs/agents/10-issue-execution-template.md` is required before implementation begins.
+- `docs/agents/12-prompt-levels.md` defines level-based context and validation routing.
+- `docs/agents/progress/` records implementation status, decisions, risks, and verified completions.
 
-These files are optional implementation-prompt preparation items. Their absence does not block the MVP application roadmap.
+The plural `docs/agents/` directory is the canonical implementation-prompt harness. Older optional singular-directory prompt guidance is superseded and must not be created for future work.
 
 ## MVP Implementation Strategy
 
@@ -165,7 +168,7 @@ The sprints below are sequential. Each sprint is intentionally bounded so it can
 
 - Goal: Establish implementation-facing scope and architecture guardrails before source-code delivery begins.
 - Why this comes now: Every subsequent increment must use the repaired canonical contracts and avoid reintroducing previously resolved contradictions.
-- Deliverables: Implementation contribution guidance; canonical-document reference list; MVP/non-MVP boundary checklist; optional decision on adding agent prompt-harness guidance before implementation prompts; documented rule that ADR changes require explicit review.
+- Deliverables: Implementation contribution guidance; canonical-document reference list; MVP/non-MVP boundary checklist; canonical agent prompt-harness guidance for implementation prompts; documented rule that ADR changes require explicit review.
 - Backend scope: Define planned project boundaries and backend conventions only; no application implementation in this sprint description.
 - Frontend scope: Define Angular as the only MVP frontend direction and identify role-aware navigation as UX-only guidance.
 - Database scope: Record the canonical logical schema authority and lifecycle/retrieval predicate for later schema work.

@@ -19,27 +19,67 @@ This document applies the approved roadmap in `docs/21-implementation-roadmap.md
 
 Classification:
 
-- Task type: Documentation generation.
-- Scope: Implementation guardrails only.
-- Implementation level: Pre-implementation governance.
-- Subagents: Not used. No repository rule requiring subagents is available.
+- Task type: Documentation/governance alignment.
+- Scope: Documentation-only / MVP governance.
+- Prompt level: Level 3.
+- Related sprint/issue: Sprint 0 / Issue #2.
 
 ## Repository Implementation Workflow
 
 Implementation work is issue-driven. A sprint in `docs/21-implementation-roadmap.md` identifies planned delivery order; future implementation issues define the bounded work that may be changed.
 
+### Canonical Sources Of Truth
+
+Future issues, branches, pull requests, and AI-assisted tasks must use these authorities rather than restating or inventing competing contracts:
+
+| Contract Or Workflow | Canonical Authority |
+| --- | --- |
+| `BR-###` business rules | `docs/09-business-rules.md` |
+| Domain language and conceptual relationships | `docs/10-domain-model.md` |
+| Logical database design | `docs/14-database-design.md` |
+| Initial API contracts | `docs/15-api-design.md` |
+| MVP roles, permissions, and security behavior | `docs/16-security-and-permissions.md` |
+| Sprint sequence and implementation order | `docs/21-implementation-roadmap.md` |
+| Issue, pull request, validation, and implementation guardrails | `docs/22-implementation-guardrails.md` |
+| AI-assisted task classification entry point | `docs/agents/13-prompt-classifier.md` |
+| Prompt-level routing | `docs/agents/12-prompt-levels.md` |
+| Implementation-prompt template | `docs/agents/10-issue-execution-template.md` |
+
+Requirements and workflow details must also be checked in `docs/06-requirements.md`, `docs/07-use-cases.md`, and `docs/08-business-process-flows.md` when affected. Architecture, testing, deployment, observability, and risk work must check `docs/11-architecture-overview.md`, `docs/12-c4-architecture.md`, `docs/17-testing-strategy.md`, `docs/18-deployment-and-devops.md`, `docs/19-observability-and-support.md`, and `docs/20-risk-register.md` as applicable.
+
 ### Required Issue Content
 
-Each implementation issue should define:
+Every future implementation issue must define:
 
+- Summary.
+- Related sprint from `docs/21-implementation-roadmap.md`.
+- Related milestone, if applicable.
 - Scope.
 - Out of scope.
 - Acceptance criteria.
 - Validation expectations.
 - Related documentation and context.
-- Related sprint from `docs/21-implementation-roadmap.md`.
+- Architecture boundaries affected.
+- Security or data risks.
+- Testing expectations.
+- Documentation update expectations.
+- Explicit deferred functionality, if applicable.
 
-An issue should also identify affected architecture boundaries, data/security risks, and any deferred functionality that must remain excluded.
+Validation expectations must be declared before implementation begins. The issue must identify affected authorization, organization-scope, lifecycle, retrieval, AI/RAG, data, or operational contracts when they apply.
+
+### Required Pull Request Content
+
+Every pull request must include:
+
+- Summary of changes.
+- Related issue and a closure reference.
+- Files changed.
+- Scope confirmation.
+- Validation performed.
+- Tests added or updated.
+- Documentation updated, if applicable.
+- Explicit deferred follow-up, if applicable.
+- Confirmation that no secrets, credentials, real data, or production connection strings were committed.
 
 ### Branch Naming
 
@@ -54,9 +94,11 @@ test/issue-<number>-short-description
 ci/issue-<number>-short-description
 ```
 
-Branches should remain limited to the related issue scope. Pull requests should reference and close the related issue, identify validation performed, and state any intentionally deferred follow-up.
+Branches must remain limited to the related issue scope and should include its issue number. Pull requests must satisfy the required content above and reference and close the related issue.
 
-### Commit Examples
+### Commit Guidance
+
+Commits should be issue-scoped, use a meaningful conventional prefix where practical, and avoid combining unrelated features or deferred scope with the approved work.
 
 ```text
 docs: add implementation guardrails
@@ -70,13 +112,31 @@ fix: enforce retrieval eligibility rule
 
 ### Issue And Pull Request Review Gate
 
-Before merging a future implementation change, reviewers should confirm:
+Before merging a future implementation change, reviewers must confirm:
 
 - The work belongs to the named roadmap sprint or an approved correction.
 - The issue does not silently expand MVP scope.
+- Required issue and pull request fields are complete.
 - Relevant acceptance criteria and validation have been completed.
 - Architecture, authorization, organization scope, lifecycle, RAG safety, testing, and DevOps guardrails remain satisfied.
 - A documentation or ADR update accompanies any approved contract or architectural change.
+
+### ADR Change Review Gate
+
+Accepted ADRs under `docs/decisions/` are canonical architecture decisions. Any change to an accepted architecture decision requires explicit review and an appropriate ADR and documentation update before merge.
+
+ADR-impacting changes include:
+
+- Changing Clean Architecture boundaries.
+- Changing SQL Server as the persistence baseline.
+- Changing Angular as the frontend framework.
+- Changing the MVP RBAC model.
+- Changing EF Core usage.
+- Changing the AI provider abstraction strategy.
+- Changing RAG with citations as the approved answer model.
+- Changing asynchronous document processing.
+- Changing organization-scoped access boundaries.
+- Adding production-grade Azure assumptions beyond MVP scope.
 
 ## Backend Guardrails
 
@@ -175,7 +235,7 @@ Future frontend implementation uses:
 - Angular Material may be used as the primary UI component foundation if selected during implementation.
 - Tailwind or other UI framework additions require an explicit future decision if not already approved.
 - Foundation work may add application shell, routing, guards, interceptors, shared components, layout, error handling, and placeholder pages.
-- Business screens should be added only in explicitly scoped feature issues.
+- Business screens must be added only in explicitly scoped feature issues.
 
 ### Frontend Security Boundary
 
@@ -237,10 +297,10 @@ Important rules:
 
 ### Migration Rules
 
-- Future migrations should be reviewed before merge.
-- Future migrations should be clearly named.
-- Future migrations should be tested locally against SQL Server when migration work exists.
-- Avoid destructive changes unless the issue and pull request explicitly justify them.
+- Future migrations must be reviewed before merge.
+- Future migrations must be clearly named.
+- Future migrations must be tested locally against SQL Server when migration work exists.
+- Destructive changes must be avoided unless the issue and pull request explicitly justify them.
 - Preserve historical traceability for documents, chat interactions, retrieval results, citations, feedback, and audit entries.
 - Do not add Phase 2 tables or workflows to the MVP merely because they appear as future logical concepts.
 
@@ -252,9 +312,10 @@ Important rules:
 - Citations must reference source chunks and documents.
 - Feedback must belong to a chat interaction and the submitting user.
 - Duplicate feedback must not inflate metrics unless a defined update behavior applies.
-- `failure_reason` should be recorded safely when document processing fails.
+- `failure_reason` must be recorded safely when document processing fails.
 - Estimated AI cost must be nullable when unavailable and must not be represented misleadingly as zero.
 - Sensitive prompt or document content must not be stored casually as diagnostic metadata.
+- MVP knowledge-gap visibility stores insufficient-context events and `NotUseful` feedback and exposes basic scoped counts; a dedicated knowledge-gap workflow remains Phase 2.
 
 ## API Guardrails
 
@@ -292,8 +353,8 @@ GET /api/v1/health/details
 - Controllers stay thin.
 - Request and response DTOs must be explicit.
 - Do not return EF Core entities directly.
-- Success response shapes should remain consistent with the API contract.
-- Error response shapes should follow `docs/15-api-design.md`.
+- Success response shapes must remain consistent with the API contract.
+- Error response shapes must follow `docs/15-api-design.md`.
 - Protected endpoints require authentication.
 - Authorization combines role permissions and organization scope.
 - Backend authorization is the source of truth.
@@ -314,7 +375,7 @@ The only MVP technical RBAC roles are:
 - `Manager`
 - `Admin`
 
-QA, Trainer, Viewer, Compliance Reviewer, leadership, recruiter, portfolio reviewer, and AI coding agent labels may describe stakeholders, readers, or future personas. Do not add them as MVP RBAC roles unless future approved documentation and any necessary ADR change explicitly authorize that scope.
+`Quality Analyst`, `Trainer`, `Viewer`, `Compliance Reviewer`, `Contact Center Leadership`, `Recruiter`, `Portfolio Reviewer`, and `AI Coding Agent` labels may describe stakeholders, readers, or future personas. Do not add them as MVP RBAC roles unless future approved documentation and any necessary ADR change explicitly authorize that scope.
 
 ### Authorization Principles
 
@@ -346,7 +407,8 @@ Organization scope must be enforced for protected records where applicable, incl
 - Feedback.
 - Dashboard metrics.
 - Audit records.
-- Future knowledge-gap signals, if implemented in a later approved phase.
+- MVP insufficient-context and `NotUseful` scoped metrics.
+- Future knowledge-gap workflow records, only if implemented in a later approved phase.
 
 ## AI / RAG Guardrails
 
@@ -366,7 +428,7 @@ This section is mandatory for every future AI, retrieval, chat, prompt, citation
 
 ### Abstraction Rules
 
-AI, storage, extraction, and retrieval provider SDKs must remain in Infrastructure. Application should depend on suitable abstractions, including as appropriate:
+AI, storage, extraction, and retrieval provider SDKs must remain in Infrastructure. Application must depend on suitable abstractions, including as appropriate:
 
 ```text
 IEmbeddingProvider
@@ -378,9 +440,11 @@ IDocumentStorage
 IDocumentTextExtractor
 ```
 
+- Application and Domain must not depend directly on Azure OpenAI, OpenAI, or vector-provider SDKs.
+
 ### Test And Logging Rules
 
-- Automated tests should use fake providers.
+- Normal automated tests and CI must use fake AI, embedding, and retrieval providers.
 - Normal CI must not require live Azure OpenAI or OpenAI calls.
 - Optional manual or controlled validation may use a configured provider only when secrets and cost limits are handled safely.
 - Do not log full prompt content.
@@ -414,6 +478,14 @@ Document processing is asynchronous.
 - Processing failures must be visible to authorized users without leaking sensitive content.
 - Re-enable and processing-retry operations remain deferred to Phase 2 unless scope is approved later.
 
+## DevOps Guardrails
+
+- No secrets, tokens, passwords, API keys, real customer data, or production connection strings may be committed.
+- Configuration must be environment-based and keep sensitive values out of source control.
+- Normal CI must use fake providers and must not require live Azure OpenAI or OpenAI calls.
+- Docker and GitHub Actions work belongs only in explicitly scoped future issues and must remain Azure-ready without introducing unapproved production hardening.
+- Delivery or configuration changes must document safe validation and preserve the MVP deployment posture in `docs/18-deployment-and-devops.md`.
+
 ## Observability and Supportability Guardrails
 
 ### Operational Signals
@@ -442,11 +514,12 @@ Observability should support:
 
 - Use structured logs.
 - Include correlation IDs where practical across API, Worker, retrieval, and provider interactions.
-- Avoid logging full document text.
-- Avoid logging full prompt content.
-- Avoid secrets, tokens, connection strings, API keys, and passwords.
+- Do not log full document text.
+- Do not log full prompt content.
+- Do not log secrets, tokens, connection strings, API keys, or passwords.
 - Sanitize provider failures and exception details.
 - Keep audit-sensitive records append-oriented and organization-scoped where applicable.
+- Operational support views must not expose protected document content or cross-organization data.
 
 ### Health Endpoint Rules
 
@@ -456,7 +529,7 @@ Observability should support:
 
 ## Testing Guardrails By Issue Type
 
-Every future issue should define validation expectations before implementation begins. Test depth should match behavioral risk and the layers affected.
+Every future implementation issue must define validation expectations before implementation begins. Test depth must match behavioral risk and the layers affected.
 
 ### Documentation Issues
 
@@ -519,6 +592,7 @@ Every future issue should define validation expectations before implementation b
 A future implementation issue is done when:
 
 - The work matches the related issue scope and roadmap sprint.
+- The issue and pull request contain the required contribution-gate fields.
 - Out-of-scope items were not added.
 - Acceptance criteria are satisfied.
 - Validation requested by the issue was completed, or an explicit reason for any omitted validation is documented.
@@ -540,6 +614,7 @@ A future implementation issue is done when:
 - Local validation commands are run when relevant projects exist.
 - Health, logging, correlation ID, audit, and error behavior remain safe where affected.
 - Documentation is updated when behavior, architecture, setup, or validation expectations change.
+- Applicable `docs/agents/progress/` records are updated after verified progress or completion.
 - No real data, secrets, tokens, passwords, or production connection strings are committed.
 - MVP boundaries are respected.
 
@@ -581,6 +656,7 @@ An MVP release candidate is ready for review only when:
 - Insufficient-context handling.
 - Chat history.
 - `Useful` and `NotUseful` feedback.
+- Stored insufficient-context events and basic scoped `NotUseful` and insufficient-context counts.
 - Basic dashboard metrics.
 - Safe health endpoints.
 - Structured logging and correlation IDs.
@@ -657,11 +733,23 @@ Known non-blocking cleanup from the second-pass audit:
 
 - Existing artifact: `docs/diagrams/business-process/monitoring-sla-process.png`.
 - Canonical future artifact name: `docs/diagrams/business-process/monitoring-operational-process.png`.
-- The existing artifact should be replaced or removed only when diagram artifacts are explicitly regenerated.
+- The existing artifact must not be replaced or removed unless diagram artifacts are explicitly regenerated.
 
 ## Agent Harness Guardrails
 
 The modular agent context harness is established under `docs/agents/`.
+
+Canonical harness references are:
+
+- `docs/agents/00-agent-operating-protocol.md`
+- `docs/agents/10-issue-execution-template.md`
+- `docs/agents/11-pr-review-template.md`
+- `docs/agents/12-prompt-levels.md`
+- `docs/agents/13-prompt-classifier.md`
+- `docs/agents/progress/current-state.md`
+- `docs/agents/progress/decisions-log.md`
+- `docs/agents/progress/open-risks.md`
+- `docs/agents/progress/completed-issues.md`
 
 For every future implementation prompt:
 
@@ -671,23 +759,29 @@ For every future implementation prompt:
 - Consult and update `docs/agents/progress/` records according to the implementation workflow.
 - Use specialist subagents only when justified and, for Level 3 work, sequentially.
 
-The older optional `docs/agent/` prompt-preparation paths are not required; their function is superseded by `docs/agents/12-prompt-levels.md` and `docs/agents/13-prompt-classifier.md`.
+The plural `docs/agents/` directory is the only canonical agent harness root. Do not create or reference superseded singular-directory prompt-harness files.
 
 AI coding agents must:
 
 - Review the relevant issue, sprint, canonical documentation, security contract, and ADRs before changing behavior.
 - Respect the MVP boundary and deferred phase rules.
-- Avoid silently changing architecture decisions or security contracts.
+- Do not silently change architecture decisions or security contracts.
 - Apply the Definition of Done and validation expectations appropriate to the issue type.
 
 ## Related Documents
 
+- `docs/01-business-context.md`
+- `docs/02-business-case.md`
+- `docs/03-project-charter.md`
+- `docs/04-stakeholders.md`
 - `docs/05-scope-and-roadmap.md`
 - `docs/06-requirements.md`
 - `docs/07-use-cases.md`
+- `docs/08-business-process-flows.md`
 - `docs/09-business-rules.md`
 - `docs/10-domain-model.md`
 - `docs/11-architecture-overview.md`
+- `docs/12-c4-architecture.md`
 - `docs/14-database-design.md`
 - `docs/15-api-design.md`
 - `docs/16-security-and-permissions.md`
@@ -697,4 +791,14 @@ AI coding agents must:
 - `docs/20-risk-register.md`
 - `docs/21-implementation-roadmap.md`
 - `docs/audits/pre-implementation-documentation-consistency-audit-v2.md`
-- `docs/decisions/`
+- `docs/decisions/README.md`
+- `docs/decisions/ADR-001-use-clean-architecture.md`
+- `docs/decisions/ADR-002-use-sql-server.md`
+- `docs/decisions/ADR-003-use-angular.md`
+- `docs/decisions/ADR-004-use-role-based-access-control.md`
+- `docs/decisions/ADR-005-use-entity-framework-core.md`
+- `docs/decisions/ADR-006-use-azure-openai-compatible-provider-abstraction.md`
+- `docs/decisions/ADR-007-use-rag-with-source-citations.md`
+- `docs/decisions/ADR-008-use-asynchronous-document-processing.md`
+- `docs/decisions/ADR-009-use-mermaid-for-architecture-diagrams.md`
+- `docs/decisions/ADR-010-use-organization-scoped-access-boundaries.md`
