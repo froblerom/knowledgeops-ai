@@ -1,0 +1,48 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding: 1rem 2rem;
+  background: #1a1a2e;
+  color: #e0e0e0;
+}
+
+.app-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+.app-nav {
+  display: flex;
+  gap: 1.5rem;
+
+  a {
+    color: #a0a0c0;
+    text-decoration: none;
+    font-size: 0.875rem;
+    padding: 0.25rem 0;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+
+    &:hover {
+      color: #ffffff;
+    }
+
+    &.active {
+      color: #ffffff;
+      border-bottom-color: #6b8aff;
+    }
+  }
+}
+
+.app-content {
+  padding: 2rem;
+}

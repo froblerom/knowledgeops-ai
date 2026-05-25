@@ -18,6 +18,10 @@ The earlier optional prompt-harness question is resolved: `docs/agents/` is the 
 
 The backend scaffold readiness concern is resolved: the .NET 10 solution, approved project reference graph, minimal hosts and architecture boundary tests were implemented and validated. No new open risk was introduced by Issue #3. The feature-sensitive risks above remain applicable to their owning future sprints, and diagram artifact filename cleanup remains deferred.
 
+## Sprint 2 Issue #4 Disposition
+
+The Angular frontend scaffold is established. The auth guard is intentionally pass-through (Sprint 6 adds real auth); this is an accepted architectural decision, not an open risk. No new open risks introduced by Issue #4. The existing security and RAG risks remain applicable to their owning future sprints.
+
 ## Update Rule
 
 Read this file for Level 3 work and release review. Update risk status, mitigation or new issue references when implementation evidence changes the risk.
