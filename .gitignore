@@ -427,3 +427,14 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# KnowledgeOps-AI local runtime
+# .env files — local secrets and environment configuration; never commit
+.env
+.env.local
+.env.*.local
+!.env.example
+# Local developer runtime data (document storage, etc.)
+.local/
+# Local Docker bind-mount data directories (if used in future sprints)
+docker-data/
