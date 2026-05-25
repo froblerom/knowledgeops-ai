@@ -15,7 +15,8 @@
       "Bash(docker --version)",
       "Bash(docker compose *)",
       "Bash(docker info *)",
-      "Bash(git check-ignore *)"
+      "Bash(git check-ignore *)",
+      "Bash(dotnet tool *)"
     ]
   }
 }
