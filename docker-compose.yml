@@ -1,0 +1,27 @@
+# KnowledgeOps-AI local development Docker Compose
+#
+# Starts the SQL Server container only.
+# API, Worker, and Frontend run locally via dotnet run / npm start.
+#
+# Quick start:
+#   cp .env.example .env        # copy and edit password before first use
+#   docker compose up -d sqlserver
+#   docker compose ps           # confirm running
+#   docker compose down         # stop
+#   docker compose down -v      # stop and delete local SQL data volume
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${KNOWLEDGEOPS_SQL_PASSWORD}"
+      MSSQL_PID: "Developer"
+    ports:
+      - "${KNOWLEDGEOPS_SQL_PORT:-1433}:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    restart: unless-stopped
+
+volumes:
+  sqlserver-data:

@@ -22,6 +22,12 @@ This log tracks implementation-time and harness-routing decisions. Accepted ADRs
 | 2026-05-25 | API interceptor is pass-through only; no JWT or Authorization header injection. | Real auth headers deferred to Sprint 6; pass-through keeps the interceptor chain wired without premature JWT handling. | Frontend HTTP | No |
 | 2026-05-25 | Development `apiBaseUrl` points to `http://localhost:5194/api/v1` (port from `launchSettings.json` HTTP profile). | Sprint 3 may change this when Docker Compose local environment is configured; port stored in environment file for easy update. | Frontend/API integration | No |
 | 2026-05-25 | Angular 21 does not generate `src/environments/` by default; files created manually. | Angular 15+ removed auto-generation; `fileReplacements` in `angular.json` development configuration performs the swap. | Frontend environment config | No |
+| 2026-05-25 | Use hybrid local runtime mode as primary: SQL Server via Docker Compose; API/Worker via `dotnet run`; frontend via Angular CLI. | Aligns with `docs/18-deployment-and-devops.md` Section 3.5 Option A; avoids app container complexity before persistence is implemented. | Local DevOps | No |
+| 2026-05-25 | Use `mcr.microsoft.com/mssql/server:2022-latest` with `MSSQL_PID=Developer` for local SQL Server container. | SQL Server 2022 aligns with ADR-002; Developer edition is free for development and testing. | Local DevOps / Database | No |
+| 2026-05-25 | Commit `.env.example` with safe placeholder values; ignore `.env` via `.gitignore`. | Matches `docs/18-deployment-and-devops.md` Section 11.2; safe template is committed, live secrets are never committed. | Security / Environment config | No |
+| 2026-05-25 | Local document storage convention: `.local/storage/documents/` at repository root; ignored by `.gitignore`. | Keeps local runtime artifacts out of source control; provides a consistent path for future local storage adapter. | Local DevOps / Document storage | No |
+| 2026-05-25 | Do not create API/Worker/Frontend Dockerfiles in Issue #5. | No persistence or application workflow is implemented yet; app containerization deferred until a later sprint when the full local stack can be validated end-to-end. | Local DevOps | No |
+| 2026-05-25 | Use `KNOWLEDGEOPS_SQL_PORT` env var with default `1433` to allow port override if host port is already in use. | Prevents Docker Compose bind failure when a local SQL Server instance occupies port 1433. | Local DevOps | No |
 
 ## Update Rule
 
