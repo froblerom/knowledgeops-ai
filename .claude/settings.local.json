@@ -1,22 +1,20 @@
 {
   "permissions": {
     "allow": [
-      "Bash(dotnet --info)",
-      "Bash(dotnet --list-sdks)",
-      "Bash(Get-ChildItem \"c:\\\\Dev\\\\knowdledgeops_ai\")",
-      "Bash(Select-Object Name, Attributes)",
-      "Bash(Format-Table -AutoSize)",
-      "Bash(npm --version)",
-      "Bash(npx --version)",
-      "Bash(npx @angular/cli version)",
-      "Bash(npx @angular/cli@21.2.12 new frontend --routing --style=scss --skip-git --no-ssr)",
-      "Bash(npm run *)",
-      "Bash(npm test *)",
-      "Bash(docker --version)",
-      "Bash(docker compose *)",
-      "Bash(docker info *)",
-      "Bash(git check-ignore *)",
-      "Bash(dotnet tool *)"
+      "Bash(git *)",
+      "Bash(dotnet *)",
+      "Bash(docker *)",
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "PowerShell(git *)",
+      "PowerShell(dotnet *)",
+      "PowerShell(docker *)",
+      "PowerShell(npm *)",
+      "PowerShell(npx *)",
+      "PowerShell(Get-ChildItem *)",
+      "PowerShell(Test-NetConnection *)",
+      "PowerShell(Write-Host *)",
+      "PowerShell($env:*)"
     ]
   }
 }

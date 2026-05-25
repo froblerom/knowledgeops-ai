@@ -98,6 +98,26 @@ SQL Server is now ready for client connections.
 
 ---
 
+## Apply Database Migrations
+
+After SQL Server is running, apply EF Core migrations to create the schema and load the fictional demo personas:
+
+```powershell
+$env:ConnectionStrings__DefaultConnection = "Server=localhost,1433;Database=KnowledgeOpsLocal;User Id=sa;Password=<your-local-password>;TrustServerCertificate=True;Encrypt=True"
+
+dotnet tool run dotnet-ef database update `
+  --project src/KnowledgeOps.Infrastructure/KnowledgeOps.Infrastructure.csproj `
+  --startup-project src/KnowledgeOps.Infrastructure/KnowledgeOps.Infrastructure.csproj
+```
+
+Replace `<your-local-password>` with the SA password you set in `.env`.
+
+This creates the `KnowledgeOpsLocal` database, applies all migrations, and inserts the fictional seed organizations and personas (two organizations, seven users, seven role assignments). No passwords are seeded.
+
+See [docs/demo-data.md](demo-data.md) for the full list of seeded organizations, users, and roles, plus reset instructions and safety rules.
+
+---
+
 ## Run API Locally
 
 From the repository root:
