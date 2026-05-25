@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet --info)",
+      "Bash(dotnet --list-sdks)",
+      "Bash(Get-ChildItem \"c:\\\\Dev\\\\knowdledgeops_ai\")",
+      "Bash(Select-Object Name, Attributes)",
+      "Bash(Format-Table -AutoSize)"
+    ]
+  }
+}

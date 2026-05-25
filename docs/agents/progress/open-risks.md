@@ -1,6 +1,6 @@
 # Open Implementation Risks
 
-Last updated: 2026-05-24
+Last updated: 2026-05-25
 
 | Risk | Severity | Related Area | Mitigation | Status |
 | --- | --- | --- | --- | --- |
@@ -13,6 +13,10 @@ Last updated: 2026-05-24
 ## Sprint 0 Issue #2 Disposition
 
 The earlier optional prompt-harness question is resolved: `docs/agents/` is the canonical harness and future implementation prompts must classify first. No open risk remains for whether the harness exists; the ongoing risks above remain relevant for implementation.
+
+## Sprint 1 Issue #3 Disposition
+
+The backend scaffold readiness concern is resolved: the .NET 10 solution, approved project reference graph, minimal hosts and architecture boundary tests were implemented and validated. No new open risk was introduced by Issue #3. The feature-sensitive risks above remain applicable to their owning future sprints, and diagram artifact filename cleanup remains deferred.
 
 ## Update Rule
 

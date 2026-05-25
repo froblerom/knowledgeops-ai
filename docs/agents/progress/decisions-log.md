@@ -13,6 +13,10 @@ This log tracks implementation-time and harness-routing decisions. Accepted ADRs
 | 2026-05-24 | `docs/09-business-rules.md` is canonical for `BR-###`. | Prevent conflicting rule identifiers and traceability drift. | Rules/traceability | No |
 | 2026-05-24 | Document disablement uses `is_retrieval_enabled = false`, not a `Disabled` processing status. | Keeps processing outcome separate from retrieval availability. | Documents/retrieval | No |
 | 2026-05-24 | Future implementation prompts must classify first using `docs/agents/13-prompt-classifier.md`. | Ensures scope, required context, risk and validation expectations are declared before implementation begins. | Execution workflow | No |
+| 2026-05-25 | Use `KnowledgeOps` for code projects and namespaces, with `KnowledgeOpsAI.sln` as the solution name while retaining KnowledgeOps-AI branding. | Matches the approved scaffold audit and keeps code identifiers consistent without changing product branding. | Backend solution structure | No |
+| 2026-05-25 | Target `net10.0` and pin the installed .NET SDK `10.0.204` in `global.json` with .NET 10 minor roll-forward. | Establishes a reproducible backend foundation without downgrading the approved target framework. | Backend toolchain | No |
+| 2026-05-25 | Defer `KnowledgeOps.E2ETests` beyond Issue #3. | Issue #3 requires only the four approved scaffold test projects; E2E workflow coverage belongs to a later authorized sprint. | Testing structure | No |
+| 2026-05-25 | Keep Issue #3 dependencies limited to host/DI abstractions and xUnit template support. | Persistence, security, provider SDKs, observability integrations and container testing are outside scaffold scope. | Backend dependency surface | No |
 
 ## Update Rule
 
