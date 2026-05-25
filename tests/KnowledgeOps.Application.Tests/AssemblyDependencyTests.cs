@@ -12,6 +12,12 @@ public sealed class AssemblyDependencyTests
         AssertDoesNotReference("KnowledgeOps.Infrastructure");
     }
 
+    [Fact]
+    public void Application_Should_Not_Reference_EntityFrameworkCore()
+    {
+        AssertDoesNotReference("Microsoft.EntityFrameworkCore");
+    }
+
     [Theory]
     [InlineData("Azure.AI.OpenAI")]
     [InlineData("OpenAI")]

@@ -31,6 +31,29 @@ public sealed class SourceProjectReferenceTests
             "KnowledgeOps.Infrastructure");
     }
 
+    [Theory]
+    [InlineData("KnowledgeOps.Domain")]
+    [InlineData("KnowledgeOps.Application")]
+    public void Inner_Layers_Should_Not_Reference_EntityFrameworkCore_Packages(string projectName)
+    {
+        var projectPath = Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            projectName,
+            $"{projectName}.csproj");
+
+        var packageReferences = XDocument.Load(projectPath)
+            .Descendants()
+            .Where(element => element.Name.LocalName == "PackageReference")
+            .Select(element => element.Attribute("Include")?.Value ?? string.Empty);
+
+        Assert.DoesNotContain(
+            packageReferences,
+            packageName => packageName.StartsWith(
+                "Microsoft.EntityFrameworkCore",
+                StringComparison.Ordinal));
+    }
+
     private static void AssertProjectReferences(string projectName, params string[] expectedReferences)
     {
         var projectPath = Path.Combine(
