@@ -23,6 +23,11 @@ public sealed class SqlServerPersistenceTests
                 .UseSqlServer(databaseConnectionString)
                 .Options;
 
+            Guid testUserId;
+            UserRoleName testUserRoleName;
+            string testUserEmail;
+            Guid testOrganizationId;
+
             await using (var context = new KnowledgeOpsDbContext(options))
             {
                 await context.Database.MigrateAsync();
@@ -47,6 +52,11 @@ public sealed class SqlServerPersistenceTests
                     UpdatedAt = timestamp
                 };
 
+                testUserId = user.Id;
+                testUserRoleName = UserRoleName.KnowledgeAdmin;
+                testUserEmail = user.Email;
+                testOrganizationId = organization.Id;
+
                 context.AddRange(
                     organization,
                     user,
@@ -54,7 +64,7 @@ public sealed class SqlServerPersistenceTests
                     {
                         Id = Guid.NewGuid(),
                         UserId = user.Id,
-                        RoleName = UserRoleName.KnowledgeAdmin,
+                        RoleName = testUserRoleName,
                         AssignedAt = timestamp
                     },
                     new AuditLogEntry
@@ -86,7 +96,7 @@ public sealed class SqlServerPersistenceTests
                         .Select(storedUser => storedUser.Email)
                         .SingleAsync());
                 Assert.Equal(
-                    UserRoleName.KnowledgeAdmin,
+                    testUserRoleName,
                     await context.UserRoles
                         .Where(role => role.UserId == user.Id)
                         .Select(role => role.RoleName)
@@ -109,10 +119,10 @@ public sealed class SqlServerPersistenceTests
                 ],
                 await ReadTableNamesAsync(databaseConnectionString));
 
-            await AssertDuplicateRoleRejectedAsync(options);
-            await AssertDuplicateEmailRejectedAsync(options);
+            await AssertDuplicateRoleRejectedAsync(options, testUserId, testUserRoleName);
+            await AssertDuplicateEmailRejectedAsync(options, testOrganizationId, testUserEmail);
             await AssertUnknownOrganizationRejectedAsync(options);
-            await AssertInvalidRoleRejectedAsync(options);
+            await AssertInvalidRoleRejectedAsync(options, testUserId);
         }
         finally
         {
@@ -121,16 +131,17 @@ public sealed class SqlServerPersistenceTests
     }
 
     private static async Task AssertDuplicateRoleRejectedAsync(
-        DbContextOptions<KnowledgeOpsDbContext> options)
+        DbContextOptions<KnowledgeOpsDbContext> options,
+        Guid userId,
+        UserRoleName existingRoleName)
     {
         await using var context = new KnowledgeOpsDbContext(options);
-        var existingRole = await context.UserRoles.SingleAsync();
 
         context.UserRoles.Add(new UserRole
         {
             Id = Guid.NewGuid(),
-            UserId = existingRole.UserId,
-            RoleName = existingRole.RoleName,
+            UserId = userId,
+            RoleName = existingRoleName,
             AssignedAt = DateTimeOffset.UtcNow
         });
 
@@ -158,18 +169,19 @@ public sealed class SqlServerPersistenceTests
     }
 
     private static async Task AssertDuplicateEmailRejectedAsync(
-        DbContextOptions<KnowledgeOpsDbContext> options)
+        DbContextOptions<KnowledgeOpsDbContext> options,
+        Guid organizationId,
+        string existingEmail)
     {
         await using var context = new KnowledgeOpsDbContext(options);
-        var storedUser = await context.Users.SingleAsync();
         var timestamp = DateTimeOffset.UtcNow;
 
         context.Users.Add(new User
         {
             Id = Guid.NewGuid(),
-            OrganizationId = storedUser.OrganizationId,
+            OrganizationId = organizationId,
             DisplayName = "Duplicate Email User",
-            Email = storedUser.Email,
+            Email = existingEmail,
             Status = UserStatus.Active,
             CreatedAt = timestamp,
             UpdatedAt = timestamp
@@ -179,10 +191,10 @@ public sealed class SqlServerPersistenceTests
     }
 
     private static async Task AssertInvalidRoleRejectedAsync(
-        DbContextOptions<KnowledgeOpsDbContext> options)
+        DbContextOptions<KnowledgeOpsDbContext> options,
+        Guid userId)
     {
         await using var context = new KnowledgeOpsDbContext(options);
-        var userId = await context.Users.Select(user => user.Id).SingleAsync();
 
         context.UserRoles.Add(new UserRole
         {

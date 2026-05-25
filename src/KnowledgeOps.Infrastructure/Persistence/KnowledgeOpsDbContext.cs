@@ -1,6 +1,7 @@
 using KnowledgeOps.Domain.Audit;
 using KnowledgeOps.Domain.Organizations;
 using KnowledgeOps.Domain.Users;
+using KnowledgeOps.Infrastructure.Persistence.SeedData;
 using Microsoft.EntityFrameworkCore;
 
 namespace KnowledgeOps.Infrastructure.Persistence;
@@ -19,5 +20,6 @@ public sealed class KnowledgeOpsDbContext(DbContextOptions<KnowledgeOpsDbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(KnowledgeOpsDbContext).Assembly);
+        KnowledgeOpsSeedData.ApplySeedData(modelBuilder);
     }
 }
