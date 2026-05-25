@@ -5,7 +5,13 @@
       "Bash(dotnet --list-sdks)",
       "Bash(Get-ChildItem \"c:\\\\Dev\\\\knowdledgeops_ai\")",
       "Bash(Select-Object Name, Attributes)",
-      "Bash(Format-Table -AutoSize)"
+      "Bash(Format-Table -AutoSize)",
+      "Bash(npm --version)",
+      "Bash(npx --version)",
+      "Bash(npx @angular/cli version)",
+      "Bash(npx @angular/cli@21.2.12 new frontend --routing --style=scss --skip-git --no-ssr)",
+      "Bash(npm run *)",
+      "Bash(npm test *)"
     ]
   }
 }

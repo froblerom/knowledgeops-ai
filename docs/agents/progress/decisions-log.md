@@ -17,6 +17,11 @@ This log tracks implementation-time and harness-routing decisions. Accepted ADRs
 | 2026-05-25 | Target `net10.0` and pin the installed .NET SDK `10.0.204` in `global.json` with .NET 10 minor roll-forward. | Establishes a reproducible backend foundation without downgrading the approved target framework. | Backend toolchain | No |
 | 2026-05-25 | Defer `KnowledgeOps.E2ETests` beyond Issue #3. | Issue #3 requires only the four approved scaffold test projects; E2E workflow coverage belongs to a later authorized sprint. | Testing structure | No |
 | 2026-05-25 | Keep Issue #3 dependencies limited to host/DI abstractions and xUnit template support. | Persistence, security, provider SDKs, observability integrations and container testing are outside scaffold scope. | Backend dependency surface | No |
+| 2026-05-25 | Use Angular 21.2.12 with Vitest (not Karma) as test runner. | Angular 21 ships `@angular/build:unit-test` backed by Vitest + jsdom; Karma is not available. | Frontend toolchain | No |
+| 2026-05-25 | Auth guard returns `true` unconditionally until Sprint 6. | Route protection is UX guidance only; backend authorization is source of truth. Sprint 6 implements real auth. | Frontend security | No |
+| 2026-05-25 | API interceptor is pass-through only; no JWT or Authorization header injection. | Real auth headers deferred to Sprint 6; pass-through keeps the interceptor chain wired without premature JWT handling. | Frontend HTTP | No |
+| 2026-05-25 | Development `apiBaseUrl` points to `http://localhost:5194/api/v1` (port from `launchSettings.json` HTTP profile). | Sprint 3 may change this when Docker Compose local environment is configured; port stored in environment file for easy update. | Frontend/API integration | No |
+| 2026-05-25 | Angular 21 does not generate `src/environments/` by default; files created manually. | Angular 15+ removed auto-generation; `fileReplacements` in `angular.json` development configuration performs the swap. | Frontend environment config | No |
 
 ## Update Rule
 
