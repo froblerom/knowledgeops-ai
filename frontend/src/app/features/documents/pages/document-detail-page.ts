@@ -1,8 +1,10 @@
 import { DatePipe } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { Subject, forkJoin, interval } from 'rxjs';
+import { switchMap, takeUntil } from 'rxjs/operators';
 import {
+  DocumentProcessingStatus,
   DocumentProcessingStatusResponse,
   DocumentService,
   ManagedDocument
@@ -12,17 +14,20 @@ import { RoleVisibilityService } from '../../../core/services/role-visibility.se
 import { LoadingState } from '../../../shared/components/loading-state/loading-state';
 import { ErrorState } from '../../../shared/components/error-state/error-state';
 
+const POLL_INTERVAL_MS = 5000;
+
 @Component({
   selector: 'app-document-detail-page',
   imports: [RouterLink, DatePipe, LoadingState, ErrorState],
   templateUrl: './document-detail-page.html',
   styleUrl: './document-detail-page.scss'
 })
-export class DocumentDetailPage implements OnInit {
+export class DocumentDetailPage implements OnInit, OnDestroy {
   private readonly documentsApi = inject(DocumentService);
   private readonly apiError = inject(ApiErrorService);
   private readonly roles = inject(RoleVisibilityService);
   private readonly route = inject(ActivatedRoute);
+  private readonly destroy$ = new Subject<void>();
 
   readonly documentId = this.route.snapshot.paramMap.get('documentId')!;
   readonly canDisable = this.roles.canDisableDocumentRetrieval();
@@ -41,12 +46,18 @@ export class DocumentDetailPage implements OnInit {
         this.document = result.document;
         this.status = result.status;
         this.loading = false;
+        this.startPollingIfPending(result.status.processingStatus);
       },
       error: response => {
         this.error = this.apiError.fromHttpError(response);
         this.loading = false;
       }
     });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   disableRetrieval(): void {
@@ -67,5 +78,33 @@ export class DocumentDetailPage implements OnInit {
         this.saving = false;
       }
     });
+  }
+
+  private isTerminal(processingStatus: DocumentProcessingStatus): boolean {
+    return processingStatus === 'Processed' || processingStatus === 'Failed';
+  }
+
+  private startPollingIfPending(processingStatus: DocumentProcessingStatus): void {
+    if (this.isTerminal(processingStatus)) return;
+
+    interval(POLL_INTERVAL_MS)
+      .pipe(
+        takeUntil(this.destroy$),
+        switchMap(() => this.documentsApi.getProcessingStatus(this.documentId))
+      )
+      .subscribe({
+        next: statusResponse => {
+          this.status = statusResponse;
+          if (statusResponse.isRetrievalEnabled !== undefined && this.document) {
+            this.document = { ...this.document, isRetrievalEnabled: statusResponse.isRetrievalEnabled };
+          }
+          if (this.isTerminal(statusResponse.processingStatus)) {
+            this.destroy$.next();
+          }
+        },
+        error: () => {
+          // Polling errors are silent; the last known status remains displayed.
+        }
+      });
   }
 }

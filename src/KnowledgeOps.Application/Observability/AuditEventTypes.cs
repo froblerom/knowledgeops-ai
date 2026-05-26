@@ -16,4 +16,7 @@ public static class AuditEventTypes
     public const string DocumentUploadAccepted = "DocumentUploadAccepted";
     public const string DocumentUploadRejected = "DocumentUploadRejected";
     public const string DocumentUploadFailed = "DocumentUploadFailed";
+    public const string DocumentProcessingStarted = "DocumentProcessingStarted";
+    public const string DocumentProcessingSucceeded = "DocumentProcessingSucceeded";
+    public const string DocumentProcessingFailed = "DocumentProcessingFailed";
 }

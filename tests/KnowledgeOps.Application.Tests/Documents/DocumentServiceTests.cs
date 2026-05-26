@@ -213,6 +213,18 @@ public sealed class DocumentServiceTests
             _documents[documentId] = updated;
             return Task.FromResult<DocumentDisableResult?>(new DocumentDisableResult(updated, changed));
         }
+
+        public Task<IReadOnlyList<ManagedDocument>> FindPendingForProcessingAsync(int maxCount, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<ManagedDocument>>([]);
+
+        public Task<ManagedDocument?> ClaimForProcessingAsync(Guid documentId, DateTimeOffset now, CancellationToken ct = default) =>
+            Task.FromResult<ManagedDocument?>(null);
+
+        public Task<ManagedDocument?> MarkProcessedAsync(Guid documentId, DateTimeOffset now, CancellationToken ct = default) =>
+            Task.FromResult<ManagedDocument?>(null);
+
+        public Task<ManagedDocument?> MarkFailedAsync(Guid documentId, string safeFailureReason, DateTimeOffset now, CancellationToken ct = default) =>
+            Task.FromResult<ManagedDocument?>(null);
     }
 
     private sealed class RecordingAuditWriter : IAuditEventWriter
