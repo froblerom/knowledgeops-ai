@@ -1,4 +1,5 @@
 using KnowledgeOps.Domain.Audit;
+using KnowledgeOps.Domain.Documents;
 using KnowledgeOps.Domain.Organizations;
 using KnowledgeOps.Domain.Users;
 using KnowledgeOps.Infrastructure.Persistence.SeedData;
@@ -14,6 +15,8 @@ public sealed class KnowledgeOpsDbContext(DbContextOptions<KnowledgeOpsDbContext
     public DbSet<User> Users => Set<User>();
 
     public DbSet<UserRole> UserRoles => Set<UserRole>();
+
+    public DbSet<Document> Documents => Set<Document>();
 
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
 

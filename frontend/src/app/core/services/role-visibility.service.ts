@@ -38,6 +38,11 @@ export class RoleVisibilityService {
     return this.hasAnyRole('KnowledgeAdmin', 'Admin');
   }
 
+  // Documents.Disable: KnowledgeAdmin, Admin.
+  canDisableDocumentRetrieval(): boolean {
+    return this.hasAnyRole('KnowledgeAdmin', 'Admin');
+  }
+
   // Dashboard.ViewOverview: KnowledgeAdmin, Manager, Admin.
   canViewDashboard(): boolean {
     return this.hasAnyRole('KnowledgeAdmin', 'Manager', 'Admin');

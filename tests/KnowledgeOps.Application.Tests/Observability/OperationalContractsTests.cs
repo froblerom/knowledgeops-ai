@@ -16,6 +16,7 @@ public sealed class OperationalContractsTests
 
         Assert.Equal(
             [
+                "DocumentRetrievalDisabled",
                 "HealthDetailsViewed",
                 "PermissionDenied",
                 "UserCreated",

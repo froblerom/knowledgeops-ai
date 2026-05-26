@@ -15,9 +15,19 @@ export const routes: Routes = [
   },
   {
     path: 'documents',
-    loadComponent: () =>
-      import('./features/documents/pages/documents-page').then(m => m.DocumentsPage),
-    canActivate: [authGuard]
+    canActivate: [authGuard],
+    children: [
+      {
+        path: '',
+        loadComponent: () =>
+          import('./features/documents/pages/documents-page').then(m => m.DocumentsPage)
+      },
+      {
+        path: ':documentId',
+        loadComponent: () =>
+          import('./features/documents/pages/document-detail-page').then(m => m.DocumentDetailPage)
+      }
+    ]
   },
   {
     path: 'chat',

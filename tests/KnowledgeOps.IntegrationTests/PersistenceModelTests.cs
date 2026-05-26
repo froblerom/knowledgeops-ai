@@ -1,4 +1,5 @@
 using KnowledgeOps.Domain.Audit;
+using KnowledgeOps.Domain.Documents;
 using KnowledgeOps.Domain.Organizations;
 using KnowledgeOps.Domain.Users;
 using KnowledgeOps.Infrastructure.Persistence;
@@ -11,7 +12,7 @@ namespace KnowledgeOps.IntegrationTests;
 public sealed class PersistenceModelTests
 {
     [Fact]
-    public void Model_Contains_Only_Approved_Foundation_Tables()
+    public void Model_Contains_Approved_Foundation_And_Document_Metadata_Tables()
     {
         using var context = CreateContext();
 
@@ -21,7 +22,7 @@ public sealed class PersistenceModelTests
             .ToArray();
 
         Assert.Equal(
-            ["audit_log_entries", "organizations", "user_roles", "users"],
+            ["audit_log_entries", "documents", "organizations", "user_roles", "users"],
             tableNames);
     }
 
@@ -72,6 +73,57 @@ public sealed class PersistenceModelTests
         Assert.Contains("N'KnowledgeAdmin'", constraint.Sql, StringComparison.Ordinal);
         Assert.Contains("N'Manager'", constraint.Sql, StringComparison.Ordinal);
         Assert.Contains("N'Admin'", constraint.Sql, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Model_Maps_Canonical_Document_Metadata_Default_Indexes_And_Status_Constraint()
+    {
+        using var context = CreateContext();
+
+        var documentEntity = context.Model.FindEntityType(typeof(Document))!;
+        var documentDesignEntity = context.GetService<IDesignTimeModel>().Model.FindEntityType(typeof(Document))!;
+        var constraint = documentDesignEntity.GetCheckConstraints()
+            .Single(checkConstraint => checkConstraint.Name == "CK_documents_processing_status");
+        var indexNames = documentEntity.GetIndexes()
+            .Select(index => index.GetDatabaseName())
+            .ToArray();
+
+        Assert.False(documentEntity.FindProperty(nameof(Document.FileName))!.IsNullable);
+        Assert.Equal(500, documentEntity.FindProperty(nameof(Document.FileName))!.GetMaxLength());
+        Assert.False(documentEntity.FindProperty(nameof(Document.Title))!.IsNullable);
+        Assert.Equal(300, documentEntity.FindProperty(nameof(Document.Title))!.GetMaxLength());
+        Assert.False(documentEntity.FindProperty(nameof(Document.ContentType))!.IsNullable);
+        Assert.Equal(150, documentEntity.FindProperty(nameof(Document.ContentType))!.GetMaxLength());
+        Assert.False(documentEntity.FindProperty(nameof(Document.FileSizeBytes))!.IsNullable);
+        Assert.False(documentEntity.FindProperty(nameof(Document.StorageLocation))!.IsNullable);
+        Assert.Equal(1000, documentEntity.FindProperty(nameof(Document.StorageLocation))!.GetMaxLength());
+        Assert.True(documentEntity.FindProperty(nameof(Document.FailureReason))!.IsNullable);
+        Assert.Equal(1000, documentEntity.FindProperty(nameof(Document.FailureReason))!.GetMaxLength());
+        Assert.False(documentEntity.FindProperty(nameof(Document.UploadedAt))!.IsNullable);
+        Assert.True(documentEntity.FindProperty(nameof(Document.ProcessingStartedAt))!.IsNullable);
+        Assert.True(documentEntity.FindProperty(nameof(Document.ProcessedAt))!.IsNullable);
+        Assert.Equal(false, documentEntity.FindProperty(nameof(Document.IsRetrievalEnabled))!.GetDefaultValue());
+
+        Assert.Contains("IX_documents_organization_id", indexNames);
+        Assert.Contains("IX_documents_uploaded_by_user_id", indexNames);
+        Assert.Contains("IX_documents_processing_status", indexNames);
+        Assert.Contains("IX_documents_retrieval_eligibility", indexNames);
+        Assert.Contains("IX_documents_deleted_at", indexNames);
+        Assert.Contains("IX_documents_uploaded_at", indexNames);
+        Assert.Contains("N'Uploaded'", constraint.Sql, StringComparison.Ordinal);
+        Assert.Contains("N'Processing'", constraint.Sql, StringComparison.Ordinal);
+        Assert.Contains("N'Processed'", constraint.Sql, StringComparison.Ordinal);
+        Assert.Contains("N'Failed'", constraint.Sql, StringComparison.Ordinal);
+        Assert.DoesNotContain("Disabled", constraint.Sql, StringComparison.Ordinal);
+
+        Assert.Contains(
+            documentEntity.GetForeignKeys(),
+            key => key.Properties.Single().Name == nameof(Document.OrganizationId)
+                && key.PrincipalEntityType.ClrType == typeof(Organization));
+        Assert.Contains(
+            documentEntity.GetForeignKeys(),
+            key => key.Properties.Single().Name == nameof(Document.UploadedByUserId)
+                && key.PrincipalEntityType.ClrType == typeof(User));
     }
 
     private static KnowledgeOpsDbContext CreateContext()

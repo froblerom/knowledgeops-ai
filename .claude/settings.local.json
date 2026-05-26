@@ -24,7 +24,9 @@
       "Bash(Select-Object -First 30)",
       "PowerShell(Get-ChildItem -Path 'c:\\\\Dev\\\\knowdledgeops_ai\\\\src\\\\KnowledgeOps.Application\\\\' | Where-Object { $_.PSIsContainer })",
       "Bash(grep -E \"\\\\.\\(cs|csproj\\)$\")",
-      "PowerShell(tail -10)"
+      "PowerShell(tail -10)",
+      "Bash(Remove-Item \"C:\\\\Dev\\\\knowdledgeops_ai\\\\src\\\\KnowledgeOps.Domain\\\\obj\\\\Debug\\\\net10.0\\\\KnowledgeOps.Domain.AssemblyInfoInputs.cache\" -Force -ErrorAction SilentlyContinue)",
+      "PowerShell($env:ConnectionStrings__DefaultConnection = \"Server=localhost,1433;Database=KnowledgeOpsDevDb;User Id=sa;Password=Dev@12345;TrustServerCertificate=True\"; dotnet ef migrations add DocumentMetadataFoundation --project C:\\\\Dev\\\\knowdledgeops_ai\\\\src\\\\KnowledgeOps.Infrastructure\\\\KnowledgeOps.Infrastructure.csproj --startup-project C:\\\\Dev\\\\knowdledgeops_ai\\\\src\\\\KnowledgeOps.Infrastructure\\\\KnowledgeOps.Infrastructure.csproj --output-dir Persistence/Migrations 2>&1)"
     ]
   }
 }

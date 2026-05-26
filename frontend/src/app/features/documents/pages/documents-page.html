@@ -1,4 +1,31 @@
-<div class="placeholder-page">
-  <h1>Documents</h1>
-  <p>Document upload and management — reserved for Sprints 10–11.</p>
-</div>
+<section class="documents-page">
+  <header>
+    <h1>Documents</h1>
+    <p>Knowledge base documents for your organization.</p>
+  </header>
+
+  @if (loading) {
+    <app-loading-state />
+  } @else if (error) {
+    <app-error-state [message]="error.message" [errorId]="error.errorId" />
+  } @else if (documents.length === 0) {
+    <p class="empty">No documents found.</p>
+  } @else {
+    <table>
+      <thead>
+        <tr><th>Title</th><th>File</th><th>Status</th><th>Retrieval</th><th>Uploaded</th></tr>
+      </thead>
+      <tbody>
+        @for (doc of documents; track doc.documentId) {
+          <tr>
+            <td><a [routerLink]="[doc.documentId]">{{ doc.title }}</a></td>
+            <td>{{ doc.fileName }}</td>
+            <td><span class="status">{{ doc.processingStatus }}</span></td>
+            <td>{{ doc.isRetrievalEnabled ? 'Enabled' : 'Disabled' }}</td>
+            <td>{{ doc.uploadedAt | date:'short' }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</section>

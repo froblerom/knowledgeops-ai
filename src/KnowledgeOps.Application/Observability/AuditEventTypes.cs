@@ -12,4 +12,5 @@ public static class AuditEventTypes
     public const string UserRoleAssigned = "UserRoleAssigned";
     public const string UserRoleRemoved = "UserRoleRemoved";
     public const string UserManagementDenied = "UserManagementDenied";
+    public const string DocumentRetrievalDisabled = "DocumentRetrievalDisabled";
 }

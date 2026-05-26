@@ -52,6 +52,12 @@ Admin user and role management foundation is fully implemented. `PermissionAutho
 
 **New residual risk**: The serializable-isolation final-active-Admin check does not span distributed transactions (single SQL Server node assumed). Acceptable at MVP scale; must be revisited before multi-node deployment.
 
+## Sprint 10 Issue #20 Disposition
+
+Document metadata persistence and lifecycle behavior are validated for Sprint 10. `Document` stores canonical metadata and timestamps, limits processing states to `Uploaded`, `Processing`, `Processed`, and `Failed`, records bounded failure reasons, and encodes only intrinsic retrieval eligibility. Retrieval disablement remains independent from processing status and the atomic repository operation exposes its actual state transition so `DocumentRetrievalDisabled` is emitted only when `true` changes to `false`. The public route is `POST /api/v1/documents/{documentId}/disable`; no re-enable or retry API exists.
+
+`DocumentMetadataFoundation` was regenerated with the required fields, `storage_location` non-null constraint, `is_retrieval_enabled` database default `false`, four-state status check constraint, organization/user foreign keys, and six supporting indexes. On 2026-05-26 the migration applied successfully to a disposable local SQL Server instance and all 32 SQL-gated integration tests passed, including canonical document persistence, default/constraint, scope, sorting, soft-delete, and transition tests. No new Issue #20 residual risk remains; the existing future retrieval/RAG authorization risk remains open for its owning sprints.
+
 ## Update Rule
 
 Read this file for Level 3 work and release review. Update risk status, mitigation or new issue references when implementation evidence changes the risk.

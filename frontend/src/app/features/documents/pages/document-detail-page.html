@@ -1,0 +1,31 @@
+<section class="document-detail-page">
+  <a routerLink="/documents">Back to documents</a>
+
+  @if (loading) {
+    <app-loading-state />
+  } @else if (error) {
+    <app-error-state [message]="error.message" [errorId]="error.errorId" />
+  } @else if (document && status) {
+    <header>
+      <h1>{{ document.title }}</h1>
+      <p>{{ document.fileName }}</p>
+    </header>
+
+    <dl>
+      <dt>Content type</dt><dd>{{ document.contentType }}</dd>
+      <dt>File size</dt><dd>{{ document.fileSizeBytes }} bytes</dd>
+      <dt>Processing status</dt><dd>{{ status.processingStatus }}</dd>
+      <dt>Failure reason</dt><dd>{{ status.failureReason || 'None reported' }}</dd>
+      <dt>Retrieval</dt><dd>{{ document.isRetrievalEnabled ? 'Enabled' : 'Disabled' }}</dd>
+      <dt>Uploaded</dt><dd>{{ document.uploadedAt | date:'medium' }}</dd>
+      <dt>Processing started</dt><dd>{{ status.processingStartedAt ? (status.processingStartedAt | date:'medium') : 'Not started' }}</dd>
+      <dt>Processed</dt><dd>{{ status.processedAt ? (status.processedAt | date:'medium') : 'Not processed' }}</dd>
+    </dl>
+
+    @if (canDisable && document.isRetrievalEnabled) {
+      <button type="button" [disabled]="saving" (click)="disableRetrieval()">
+        {{ saving ? 'Disabling...' : 'Disable retrieval' }}
+      </button>
+    }
+  }
+</section>
