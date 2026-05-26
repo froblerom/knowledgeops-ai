@@ -1,10 +1,12 @@
 using System.Text;
+using KnowledgeOps.Api.Authorization;
 using KnowledgeOps.Api.CurrentUser;
 using KnowledgeOps.Application;
 using KnowledgeOps.Application.Auth.Abstractions;
 using KnowledgeOps.Infrastructure;
 using KnowledgeOps.Infrastructure.Auth;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
@@ -40,6 +42,8 @@ builder.Services
     });
 
 builder.Services.AddAuthorization();
+builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
+builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
 builder.Services.AddCors(options =>
 {

@@ -46,6 +46,20 @@ public sealed class AssemblyDependencyTests
         AssertDoesNotReference(forbiddenAssemblyPrefix);
     }
 
+    // Authorization layer boundary tests
+
+    [Fact]
+    public void Application_Should_Not_Reference_AspNetCoreAuthorization()
+    {
+        AssertDoesNotReference("Microsoft.AspNetCore.Authorization");
+    }
+
+    [Fact]
+    public void Application_Should_Not_Reference_AspNetCoreMvc()
+    {
+        AssertDoesNotReference("Microsoft.AspNetCore.Mvc");
+    }
+
     private static void AssertDoesNotReference(string forbiddenAssemblyPrefix)
     {
         var referencedAssemblyNames = ApplicationAssembly.GetReferencedAssemblies()
