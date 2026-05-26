@@ -1,6 +1,6 @@
 # Open Implementation Risks
 
-Last updated: 2026-05-25
+Last updated: 2026-05-26
 
 | Risk | Severity | Related Area | Mitigation | Status |
 | --- | --- | --- | --- | --- |
@@ -37,6 +37,10 @@ The fictional seed data migration is established. `SeedFictionalOrganizationsAnd
 ## Sprint 6 Issue #13 Disposition
 
 JWT Bearer authentication and current-user context are implemented across all layers. Login, logout, and `/auth/me` endpoints are live. All five MVP login failure modes return HTTP 401 with an identical body (user enumeration prevented). GET /auth/me re-queries the database on every request and rejects Disabled/Pending/missing users. Angular `authGuard` redirects to `/login` when the session is expired or absent; `apiInterceptor` attaches Bearer tokens only to API-URL requests. `ValidateOnStart` enforces a minimum 32-character signing key at host startup. No passwords committed in seed data; test passwords provisioned via fixture setup only. Authorization risk for business features remains open (role-scoped document/RAG access is not yet enforced — see Sprint 7+).
+
+## Sprint 7 Issue #14 Disposition
+
+RBAC permission catalog and policy enforcement are fully implemented. `KnowledgeOpsPermissions` defines all 30 MVP permissions; `RolePermissionMatrix` enforces deny-by-default for unknown roles and unknown permissions; `PermissionService` and `OrganizationScopeService` are pure in-memory (no database dependency). `[RequirePermission]` attribute and `PermissionPolicyProvider` wire the ASP.NET Core policy pipeline; `PermissionAuthorizationHandler` logs only safe fields. Organization-scope enforcement (same-org-only) applies identically to all roles including Admin. `AuthorizationApiTests` confirm 401 without token, 403 for permission violations, 404 for cross-org resource lookups, and safe denial bodies (no permission name, org name, or token leakage). Frontend `RoleVisibilityService` provides UX-only visibility helpers annotated as non-authoritative. Two partial risks remain: (1) `Chat.ViewInteraction`/`Chat.ViewCitations` own-only vs. scoped query-level enforcement deferred to Sprint 17+ chat workflows — the matrix carries a code comment documenting the convention; (2) authorization failure logging is defined at the event level but full structured logging framework, correlation middleware, and health endpoints are deferred to Sprint 8. The critical "Authorization may be skipped during retrieval or prompt construction" risk remains open and applicable to all future RAG sprints.
 
 ## Update Rule
 

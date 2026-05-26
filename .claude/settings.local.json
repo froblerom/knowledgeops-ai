@@ -14,7 +14,14 @@
       "PowerShell(Get-ChildItem *)",
       "PowerShell(Test-NetConnection *)",
       "PowerShell(Write-Host *)",
-      "PowerShell($env:*)"
+      "PowerShell($env:*)",
+      "Bash(xargs grep -l \"AuthWebApplicationFactory\")",
+      "Bash(xargs grep -l \"Permission\\\\|Authorization\")",
+      "Bash(xargs grep -l \"issue.*14\\\\|#14\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\Dev\\\\knowdledgeops_ai\\\\tests\" -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Dev\\\\knowdledgeops_ai\\\\src\\\\KnowledgeOps.Infrastructure\\\\Persistence\" -Recurse -Name -Include \"*.cs\")",
+      "Bash(Select-Object -First 30)"
     ]
   }
 }
