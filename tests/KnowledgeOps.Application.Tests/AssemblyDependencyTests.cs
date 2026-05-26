@@ -18,6 +18,24 @@ public sealed class AssemblyDependencyTests
         AssertDoesNotReference("Microsoft.EntityFrameworkCore");
     }
 
+    [Fact]
+    public void Application_Should_Not_Reference_AspNetCoreAuthentication()
+    {
+        AssertDoesNotReference("Microsoft.AspNetCore.Authentication");
+    }
+
+    [Fact]
+    public void Application_Should_Not_Reference_SystemIdentityModelTokensJwt()
+    {
+        AssertDoesNotReference("System.IdentityModel.Tokens.Jwt");
+    }
+
+    [Fact]
+    public void Application_Should_Not_Reference_MicrosoftIdentityModelTokens()
+    {
+        AssertDoesNotReference("Microsoft.IdentityModel.Tokens");
+    }
+
     [Theory]
     [InlineData("Azure.AI.OpenAI")]
     [InlineData("OpenAI")]
