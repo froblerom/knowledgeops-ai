@@ -32,9 +32,11 @@ describe('ApiErrorService', () => {
   });
 
   it.each([
+    [400, 'Please review the supplied values and try again.'],
     [401, 'Your session has expired. Please sign in again.'],
     [403, 'You do not have access to perform this action.'],
-    [404, 'The requested item could not be found.']
+    [404, 'The requested item could not be found.'],
+    [409, 'The requested change conflicts with the current state.']
   ])('maps status %i to a safe message', (status, message) => {
     const error = service.fromHttpError(new HttpErrorResponse({
       status,

@@ -1,0 +1,38 @@
+<section class="user-form">
+  <a routerLink="/admin/users" class="back">Back to users</a>
+  @if (loading) {
+    <app-loading-state />
+  } @else if (!user) {
+    <app-error-state [message]="error?.message || 'The requested item could not be found.'" [errorId]="error?.errorId || null" />
+  } @else {
+    <h1>{{ user.displayName }}</h1>
+    <p class="scope">Organization: {{ user.organizationId }}</p>
+    <form [formGroup]="form" (ngSubmit)="save()">
+      <label>Display name <input type="text" formControlName="displayName" /></label>
+      <label>Email <input type="email" formControlName="email" /></label>
+      <label>
+        Status
+        <select formControlName="status">
+          @for (status of statuses; track status) { <option [value]="status">{{ status }}</option> }
+        </select>
+      </label>
+      <button type="submit" [disabled]="form.invalid || saving">Save user</button>
+    </form>
+
+    <h2>Roles</h2>
+    <ul class="roles">
+      @for (role of user.roles; track role) {
+        <li>{{ role }} <button type="button" (click)="removeRole(role)" [disabled]="saving">Remove</button></li>
+      } @empty {
+        <li>No roles assigned.</li>
+      }
+    </ul>
+    <div class="role-add" [formGroup]="form">
+      <select formControlName="role">
+        @for (role of availableRoles; track role) { <option [value]="role">{{ role }}</option> }
+      </select>
+      <button type="button" (click)="addRole()" [disabled]="saving">Add role</button>
+    </div>
+    @if (error) { <app-error-state [message]="error.message" [errorId]="error.errorId" /> }
+  }
+</section>

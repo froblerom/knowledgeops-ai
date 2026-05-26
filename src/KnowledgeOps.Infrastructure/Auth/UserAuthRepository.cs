@@ -1,6 +1,7 @@
 using KnowledgeOps.Application.Auth.Abstractions;
 using KnowledgeOps.Domain.Users;
 using KnowledgeOps.Infrastructure.Persistence;
+using KnowledgeOps.Application.Users;
 using Microsoft.EntityFrameworkCore;
 
 namespace KnowledgeOps.Infrastructure.Auth;
@@ -16,9 +17,10 @@ internal sealed class UserAuthRepository : IUserAuthRepository
 
     public async Task<UserAuthRecord?> FindByEmailAsync(string email, CancellationToken ct = default)
     {
+        var normalizedEmail = EmailNormalizer.Normalize(email);
         var user = await _context.Users
             .AsNoTracking()
-            .Where(u => u.Email == email && u.DeletedAt == null)
+            .Where(u => u.Email == normalizedEmail && u.DeletedAt == null)
             .FirstOrDefaultAsync(ct);
 
         if (user is null) return null;

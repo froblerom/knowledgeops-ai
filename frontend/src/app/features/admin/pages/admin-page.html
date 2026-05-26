@@ -1,4 +1,33 @@
-<div class="placeholder-page">
-  <h1>Admin</h1>
-  <p>User and system administration — reserved for Sprint 9.</p>
-</div>
+<section class="admin-page">
+  <header>
+    <div>
+      <h1>Users</h1>
+      <p>Manage access for your organization.</p>
+    </div>
+    <a routerLink="/admin/users/new" class="action">Create user</a>
+  </header>
+
+  @if (loading) {
+    <app-loading-state />
+  } @else if (error) {
+    <app-error-state [message]="error.message" [errorId]="error.errorId" />
+  } @else if (users.length === 0) {
+    <p class="empty">No users found.</p>
+  } @else {
+    <table>
+      <thead>
+        <tr><th>Name</th><th>Email</th><th>Status</th><th>Roles</th></tr>
+      </thead>
+      <tbody>
+        @for (user of users; track user.userId) {
+          <tr>
+            <td><a [routerLink]="['/admin/users', user.userId]">{{ user.displayName }}</a></td>
+            <td>{{ user.email }}</td>
+            <td><span class="status">{{ user.status }}</span></td>
+            <td>{{ user.roles.join(', ') || 'None' }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</section>

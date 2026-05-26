@@ -15,4 +15,7 @@ public sealed class PermissionService : IPermissionService
 
         return RolePermissionMatrix.HasPermission(currentUser.Roles, permission);
     }
+
+    public bool HasPermission(UserAccessState currentUser, string permission) =>
+        RolePermissionMatrix.HasPermission(currentUser.Roles, permission);
 }

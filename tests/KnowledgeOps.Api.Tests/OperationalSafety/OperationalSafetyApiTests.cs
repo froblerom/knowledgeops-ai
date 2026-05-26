@@ -4,6 +4,8 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using KnowledgeOps.Application.Auth.Abstractions;
 using KnowledgeOps.Application.Observability;
+using KnowledgeOps.Application.Authorization;
+using KnowledgeOps.Api.Tests.Support;
 using KnowledgeOps.Domain.Users;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -313,6 +315,9 @@ public sealed class OperationalSafetyApiTestFactory : WebApplicationFactory<Prog
             services.AddSingleton<IAuditEventWriter>(AuditWriter);
             services.RemoveAll<IDatabaseHealthCheck>();
             services.AddSingleton<IDatabaseHealthCheck>(DatabaseHealth);
+            services.RemoveAll<IUserAccessStateReader>();
+            services.AddSingleton(new AccessStateOverrides());
+            services.AddScoped<IUserAccessStateReader, RepositoryUserAccessStateReader>();
 
             services.AddControllers()
                 .AddApplicationPart(typeof(OperationalSafetyApiTestFactory).Assembly);

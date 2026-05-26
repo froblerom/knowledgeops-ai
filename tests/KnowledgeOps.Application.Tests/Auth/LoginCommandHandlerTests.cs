@@ -32,6 +32,17 @@ public sealed class LoginCommandHandlerTests
     }
 
     [Fact]
+    public async Task HandleAsync_NormalizesEmailBeforeLookup()
+    {
+        var repo = new StubUserAuthRepository(ActiveUser());
+        var handler = BuildHandler(repo, new StubPasswordHasher(verifyResult: true), new StubTokenService());
+
+        await handler.HandleAsync(new LoginCommand("  Agent@Example.Com ", "password"));
+
+        Assert.Equal("agent@example.com", repo.LastLookupEmail);
+    }
+
+    [Fact]
     public async Task HandleAsync_ValidLogin_UpdatesLastLoginAt()
     {
         var repo = new StubUserAuthRepository(ActiveUser());
@@ -122,9 +133,13 @@ public sealed class LoginCommandHandlerTests
     private sealed class StubUserAuthRepository(UserAuthRecord? user) : IUserAuthRepository
     {
         public Guid? LastLoginAtUpdatedFor { get; private set; }
+        public string? LastLookupEmail { get; private set; }
 
-        public Task<UserAuthRecord?> FindByEmailAsync(string email, CancellationToken ct = default) =>
-            Task.FromResult(user);
+        public Task<UserAuthRecord?> FindByEmailAsync(string email, CancellationToken ct = default)
+        {
+            LastLookupEmail = email;
+            return Task.FromResult(user);
+        }
 
         public Task<UserAuthRecord?> FindByIdAsync(Guid userId, CancellationToken ct = default) =>
             Task.FromResult(user);

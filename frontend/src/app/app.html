@@ -5,7 +5,9 @@
     <a routerLink="/documents" routerLinkActive="active">Documents</a>
     <a routerLink="/chat" routerLinkActive="active">Chat</a>
     <a routerLink="/dashboard" routerLinkActive="active">Dashboard</a>
-    <a routerLink="/admin" routerLinkActive="active">Admin</a>
+    @if (visibility.canViewAdmin()) {
+      <a routerLink="/admin/users" routerLinkActive="active">Admin</a>
+    }
   </nav>
 </header>
 

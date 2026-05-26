@@ -1,5 +1,6 @@
 using KnowledgeOps.Application.Auth.Abstractions;
 using KnowledgeOps.Domain.Users;
+using KnowledgeOps.Application.Users;
 using Microsoft.Extensions.Logging;
 
 namespace KnowledgeOps.Application.Auth.Commands;
@@ -25,7 +26,7 @@ public sealed class LoginCommandHandler
 
     public async Task<LoginResult?> HandleAsync(LoginCommand command, CancellationToken ct = default)
     {
-        var user = await _userAuthRepository.FindByEmailAsync(command.Email, ct);
+        var user = await _userAuthRepository.FindByEmailAsync(EmailNormalizer.Normalize(command.Email), ct);
 
         if (user is null
             || user.Status != UserStatus.Active
