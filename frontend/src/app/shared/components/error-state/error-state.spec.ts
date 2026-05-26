@@ -20,4 +20,13 @@ describe('ErrorState', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('.error-message')?.textContent).toContain('Test error');
   });
+
+  it('displays an Error ID only when supplied', () => {
+    const fixture = TestBed.createComponent(ErrorState);
+    fixture.componentInstance.errorId = 'request-123';
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.error-id')?.textContent)
+      .toContain('Error ID: request-123');
+  });
 });

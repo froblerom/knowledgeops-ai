@@ -7,4 +7,5 @@ import { Component, Input } from '@angular/core';
 })
 export class ErrorState {
   @Input() message = 'An unexpected error occurred.';
+  @Input() errorId: string | null = null;
 }

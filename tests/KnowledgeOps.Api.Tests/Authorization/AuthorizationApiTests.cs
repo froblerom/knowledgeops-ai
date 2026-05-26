@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using KnowledgeOps.Application.Auth.Abstractions;
+using KnowledgeOps.Application.Observability;
 using KnowledgeOps.Domain.Users;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -301,6 +302,9 @@ public sealed class AuthorizationApiTestFactory : WebApplicationFactory<Program>
             services.RemoveAll<IPasswordHasher>();
             services.AddSingleton<IPasswordHasher, PlaintextPasswordHasher>();
 
+            services.RemoveAll<IAuditEventWriter>();
+            services.AddSingleton<IAuditEventWriter, NoopAuditEventWriter>();
+
             // Register test-only controller from this assembly.
             services.AddControllers()
                 .AddApplicationPart(typeof(AuthorizationApiTestFactory).Assembly);
@@ -349,5 +353,11 @@ public sealed class AuthorizationApiTestFactory : WebApplicationFactory<Program>
         public string HashPassword(string password) => password;
         public bool VerifyPassword(string hashedPassword, string password) =>
             string.Equals(hashedPassword, password, StringComparison.Ordinal);
+    }
+
+    private sealed class NoopAuditEventWriter : IAuditEventWriter
+    {
+        public Task WriteAsync(AuditEvent auditEvent, CancellationToken ct = default) =>
+            Task.CompletedTask;
     }
 }

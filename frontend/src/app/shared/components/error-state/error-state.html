@@ -1,4 +1,7 @@
 <div class="error-state" role="alert">
   <span class="error-icon" aria-hidden="true">!</span>
   <span class="error-message">{{ message }}</span>
+  @if (errorId) {
+    <span class="error-id">Error ID: {{ errorId }}</span>
+  }
 </div>

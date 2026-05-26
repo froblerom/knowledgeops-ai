@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using KnowledgeOps.Application.Auth.Abstractions;
+using KnowledgeOps.Application.Observability;
 using KnowledgeOps.Domain.Users;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -71,17 +72,25 @@ public sealed class AuthControllerTests : IClassFixture<AuthWebApplicationFactor
     }
 
     [Fact]
-    public async Task Login_AllFailures_ReturnIdenticalBody()
+    public async Task Login_AllFailures_ReturnIdenticalGenericErrorApartFromCorrelationId()
     {
         var unknown = await (await _client.PostAsJsonAsync("/api/v1/auth/login",
             new { email = "nobody@example.com", password = "p" }))
-            .Content.ReadAsStringAsync();
+            .Content.ReadFromJsonAsync<JsonElement>();
 
         var wrong = await (await _client.PostAsJsonAsync("/api/v1/auth/login",
             new { email = AuthWebApplicationFactory.ActiveEmail, password = "wrong" }))
-            .Content.ReadAsStringAsync();
+            .Content.ReadFromJsonAsync<JsonElement>();
 
-        Assert.Equal(unknown, wrong);
+        Assert.Equal(
+            unknown.GetProperty("error").GetProperty("code").GetString(),
+            wrong.GetProperty("error").GetProperty("code").GetString());
+        Assert.Equal(
+            unknown.GetProperty("error").GetProperty("message").GetString(),
+            wrong.GetProperty("error").GetProperty("message").GetString());
+        Assert.Equal("Invalid credentials.", unknown.GetProperty("error").GetProperty("message").GetString());
+        Assert.False(string.IsNullOrWhiteSpace(
+            unknown.GetProperty("error").GetProperty("correlationId").GetString()));
     }
 
     [Fact]
@@ -172,6 +181,9 @@ public sealed class AuthWebApplicationFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<IPasswordHasher>();
             services.AddSingleton<IPasswordHasher, PlaintextPasswordHasher>();
+
+            services.RemoveAll<IAuditEventWriter>();
+            services.AddSingleton<IAuditEventWriter, NoopAuditEventWriter>();
         });
     }
 
@@ -205,5 +217,11 @@ public sealed class AuthWebApplicationFactory : WebApplicationFactory<Program>
         public string HashPassword(string password) => password;
         public bool VerifyPassword(string hashedPassword, string password) =>
             string.Equals(hashedPassword, password, StringComparison.Ordinal);
+    }
+
+    private sealed class NoopAuditEventWriter : IAuditEventWriter
+    {
+        public Task WriteAsync(AuditEvent auditEvent, CancellationToken ct = default) =>
+            Task.CompletedTask;
     }
 }
