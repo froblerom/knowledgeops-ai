@@ -2,6 +2,9 @@ using KnowledgeOps.Domain.Audit;
 using KnowledgeOps.Domain.Organizations;
 using KnowledgeOps.Domain.Users;
 using KnowledgeOps.Infrastructure.Persistence;
+using KnowledgeOps.Infrastructure.Observability;
+using ApplicationAuditEvent = KnowledgeOps.Application.Observability.AuditEvent;
+using ApplicationAuditSeverity = KnowledgeOps.Application.Observability.AuditSeverity;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
@@ -123,6 +126,45 @@ public sealed class SqlServerPersistenceTests
             await AssertDuplicateEmailRejectedAsync(options, testOrganizationId, testUserEmail);
             await AssertUnknownOrganizationRejectedAsync(options);
             await AssertInvalidRoleRejectedAsync(options, testUserId);
+        }
+        finally
+        {
+            await DropDatabaseIfPresentAsync(baseConnectionString, databaseName);
+        }
+    }
+
+    [SqlServerFact]
+    public async Task AuditWriter_PersistsSafeOperationalEventUsingExistingTable()
+    {
+        var baseConnectionString =
+            Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")!;
+        var databaseName = $"KnowledgeOpsIssue15AuditTests_{Guid.NewGuid():N}";
+        var databaseConnectionString = WithDatabase(baseConnectionString, databaseName);
+
+        try
+        {
+            var options = new DbContextOptionsBuilder<KnowledgeOpsDbContext>()
+                .UseSqlServer(databaseConnectionString)
+                .Options;
+
+            await using var context = new KnowledgeOpsDbContext(options);
+            await context.Database.MigrateAsync();
+
+            var writer = new EfAuditEventWriter(context);
+            await writer.WriteAsync(new ApplicationAuditEvent(
+                "UserLoginFailure",
+                "User login failed.",
+                ApplicationAuditSeverity.Warning,
+                "unsafe correlation id"));
+
+            var stored = await context.AuditLogEntries
+                .Where(entry => entry.EventType == "UserLoginFailure")
+                .SingleAsync();
+
+            Assert.Equal("User login failed.", stored.Message);
+            Assert.Equal(AuditSeverity.Warning, stored.Severity);
+            Assert.NotEqual("unsafe correlation id", stored.CorrelationId);
+            Assert.Equal(32, stored.CorrelationId!.Length);
         }
         finally
         {

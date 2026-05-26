@@ -2,6 +2,7 @@ using KnowledgeOps.Api.Controllers.Models;
 using KnowledgeOps.Application.Auth.Abstractions;
 using KnowledgeOps.Application.Auth.Commands;
 using KnowledgeOps.Application.Auth.Queries;
+using KnowledgeOps.Application.Observability;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,15 +15,24 @@ public sealed class AuthController : ControllerBase
     private readonly LoginCommandHandler _loginCommandHandler;
     private readonly GetCurrentUserQueryHandler _getCurrentUserQueryHandler;
     private readonly ICurrentUser _currentUser;
+    private readonly IAuditEventWriter _auditEventWriter;
+    private readonly ICorrelationContext _correlationContext;
+    private readonly ILogger<AuthController> _logger;
 
     public AuthController(
         LoginCommandHandler loginCommandHandler,
         GetCurrentUserQueryHandler getCurrentUserQueryHandler,
-        ICurrentUser currentUser)
+        ICurrentUser currentUser,
+        IAuditEventWriter auditEventWriter,
+        ICorrelationContext correlationContext,
+        ILogger<AuthController> logger)
     {
         _loginCommandHandler = loginCommandHandler;
         _getCurrentUserQueryHandler = getCurrentUserQueryHandler;
         _currentUser = currentUser;
+        _auditEventWriter = auditEventWriter;
+        _correlationContext = correlationContext;
+        _logger = logger;
     }
 
     [HttpPost("login")]
@@ -33,7 +43,27 @@ public sealed class AuthController : ControllerBase
             new LoginCommand(request.Email, request.Password), ct);
 
         if (result is null)
-            return Unauthorized(new { message = "Invalid credentials." });
+        {
+            await WriteAuditBestEffortAsync(
+                new AuditEvent(
+                    AuditEventTypes.UserLoginFailure,
+                    "User login failed.",
+                    AuditSeverity.Warning,
+                    _correlationContext.CorrelationId),
+                ct);
+
+            return Unauthorized(ApiErrorResponses.InvalidCredentials(_correlationContext.CorrelationId));
+        }
+
+        await WriteAuditBestEffortAsync(
+            new AuditEvent(
+                AuditEventTypes.UserLoginSuccess,
+                "User login succeeded.",
+                AuditSeverity.Info,
+                _correlationContext.CorrelationId,
+                result.OrganizationId,
+                result.UserId),
+            ct);
 
         return Ok(new LoginResponse
         {
@@ -66,7 +96,7 @@ public sealed class AuthController : ControllerBase
             new GetCurrentUserQuery(_currentUser.UserId), ct);
 
         if (result is null)
-            return Unauthorized(new { message = "Invalid credentials." });
+            return Unauthorized(ApiErrorResponses.InvalidCredentials(_correlationContext.CorrelationId));
 
         return Ok(new CurrentUserResponse
         {
@@ -77,5 +107,20 @@ public sealed class AuthController : ControllerBase
             Roles = result.Roles,
             Status = result.Status
         });
+    }
+
+    private async Task WriteAuditBestEffortAsync(AuditEvent auditEvent, CancellationToken ct)
+    {
+        try
+        {
+            await _auditEventWriter.WriteAsync(auditEvent, ct);
+        }
+        catch
+        {
+            _logger.LogWarning(
+                "Audit write failed. EventType={EventType} CorrelationId={CorrelationId}",
+                auditEvent.EventType,
+                auditEvent.CorrelationId);
+        }
     }
 }

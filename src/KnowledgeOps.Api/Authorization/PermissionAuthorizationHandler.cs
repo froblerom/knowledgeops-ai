@@ -1,5 +1,6 @@
 using KnowledgeOps.Application.Auth.Abstractions;
 using KnowledgeOps.Application.Authorization;
+using KnowledgeOps.Application.Observability;
 using Microsoft.AspNetCore.Authorization;
 
 namespace KnowledgeOps.Api.Authorization;
@@ -11,26 +12,32 @@ public sealed class PermissionAuthorizationHandler : AuthorizationHandler<Permis
 {
     private readonly IPermissionService _permissionService;
     private readonly ICurrentUser _currentUser;
+    private readonly IAuditEventWriter _auditEventWriter;
+    private readonly ICorrelationContext _correlationContext;
     private readonly ILogger<PermissionAuthorizationHandler> _logger;
 
     public PermissionAuthorizationHandler(
         IPermissionService permissionService,
         ICurrentUser currentUser,
+        IAuditEventWriter auditEventWriter,
+        ICorrelationContext correlationContext,
         ILogger<PermissionAuthorizationHandler> logger)
     {
         _permissionService = permissionService;
         _currentUser = currentUser;
+        _auditEventWriter = auditEventWriter;
+        _correlationContext = correlationContext;
         _logger = logger;
     }
 
-    protected override Task HandleRequirementAsync(
+    protected override async Task HandleRequirementAsync(
         AuthorizationHandlerContext context,
         PermissionRequirement requirement)
     {
         if (!_currentUser.IsAuthenticated)
         {
             context.Fail();
-            return Task.CompletedTask;
+            return;
         }
 
         if (_permissionService.HasPermission(_currentUser, requirement.Permission))
@@ -41,13 +48,33 @@ public sealed class PermissionAuthorizationHandler : AuthorizationHandler<Permis
         {
             _logger.LogWarning(
                 "Authorization denied. EventType={EventType} UserId={UserId} OrganizationId={OrganizationId}",
-                "PermissionDenied",
+                AuditEventTypes.PermissionDenied,
                 _currentUser.UserId,
                 _currentUser.OrganizationId);
 
+            await WriteAuditBestEffortAsync();
             context.Fail();
         }
+    }
 
-        return Task.CompletedTask;
+    private async Task WriteAuditBestEffortAsync()
+    {
+        try
+        {
+            await _auditEventWriter.WriteAsync(new AuditEvent(
+                AuditEventTypes.PermissionDenied,
+                "Permission denied.",
+                AuditSeverity.Warning,
+                _correlationContext.CorrelationId,
+                _currentUser.OrganizationId,
+                _currentUser.UserId));
+        }
+        catch
+        {
+            _logger.LogWarning(
+                "Audit write failed. EventType={EventType} CorrelationId={CorrelationId}",
+                AuditEventTypes.PermissionDenied,
+                _correlationContext.CorrelationId);
+        }
     }
 }

@@ -60,6 +60,18 @@ public sealed class AssemblyDependencyTests
         AssertDoesNotReference("Microsoft.AspNetCore.Mvc");
     }
 
+    [Fact]
+    public void Application_Should_Not_Reference_EntityFrameworkCoreSqlServer()
+    {
+        AssertDoesNotReference("Microsoft.EntityFrameworkCore.SqlServer");
+    }
+
+    [Fact]
+    public void Application_Should_Not_Reference_MicrosoftDataSqlClient()
+    {
+        AssertDoesNotReference("Microsoft.Data.SqlClient");
+    }
+
     private static void AssertDoesNotReference(string forbiddenAssemblyPrefix)
     {
         var referencedAssemblyNames = ApplicationAssembly.GetReferencedAssemblies()

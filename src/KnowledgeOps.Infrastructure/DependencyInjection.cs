@@ -1,5 +1,7 @@
 using KnowledgeOps.Application.Auth.Abstractions;
+using KnowledgeOps.Application.Observability;
 using KnowledgeOps.Infrastructure.Auth;
+using KnowledgeOps.Infrastructure.Observability;
 using KnowledgeOps.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -39,6 +41,8 @@ public static class DependencyInjection
         services.AddScoped<IUserAuthRepository, UserAuthRepository>();
         services.AddSingleton<IPasswordHasher, PasswordHasherService>();
         services.AddSingleton<ITokenService, JwtTokenService>();
+        services.AddScoped<IAuditEventWriter, EfAuditEventWriter>();
+        services.AddScoped<IDatabaseHealthCheck, EfDatabaseHealthCheck>();
 
         return services;
     }

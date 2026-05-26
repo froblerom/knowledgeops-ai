@@ -1,6 +1,9 @@
-import { HttpInterceptorFn } from '@angular/common/http';
+import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
+import { Router } from '@angular/router';
+import { catchError, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { ApiErrorService } from '../services/api-error.service';
 import { AuthSessionService } from '../services/auth-session.service';
 
 export const apiInterceptor: HttpInterceptorFn = (req, next) => {
@@ -9,15 +12,22 @@ export const apiInterceptor: HttpInterceptorFn = (req, next) => {
   }
 
   const session = inject(AuthSessionService);
+  const errors = inject(ApiErrorService);
+  const router = inject(Router);
   const token = session.getAccessToken();
 
-  if (!token) {
-    return next(req);
-  }
+  const authReq = token
+    ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
+    : req;
 
-  const authReq = req.clone({
-    setHeaders: { Authorization: `Bearer ${token}` }
-  });
+  return next(authReq).pipe(
+    catchError((response: HttpErrorResponse) => {
+      if (response.status === 401) {
+        session.clearSession();
+        void router.navigate(['/login']);
+      }
 
-  return next(authReq);
+      return throwError(() => errors.fromHttpError(response));
+    })
+  );
 };
