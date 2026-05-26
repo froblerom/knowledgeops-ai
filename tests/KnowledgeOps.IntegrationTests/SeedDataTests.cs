@@ -214,6 +214,7 @@ public sealed class SeedDataTests
                 [
                     "__EFMigrationsHistory",
                     "audit_log_entries",
+                    "documents",
                     "organizations",
                     "user_roles",
                     "users"

@@ -1,9 +1,11 @@
 using KnowledgeOps.Application.Auth.Abstractions;
+using KnowledgeOps.Application.Documents;
 using KnowledgeOps.Application.Observability;
 using KnowledgeOps.Application.Authorization;
 using KnowledgeOps.Application.Users;
 using KnowledgeOps.Infrastructure.Auth;
 using KnowledgeOps.Infrastructure.Authorization;
+using KnowledgeOps.Infrastructure.Documents;
 using KnowledgeOps.Infrastructure.Observability;
 using KnowledgeOps.Infrastructure.Persistence;
 using KnowledgeOps.Infrastructure.Users;
@@ -44,6 +46,7 @@ public static class DependencyInjection
 
         services.AddScoped<IUserAuthRepository, UserAuthRepository>();
         services.AddScoped<IUserAccessStateReader, EfUserAccessStateReader>();
+        services.AddScoped<IDocumentRepository, EfDocumentRepository>();
         services.AddScoped<IUserManagementRepository, EfUserManagementRepository>();
         services.AddSingleton<IPasswordHasher, PasswordHasherService>();
         services.AddSingleton<ITokenService, JwtTokenService>();

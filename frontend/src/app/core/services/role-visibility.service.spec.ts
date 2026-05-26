@@ -152,10 +152,29 @@ describe('RoleVisibilityService', () => {
 
   // ── Unknown/empty roles ──────────────────────────────────────────────────────
 
+  // ── canDisableDocumentRetrieval ──────────────────────────────────────────────
+
+  it('canDisableDocumentRetrieval returns true for KnowledgeAdmin and Admin', () => {
+    for (const role of ['KnowledgeAdmin', 'Admin']) {
+      sessionService.saveSession(makeSession([role]));
+      expect(service.canDisableDocumentRetrieval()).toBe(true);
+    }
+  });
+
+  it('canDisableDocumentRetrieval returns false for Manager, Agent, Supervisor', () => {
+    for (const role of ['Manager', 'Agent', 'Supervisor']) {
+      sessionService.saveSession(makeSession([role]));
+      expect(service.canDisableDocumentRetrieval()).toBe(false);
+    }
+  });
+
+  // ── Unknown/empty roles ──────────────────────────────────────────────────────
+
   it('unknown role returns false for all restricted visibility helpers', () => {
     sessionService.saveSession(makeSession(['UnknownRole']));
     expect(service.canViewDocuments()).toBe(false);
     expect(service.canUploadDocuments()).toBe(false);
+    expect(service.canDisableDocumentRetrieval()).toBe(false);
     expect(service.canViewDashboard()).toBe(false);
     expect(service.canViewFeedbackReview()).toBe(false);
     expect(service.canViewAdmin()).toBe(false);
@@ -166,6 +185,7 @@ describe('RoleVisibilityService', () => {
     // canAskChat and canViewSystemHealth check isAuthenticated, not roles
     expect(service.canViewDocuments()).toBe(false);
     expect(service.canUploadDocuments()).toBe(false);
+    expect(service.canDisableDocumentRetrieval()).toBe(false);
     expect(service.canViewDashboard()).toBe(false);
     expect(service.canViewFeedbackReview()).toBe(false);
     expect(service.canViewAdmin()).toBe(false);
@@ -176,6 +196,7 @@ describe('RoleVisibilityService', () => {
     expect(service.canAskChat()).toBe(false);
     expect(service.canViewDocuments()).toBe(false);
     expect(service.canUploadDocuments()).toBe(false);
+    expect(service.canDisableDocumentRetrieval()).toBe(false);
     expect(service.canViewDashboard()).toBe(false);
     expect(service.canViewFeedbackReview()).toBe(false);
     expect(service.canViewAdmin()).toBe(false);
