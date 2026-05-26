@@ -16,6 +16,9 @@ public sealed class OperationalContractsTests
 
         Assert.Equal(
             [
+                "DocumentProcessingFailed",
+                "DocumentProcessingStarted",
+                "DocumentProcessingSucceeded",
                 "DocumentRetrievalDisabled",
                 "DocumentUploadAccepted",
                 "DocumentUploadFailed",

@@ -35,15 +35,6 @@ public static class DependencyInjection
             options.UseSqlServer(connectionString);
         });
 
-        services.AddOptions<JwtSettings>()
-            .BindConfiguration("Jwt")
-            .Validate(
-                s => !string.IsNullOrWhiteSpace(s.SigningKey) && s.SigningKey.Length >= 32,
-                "JWT signing key is missing or too short. Set 'Jwt:SigningKey' to a random value " +
-                "of at least 32 characters using dotnet user-secrets or an environment variable. " +
-                "Never commit a real signing key to source control.")
-            .ValidateOnStart();
-
         services.AddScoped<IUserAuthRepository, UserAuthRepository>();
         services.AddScoped<IUserAccessStateReader, EfUserAccessStateReader>();
         services.AddScoped<IDocumentRepository, EfDocumentRepository>();
@@ -54,6 +45,24 @@ public static class DependencyInjection
         services.AddSingleton<ITokenService, JwtTokenService>();
         services.AddScoped<IAuditEventWriter, EfAuditEventWriter>();
         services.AddScoped<IDatabaseHealthCheck, EfDatabaseHealthCheck>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers JWT settings validation. Call only from API hosts that authenticate requests.
+    /// The Worker host does not handle JWT and must not call this method.
+    /// </summary>
+    public static IServiceCollection AddJwtInfrastructure(this IServiceCollection services)
+    {
+        services.AddOptions<JwtSettings>()
+            .BindConfiguration("Jwt")
+            .Validate(
+                s => !string.IsNullOrWhiteSpace(s.SigningKey) && s.SigningKey.Length >= 32,
+                "JWT signing key is missing or too short. Set 'Jwt:SigningKey' to a random value " +
+                "of at least 32 characters using dotnet user-secrets or an environment variable. " +
+                "Never commit a real signing key to source control.")
+            .ValidateOnStart();
 
         return services;
     }

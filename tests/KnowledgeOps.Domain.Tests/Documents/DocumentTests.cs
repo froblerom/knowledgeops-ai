@@ -151,6 +151,72 @@ public sealed class DocumentTests
         Assert.False(deleted.IsEligibleForRetrieval());
     }
 
+    [Fact]
+    public void MarkProcessed_WhenUploaded_Throws()
+    {
+        var doc = MakeDocument();
+
+        Assert.Throws<InvalidOperationException>(() => doc.MarkProcessed(UploadedAt.AddMinutes(1)));
+    }
+
+    [Fact]
+    public void MarkFailed_WhenUploaded_Throws()
+    {
+        var doc = MakeDocument();
+
+        Assert.Throws<InvalidOperationException>(() =>
+            doc.MarkFailed("Some reason.", UploadedAt.AddMinutes(1)));
+    }
+
+    [Fact]
+    public void StartProcessing_AfterFailed_Throws()
+    {
+        var doc = MakeDocument();
+        doc.StartProcessing(UploadedAt.AddMinutes(1));
+        doc.MarkFailed("Some reason.", UploadedAt.AddMinutes(2));
+
+        Assert.Throws<InvalidOperationException>(() => doc.StartProcessing(UploadedAt.AddMinutes(3)));
+    }
+
+    [Fact]
+    public void StartProcessing_AfterProcessed_Throws()
+    {
+        var doc = MakeDocument();
+        doc.StartProcessing(UploadedAt.AddMinutes(1));
+        doc.MarkProcessed(UploadedAt.AddMinutes(2));
+
+        Assert.Throws<InvalidOperationException>(() => doc.StartProcessing(UploadedAt.AddMinutes(3)));
+    }
+
+    [Fact]
+    public void MarkProcessed_DoesNotEnableRetrieval()
+    {
+        var doc = MakeDocument();
+        doc.StartProcessing(UploadedAt.AddMinutes(1));
+        doc.MarkProcessed(UploadedAt.AddMinutes(2));
+
+        Assert.False(doc.IsRetrievalEnabled);
+    }
+
+    [Fact]
+    public void MarkFailed_DoesNotEnableRetrieval()
+    {
+        var doc = MakeDocument();
+        doc.StartProcessing(UploadedAt.AddMinutes(1));
+        doc.MarkFailed("Some reason.", UploadedAt.AddMinutes(2));
+
+        Assert.False(doc.IsRetrievalEnabled);
+    }
+
+    [Fact]
+    public void MarkFailed_WithNullReason_Throws()
+    {
+        var doc = MakeDocument();
+        doc.StartProcessing(UploadedAt.AddMinutes(1));
+
+        Assert.Throws<ArgumentException>(() => doc.MarkFailed(null!, UploadedAt.AddMinutes(2)));
+    }
+
     private static Document MakeDocument() =>
         new()
         {

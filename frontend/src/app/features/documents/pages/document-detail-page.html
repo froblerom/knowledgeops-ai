@@ -15,7 +15,9 @@
       <dt>Content type</dt><dd>{{ document.contentType }}</dd>
       <dt>File size</dt><dd>{{ document.fileSizeBytes }} bytes</dd>
       <dt>Processing status</dt><dd>{{ status.processingStatus }}</dd>
-      <dt>Failure reason</dt><dd>{{ status.failureReason || 'None reported' }}</dd>
+      @if (status.processingStatus === 'Failed' && status.failureReason) {
+        <dt>Failure reason</dt><dd>{{ status.failureReason }}</dd>
+      }
       <dt>Retrieval</dt><dd>{{ document.isRetrievalEnabled ? 'Enabled' : 'Disabled' }}</dd>
       <dt>Uploaded</dt><dd>{{ document.uploadedAt | date:'medium' }}</dd>
       <dt>Processing started</dt><dd>{{ status.processingStartedAt ? (status.processingStartedAt | date:'medium') : 'Not started' }}</dd>

@@ -66,6 +66,18 @@ All 212 Application tests and 102 API tests pass. Angular test suite passes 96/9
 
 **Residual risk**: `LocalDocumentStorage` uses local filesystem only; no production cloud adapter exists. Uploaded files are lost if the host is replaced. Acceptable for MVP local development; cloud storage adapter must be implemented before any production deployment. Re-enable and retry endpoints remain deferred to Phase 2.
 
+## Sprint 12 Issue #22 Disposition
+
+Asynchronous document processing worker foundation is fully implemented. `DocumentProcessingWorker` (`BackgroundService`) polls for `Uploaded` documents using `PeriodicTimer` and delegates to `DocumentProcessingOrchestrator` per-cycle scope. The orchestrator atomically claims a document via `ExecuteUpdateAsync` (WHERE `ProcessingStatus == Uploaded`), invokes `PlaceholderDocumentProcessingStep` (no-op), then calls `MarkProcessedAsync` or `MarkFailedAsync`. Processing state transitions do not change `IsRetrievalEnabled`. Failure reasons use only `ex.Message`, trimmed and capped at 200 characters — never `ex.ToString()`. Processing audit events (`DocumentProcessingStarted`, `DocumentProcessingSucceeded`, `DocumentProcessingFailed`) are emitted as best-effort. Angular `DocumentDetailPage` now polls status every 5 seconds while the status is non-terminal (Uploaded/Processing) and stops automatically on Processed/Failed or ngOnDestroy.
+
+JWT blocker resolved: `AddJwtInfrastructure()` is split from `AddInfrastructure()`; the Worker calls only `AddInfrastructure()` and does not require `Jwt:SigningKey`. `WorkerCorrelationContext` provides per-scope non-HTTP correlation IDs. `WorkerSettings` defaults `PollingIntervalSeconds` to 10 with safe clamping.
+
+Non-integration tests: 27 Domain + 228 Application + 102 API = 357 passed, 0 failed. Angular test suite passes 103/103. No migration created; all required columns exist from Sprint 10. Scope confirmed: no extraction, chunking, embeddings, vector storage, RAG, citations, retry endpoint, re-enable endpoint, external queue, or distributed dashboard.
+
+**New residual risks**:
+- `PlaceholderDocumentProcessingStep` does nothing; documents reach `Processed` status without any real extraction/embedding. `IsEligibleForRetrieval()` remains false until a re-enable operation is implemented (Phase 2+). Acceptable and required by Sprint 12 scope.
+- Worker runs locally via `dotnet run`; no production deployment, container, or service-manager configuration exists yet. Cloud deployment must configure `ConnectionStrings__DefaultConnection` and `Worker:PollingIntervalSeconds` via environment variables or secrets.
+
 ## Update Rule
 
 Read this file for Level 3 work and release review. Update risk status, mitigation or new issue references when implementation evidence changes the risk.
