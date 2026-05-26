@@ -227,6 +227,198 @@ public sealed class DocumentsControllerTests : IClassFixture<DocumentsApiTestFac
         Assert.DoesNotContain("organizationId", raw, StringComparison.OrdinalIgnoreCase);
     }
 
+    // ──────────────────────────────────────────────────────────────
+    // Upload — authorization
+    // ──────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Upload_WithoutAuthentication_Returns401()
+    {
+        var response = await _factory.CreateClient().PostAsync(
+            "/api/v1/documents",
+            BuildUploadContent());
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(DocumentsApiTestFactory.AgentEmail)]
+    [InlineData(DocumentsApiTestFactory.SupervisorEmail)]
+    [InlineData(DocumentsApiTestFactory.ManagerEmail)]
+    public async Task Upload_WithoutUploadPermission_Returns403(string email)
+    {
+        var response = await (await AuthenticateAsync(email)).PostAsync(
+            "/api/v1/documents",
+            BuildUploadContent());
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(DocumentsApiTestFactory.KnowledgeAdminEmail)]
+    [InlineData(DocumentsApiTestFactory.AdminEmail)]
+    public async Task Upload_AllowedRoles_Returns201WithUploadedStatus(string email)
+    {
+        var response = await (await AuthenticateAsync(email)).PostAsync(
+            "/api/v1/documents",
+            BuildUploadContent());
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Equal("Uploaded", body.GetProperty("processingStatus").GetString());
+        Assert.False(body.GetProperty("isRetrievalEnabled").GetBoolean());
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // Upload — validation
+    // ──────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Upload_MissingTitle_Returns400()
+    {
+        var content = new MultipartFormDataContent();
+        var fileContent = new ByteArrayContent(new byte[1024]);
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+        content.Add(fileContent, "file", "policy.pdf");
+
+        var response = await (await AuthenticateAsync(DocumentsApiTestFactory.KnowledgeAdminEmail))
+            .PostAsync("/api/v1/documents", content);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Upload_MissingFile_Returns400()
+    {
+        var content = new MultipartFormDataContent();
+        content.Add(new StringContent("Policy Document"), "title");
+
+        var response = await (await AuthenticateAsync(DocumentsApiTestFactory.KnowledgeAdminEmail))
+            .PostAsync("/api/v1/documents", content);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Upload_UnsupportedExtension_Returns400()
+    {
+        var response = await (await AuthenticateAsync(DocumentsApiTestFactory.KnowledgeAdminEmail)).PostAsync(
+            "/api/v1/documents",
+            BuildUploadContent(fileName: "malware.exe", contentType: "application/octet-stream"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Upload_UnsupportedContentType_Returns400()
+    {
+        var response = await (await AuthenticateAsync(DocumentsApiTestFactory.KnowledgeAdminEmail)).PostAsync(
+            "/api/v1/documents",
+            BuildUploadContent(contentType: "image/png"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Upload_OversizedFile_Returns400()
+    {
+        var response = await (await AuthenticateAsync(DocumentsApiTestFactory.KnowledgeAdminEmail)).PostAsync(
+            "/api/v1/documents",
+            BuildUploadContent(fileSizeBytes: 10 * 1024 * 1024 + 1));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // Upload — response contract
+    // ──────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Upload_Success_ResponseDoesNotExposeStorageLocation()
+    {
+        var raw = await (await (await AuthenticateAsync(DocumentsApiTestFactory.KnowledgeAdminEmail))
+            .PostAsync("/api/v1/documents", BuildUploadContent())).Content.ReadAsStringAsync();
+
+        Assert.DoesNotContain("storageLocation", raw, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("local://", raw, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Upload_Success_ResponseDoesNotExposeOrganizationId()
+    {
+        var raw = await (await (await AuthenticateAsync(DocumentsApiTestFactory.KnowledgeAdminEmail))
+            .PostAsync("/api/v1/documents", BuildUploadContent())).Content.ReadAsStringAsync();
+
+        Assert.DoesNotContain("organizationId", raw, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Upload_Success_ResponseShowsExpectedNullFields()
+    {
+        var response = await (await AuthenticateAsync(DocumentsApiTestFactory.KnowledgeAdminEmail)).PostAsync(
+            "/api/v1/documents", BuildUploadContent());
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+
+        Assert.Equal(JsonValueKind.Null, body.GetProperty("failureReason").ValueKind);
+        Assert.Equal(JsonValueKind.Null, body.GetProperty("processingStartedAt").ValueKind);
+        Assert.Equal(JsonValueKind.Null, body.GetProperty("processedAt").ValueKind);
+    }
+
+    [Fact]
+    public async Task Upload_Success_LocationHeaderPointsToDocumentDetail()
+    {
+        var response = await (await AuthenticateAsync(DocumentsApiTestFactory.KnowledgeAdminEmail)).PostAsync(
+            "/api/v1/documents", BuildUploadContent());
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var documentId = body.GetProperty("documentId").GetGuid();
+
+        Assert.NotNull(response.Headers.Location);
+        Assert.Contains(documentId.ToString(), response.Headers.Location.ToString());
+    }
+
+    [Fact]
+    public async Task Upload_Success_DocumentAssignedToActorOrganization()
+    {
+        var response = await (await AuthenticateAsync(DocumentsApiTestFactory.KnowledgeAdminEmail)).PostAsync(
+            "/api/v1/documents", BuildUploadContent());
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var documentId = body.GetProperty("documentId").GetGuid();
+
+        var listed = await (await AuthenticateAsync(DocumentsApiTestFactory.KnowledgeAdminEmail))
+            .GetAsync("/api/v1/documents");
+        var list = await listed.Content.ReadFromJsonAsync<JsonElement>();
+
+        Assert.Equal(1, list.GetArrayLength());
+        Assert.Equal(documentId, list[0].GetProperty("documentId").GetGuid());
+    }
+
+    [Fact]
+    public async Task Upload_Success_EmitsUploadAcceptedAuditEvent()
+    {
+        await (await AuthenticateAsync(DocumentsApiTestFactory.KnowledgeAdminEmail)).PostAsync(
+            "/api/v1/documents", BuildUploadContent());
+
+        Assert.Single(_factory.Audit.Events, e => e.EventType == AuditEventTypes.DocumentUploadAccepted);
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // Upload helpers
+    // ──────────────────────────────────────────────────────────────
+
+    private static MultipartFormDataContent BuildUploadContent(
+        string title = "Policy Document",
+        string fileName = "policy.pdf",
+        string contentType = "application/pdf",
+        int fileSizeBytes = 1024)
+    {
+        var content = new MultipartFormDataContent();
+        content.Add(new StringContent(title), "title");
+        var fileContent = new ByteArrayContent(new byte[fileSizeBytes]);
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+        content.Add(fileContent, "file", fileName);
+        return content;
+    }
+
     private async Task<HttpClient> AuthenticateAsync(string email)
     {
         var client = _factory.CreateClient();
@@ -283,11 +475,13 @@ public sealed class DocumentsApiTestFactory : WebApplicationFactory<Program>
     public static readonly Guid DocId = Guid.Parse("ee000000-0000-4000-8000-000000000001");
 
     public FakeDocumentRepository DocumentRepository { get; } = new();
+    public FakeDocumentStorage DocumentStorage { get; } = new();
     public RecordingAuditWriter Audit { get; } = new();
 
     public void Reset()
     {
         DocumentRepository.Reset();
+        DocumentStorage.Reset();
         Audit.Events.Clear();
     }
 
@@ -316,6 +510,8 @@ public sealed class DocumentsApiTestFactory : WebApplicationFactory<Program>
                 new FixedAccessStateReader(sp.GetRequiredService<IUserAuthRepository>()));
             services.RemoveAll<IDocumentRepository>();
             services.AddSingleton<IDocumentRepository>(DocumentRepository);
+            services.RemoveAll<IDocumentStorage>();
+            services.AddSingleton<IDocumentStorage>(DocumentStorage);
             services.RemoveAll<IPasswordHasher>();
             services.AddSingleton<IPasswordHasher, TestPasswordHasher>();
             services.RemoveAll<IAuditEventWriter>();
@@ -424,6 +620,35 @@ public sealed class DocumentsApiTestFactory : WebApplicationFactory<Program>
         public Task WriteAsync(AuditEvent auditEvent, CancellationToken ct = default)
         {
             Events.Add(auditEvent);
+            return Task.CompletedTask;
+        }
+    }
+
+    public sealed class FakeDocumentStorage : IDocumentStorage
+    {
+        private readonly List<string> _stored = [];
+        public IReadOnlyList<string> Stored => _stored;
+        public bool ShouldFailStore { get; set; }
+
+        public void Reset()
+        {
+            _stored.Clear();
+            ShouldFailStore = false;
+        }
+
+        public Task<StoredDocumentReference> StoreAsync(
+            Stream fileStream, string safeFileName, string contentType, CancellationToken ct = default)
+        {
+            if (ShouldFailStore)
+                throw new InvalidOperationException("Simulated storage failure.");
+            var reference = $"local://test-{safeFileName}";
+            _stored.Add(reference);
+            return Task.FromResult(new StoredDocumentReference(reference));
+        }
+
+        public Task DeleteAsync(string storageReference, CancellationToken ct = default)
+        {
+            _stored.Remove(storageReference);
             return Task.CompletedTask;
         }
     }

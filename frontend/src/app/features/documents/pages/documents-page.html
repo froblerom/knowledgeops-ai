@@ -2,6 +2,9 @@
   <header>
     <h1>Documents</h1>
     <p>Knowledge base documents for your organization.</p>
+    @if (roleVisibility.canUploadDocuments()) {
+      <a routerLink="new" class="upload-link">Upload Document</a>
+    }
   </header>
 
   @if (loading) {

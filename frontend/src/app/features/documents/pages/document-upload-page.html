@@ -1,0 +1,51 @@
+<section class="upload-page">
+  <header>
+    <h1>Upload Document</h1>
+    <a routerLink="/documents">Back to Documents</a>
+  </header>
+
+  @if (!roleVisibility.canUploadDocuments()) {
+    <p class="access-denied">You do not have permission to upload documents.</p>
+  } @else {
+    @if (validationErrors.length > 0) {
+      <ul class="validation-errors" role="alert">
+        @for (err of validationErrors; track err) {
+          <li>{{ err }}</li>
+        }
+      </ul>
+    }
+
+    @if (error) {
+      <app-error-state [message]="error.message" [errorId]="error.errorId" />
+    }
+
+    <form (ngSubmit)="onSubmit()" novalidate>
+      <div class="field">
+        <label for="title">Title</label>
+        <input
+          id="title"
+          type="text"
+          [(ngModel)]="title"
+          name="title"
+          autocomplete="off"
+          [disabled]="submitting" />
+      </div>
+
+      <div class="field">
+        <label for="file">File</label>
+        <input
+          id="file"
+          type="file"
+          name="file"
+          accept=".pdf,.txt,.md,.markdown,.docx"
+          (change)="onFileChange($event)"
+          [disabled]="submitting" />
+        <small>Supported formats: PDF, TXT, MD, DOCX. Maximum size: 10 MB.</small>
+      </div>
+
+      <button type="submit" [disabled]="submitting">
+        {{ submitting ? 'Uploading…' : 'Upload Document' }}
+      </button>
+    </form>
+  }
+</section>

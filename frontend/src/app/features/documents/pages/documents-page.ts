@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { DocumentService, ManagedDocument } from '../../../core/services/document.service';
 import { ApiErrorService, ApiRequestError } from '../../../core/services/api-error.service';
+import { RoleVisibilityService } from '../../../core/services/role-visibility.service';
 import { LoadingState } from '../../../shared/components/loading-state/loading-state';
 import { ErrorState } from '../../../shared/components/error-state/error-state';
 
@@ -15,6 +16,7 @@ import { ErrorState } from '../../../shared/components/error-state/error-state';
 export class DocumentsPage implements OnInit {
   private readonly documentsApi = inject(DocumentService);
   private readonly apiError = inject(ApiErrorService);
+  readonly roleVisibility = inject(RoleVisibilityService);
 
   documents: ManagedDocument[] = [];
   loading = true;

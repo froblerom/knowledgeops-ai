@@ -24,6 +24,7 @@ describe('DocumentDetailPage', () => {
     isRetrievalEnabled: true,
     uploadedByUserId: 'user-1',
     uploadedAt: '2026-01-01T00:00:00Z',
+    processingStartedAt: null,
     processedAt: null
   };
   const status: DocumentProcessingStatusResponse = {

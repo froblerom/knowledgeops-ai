@@ -12,6 +12,7 @@ public sealed class DocumentResponse
     public bool IsRetrievalEnabled { get; init; }
     public Guid UploadedByUserId { get; init; }
     public DateTimeOffset UploadedAt { get; init; }
+    public DateTimeOffset? ProcessingStartedAt { get; init; }
     public DateTimeOffset? ProcessedAt { get; init; }
 }
 

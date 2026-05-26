@@ -58,6 +58,14 @@ Document metadata persistence and lifecycle behavior are validated for Sprint 10
 
 `DocumentMetadataFoundation` was regenerated with the required fields, `storage_location` non-null constraint, `is_retrieval_enabled` database default `false`, four-state status check constraint, organization/user foreign keys, and six supporting indexes. On 2026-05-26 the migration applied successfully to a disposable local SQL Server instance and all 32 SQL-gated integration tests passed, including canonical document persistence, default/constraint, scope, sorting, soft-delete, and transition tests. No new Issue #20 residual risk remains; the existing future retrieval/RAG authorization risk remains open for its owning sprints.
 
+## Sprint 11 Issue #21 Disposition
+
+Document upload via `POST /api/v1/documents` (multipart/form-data) is implemented across all layers. The `IDocumentStorage` / `LocalDocumentStorage` abstraction writes files to `.local/storage/documents/` using a `local://` URI scheme; no absolute paths or storage internals are exposed in API responses or Angular UI. The upload flow is atomic: validate → store → persist; `DeleteAsync` is called best-effort when `CreateAsync` fails. Extension, content-type, and size validation are enforced in the Application layer; `FormOptions.MultipartBodyLengthLimit` and `[RequestSizeLimit]` are enforced at the framework level. Three distinct audit events (`DocumentUploadAccepted`, `DocumentUploadRejected`, `DocumentUploadFailed`) allow ops teams to distinguish validation failures from infrastructure failures. Angular `DocumentUploadPage` is role-gated by `canUploadDocuments()` (UX-only; backend `[RequirePermission(Documents.Upload)]` is authoritative).
+
+All 212 Application tests and 102 API tests pass. Angular test suite passes 96/96 with exit code 0 (router navigation mocked via `vi.spyOn` rather than token replacement). `git ls-files .local/` confirms no storage files are committed. No migration was created; `storage_location` is updated to a real `local://` reference on upload. No synchronous processing, extraction, chunking, embeddings, retrieval, RAG, or citations were introduced.
+
+**Residual risk**: `LocalDocumentStorage` uses local filesystem only; no production cloud adapter exists. Uploaded files are lost if the host is replaced. Acceptable for MVP local development; cloud storage adapter must be implemented before any production deployment. Re-enable and retry endpoints remain deferred to Phase 2.
+
 ## Update Rule
 
 Read this file for Level 3 work and release review. Update risk status, mitigation or new issue references when implementation evidence changes the risk.

@@ -23,6 +23,11 @@ export const routes: Routes = [
           import('./features/documents/pages/documents-page').then(m => m.DocumentsPage)
       },
       {
+        path: 'new',
+        loadComponent: () =>
+          import('./features/documents/pages/document-upload-page').then(m => m.DocumentUploadPage)
+      },
+      {
         path: ':documentId',
         loadComponent: () =>
           import('./features/documents/pages/document-detail-page').then(m => m.DocumentDetailPage)

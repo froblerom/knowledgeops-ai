@@ -1,0 +1,29 @@
+.upload-page {
+  padding: 1rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+
+  label {
+    font-weight: 500;
+  }
+
+  small {
+    color: #666;
+    font-size: 0.8rem;
+  }
+}
+
+.validation-errors {
+  color: #c00;
+  margin-bottom: 1rem;
+  padding-left: 1.25rem;
+}
+
+.access-denied {
+  color: #c00;
+}

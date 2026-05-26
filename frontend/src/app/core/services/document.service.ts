@@ -16,6 +16,7 @@ export interface ManagedDocument {
   isRetrievalEnabled: boolean;
   uploadedByUserId: string;
   uploadedAt: string;
+  processingStartedAt: string | null;
   processedAt: string | null;
 }
 
@@ -53,5 +54,13 @@ export class DocumentService {
       `${this.baseUrl}/${documentId}/disable`,
       {}
     );
+  }
+
+  upload(title: string, file: File): Observable<ManagedDocument> {
+    const formData = new FormData();
+    formData.append('title', title);
+    formData.append('file', file);
+    // Do not set Content-Type manually; browser sets multipart/form-data with boundary.
+    return this.http.post<ManagedDocument>(this.baseUrl, formData);
   }
 }
