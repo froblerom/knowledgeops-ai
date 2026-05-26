@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
+import { adminVisibilityGuard } from './core/guards/admin-visibility.guard';
 
 export const routes: Routes = [
   {
@@ -32,9 +33,25 @@ export const routes: Routes = [
   },
   {
     path: 'admin',
-    loadComponent: () =>
-      import('./features/admin/pages/admin-page').then(m => m.AdminPage),
-    canActivate: [authGuard]
+    canActivate: [authGuard, adminVisibilityGuard],
+    children: [
+      { path: '', redirectTo: 'users', pathMatch: 'full' },
+      {
+        path: 'users',
+        loadComponent: () =>
+          import('./features/admin/pages/admin-page').then(m => m.AdminPage)
+      },
+      {
+        path: 'users/new',
+        loadComponent: () =>
+          import('./features/admin/pages/admin-user-create-page').then(m => m.AdminUserCreatePage)
+      },
+      {
+        path: 'users/:userId',
+        loadComponent: () =>
+          import('./features/admin/pages/admin-user-detail-page').then(m => m.AdminUserDetailPage)
+      }
+    ]
   },
   {
     path: '**',

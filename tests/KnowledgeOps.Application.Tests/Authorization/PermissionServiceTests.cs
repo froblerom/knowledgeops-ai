@@ -50,6 +50,13 @@ public sealed class PermissionServiceTests
     }
 
     [Fact]
+    public void HasPermission_PersistedAccessStateUsesCurrentRoles()
+    {
+        var state = new UserAccessState(Guid.NewGuid(), Guid.NewGuid(), ["Agent"]);
+        Assert.False(Service.HasPermission(state, KnowledgeOpsPermissions.Users.View));
+    }
+
+    [Fact]
     public void HasPermission_NonAdminWithUsersView_ReturnsFalse()
     {
         foreach (var role in new[] { "Agent", "Supervisor", "KnowledgeAdmin", "Manager" })

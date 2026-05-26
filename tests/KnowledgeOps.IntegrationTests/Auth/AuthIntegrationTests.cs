@@ -115,6 +115,7 @@ public sealed class AuthIntegrationTests
 
             var services = new ServiceCollection();
             services.AddLogging();
+            services.AddSingleton<IConfiguration>(configuration);
             services.AddApplication();
             services.AddInfrastructure(configuration);
 

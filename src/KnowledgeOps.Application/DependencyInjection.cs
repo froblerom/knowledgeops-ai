@@ -1,6 +1,7 @@
 using KnowledgeOps.Application.Auth.Commands;
 using KnowledgeOps.Application.Auth.Queries;
 using KnowledgeOps.Application.Authorization;
+using KnowledgeOps.Application.Users;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace KnowledgeOps.Application;
@@ -11,6 +12,7 @@ public static class DependencyInjection
     {
         services.AddScoped<LoginCommandHandler>();
         services.AddScoped<GetCurrentUserQueryHandler>();
+        services.AddScoped<UserManagementService>();
 
         services.AddSingleton<IPermissionService, PermissionService>();
         services.AddSingleton<IOrganizationScopeService, OrganizationScopeService>();

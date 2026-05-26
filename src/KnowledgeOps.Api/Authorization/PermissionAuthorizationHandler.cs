@@ -11,6 +11,7 @@ namespace KnowledgeOps.Api.Authorization;
 public sealed class PermissionAuthorizationHandler : AuthorizationHandler<PermissionRequirement>
 {
     private readonly IPermissionService _permissionService;
+    private readonly IUserAccessStateReader _accessStateReader;
     private readonly ICurrentUser _currentUser;
     private readonly IAuditEventWriter _auditEventWriter;
     private readonly ICorrelationContext _correlationContext;
@@ -18,12 +19,14 @@ public sealed class PermissionAuthorizationHandler : AuthorizationHandler<Permis
 
     public PermissionAuthorizationHandler(
         IPermissionService permissionService,
+        IUserAccessStateReader accessStateReader,
         ICurrentUser currentUser,
         IAuditEventWriter auditEventWriter,
         ICorrelationContext correlationContext,
         ILogger<PermissionAuthorizationHandler> logger)
     {
         _permissionService = permissionService;
+        _accessStateReader = accessStateReader;
         _currentUser = currentUser;
         _auditEventWriter = auditEventWriter;
         _correlationContext = correlationContext;
@@ -40,7 +43,10 @@ public sealed class PermissionAuthorizationHandler : AuthorizationHandler<Permis
             return;
         }
 
-        if (_permissionService.HasPermission(_currentUser, requirement.Permission))
+        var accessState = await _accessStateReader.FindActiveByIdAsync(_currentUser.UserId);
+        if (accessState is not null
+            && accessState.OrganizationId == _currentUser.OrganizationId
+            && _permissionService.HasPermission(accessState, requirement.Permission))
         {
             context.Succeed(requirement);
         }

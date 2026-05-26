@@ -23,7 +23,8 @@
       "Bash(Get-ChildItem -Path \"c:\\\\Dev\\\\knowdledgeops_ai\\\\src\\\\KnowledgeOps.Infrastructure\\\\Persistence\" -Recurse -Name -Include \"*.cs\")",
       "Bash(Select-Object -First 30)",
       "PowerShell(Get-ChildItem -Path 'c:\\\\Dev\\\\knowdledgeops_ai\\\\src\\\\KnowledgeOps.Application\\\\' | Where-Object { $_.PSIsContainer })",
-      "Bash(grep -E \"\\\\.\\(cs|csproj\\)$\")"
+      "Bash(grep -E \"\\\\.\\(cs|csproj\\)$\")",
+      "PowerShell(tail -10)"
     ]
   }
 }

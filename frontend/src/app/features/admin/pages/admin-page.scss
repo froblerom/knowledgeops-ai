@@ -1,0 +1,49 @@
+.admin-page {
+  max-width: 68rem;
+  color: #e0e0e0;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+
+  p {
+    margin-top: 0.35rem;
+    color: #a0a0c0;
+  }
+}
+
+.action {
+  background: #6b8aff;
+  border-radius: 0.35rem;
+  color: #fff;
+  padding: 0.65rem 1rem;
+  text-decoration: none;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+
+  th, td {
+    border-bottom: 1px solid #2b2b45;
+    padding: 0.8rem;
+    text-align: left;
+  }
+
+  a {
+    color: #91abff;
+  }
+}
+
+.status {
+  border: 1px solid #394268;
+  border-radius: 1rem;
+  padding: 0.2rem 0.6rem;
+}
+
+.empty {
+  color: #a0a0c0;
+}

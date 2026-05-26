@@ -4,6 +4,8 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using KnowledgeOps.Application.Auth.Abstractions;
 using KnowledgeOps.Application.Observability;
+using KnowledgeOps.Application.Authorization;
+using KnowledgeOps.Api.Tests.Support;
 using KnowledgeOps.Domain.Users;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -20,6 +22,7 @@ public sealed class AuthorizationApiTests : IClassFixture<AuthorizationApiTestFa
     public AuthorizationApiTests(AuthorizationApiTestFactory factory)
     {
         _factory = factory;
+        _factory.AccessOverrides.Reset();
     }
 
     // ── Unauthenticated denial (401) ───────────────────────────────────────────
@@ -232,6 +235,54 @@ public sealed class AuthorizationApiTests : IClassFixture<AuthorizationApiTestFa
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
+    [Fact]
+    public async Task UsersView_AdminTokenAfterPersistedDisable_Returns403()
+    {
+        var token = await GetTokenAsync(AuthorizationApiTestFactory.AsteriaAdminEmail);
+        _factory.AccessOverrides.DisableAdmins = true;
+        try
+        {
+            var response = await CreateAuthenticatedClient(token).GetAsync("/api/test/authorization/users-view");
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        }
+        finally
+        {
+            _factory.AccessOverrides.Reset();
+        }
+    }
+
+    [Fact]
+    public async Task UsersView_AdminTokenAfterPersistedDemotion_Returns403()
+    {
+        var token = await GetTokenAsync(AuthorizationApiTestFactory.AsteriaAdminEmail);
+        _factory.AccessOverrides.DemoteAdmins = true;
+        try
+        {
+            var response = await CreateAuthenticatedClient(token).GetAsync("/api/test/authorization/users-view");
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        }
+        finally
+        {
+            _factory.AccessOverrides.Reset();
+        }
+    }
+
+    [Fact]
+    public async Task UsersView_WhenTokenOrganizationNoLongerMatchesPersistedState_Returns403()
+    {
+        var token = await GetTokenAsync(AuthorizationApiTestFactory.AsteriaAdminEmail);
+        _factory.AccessOverrides.OrganizationIdOverride = AuthorizationApiTestFactory.BorealOrgId;
+        try
+        {
+            var response = await CreateAuthenticatedClient(token).GetAsync("/api/test/authorization/users-view");
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        }
+        finally
+        {
+            _factory.AccessOverrides.Reset();
+        }
+    }
+
     // ── Helpers ────────────────────────────────────────────────────────────────
 
     private async Task<string> GetTokenAsync(string email)
@@ -265,6 +316,7 @@ public sealed class AuthorizationApiTestFactory : WebApplicationFactory<Program>
     public const string BorealAdminEmail = "admin@boreal.test";
 
     public const string Password = "test-password";
+    public AccessStateOverrides AccessOverrides { get; } = new();
 
     // Org IDs match SeedDataIds.cs — kept inline to avoid Infrastructure project reference in Api.Tests.
     public static readonly Guid AsteriaOrgId = new("11111111-1111-4111-8111-111111111111");
@@ -304,6 +356,10 @@ public sealed class AuthorizationApiTestFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<IAuditEventWriter>();
             services.AddSingleton<IAuditEventWriter, NoopAuditEventWriter>();
+
+            services.RemoveAll<IUserAccessStateReader>();
+            services.AddSingleton(AccessOverrides);
+            services.AddScoped<IUserAccessStateReader, RepositoryUserAccessStateReader>();
 
             // Register test-only controller from this assembly.
             services.AddControllers()

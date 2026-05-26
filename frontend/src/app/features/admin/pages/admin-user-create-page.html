@@ -1,0 +1,24 @@
+<section class="user-form">
+  <a routerLink="/admin/users" class="back">Back to users</a>
+  <h1>Create user</h1>
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    <label>Display name <input type="text" formControlName="displayName" /></label>
+    <label>Email <input type="email" formControlName="email" /></label>
+    <label>
+      Status
+      <select formControlName="status">
+        @for (status of statuses; track status) { <option [value]="status">{{ status }}</option> }
+      </select>
+    </label>
+    <label>
+      Initial role
+      <select formControlName="role">
+        <option value="">No initial role</option>
+        @for (role of roles; track role) { <option [value]="role">{{ role }}</option> }
+      </select>
+    </label>
+    <label>Initial password <input type="password" formControlName="initialPassword" autocomplete="new-password" /></label>
+    @if (error) { <app-error-state [message]="error.message" [errorId]="error.errorId" /> }
+    <button type="submit" [disabled]="form.invalid || loading">{{ loading ? 'Creating...' : 'Create user' }}</button>
+  </form>
+</section>

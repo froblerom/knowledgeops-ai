@@ -35,12 +35,16 @@ export class ApiErrorService {
 
   private messageForStatus(status: number): string {
     switch (status) {
+      case 400:
+        return 'Please review the supplied values and try again.';
       case 401:
         return 'Your session has expired. Please sign in again.';
       case 403:
         return 'You do not have access to perform this action.';
       case 404:
         return 'The requested item could not be found.';
+      case 409:
+        return 'The requested change conflicts with the current state.';
       case 500:
         return 'Something went wrong. Please try again.';
       case 503:

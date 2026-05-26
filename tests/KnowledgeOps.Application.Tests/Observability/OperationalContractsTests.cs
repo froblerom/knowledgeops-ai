@@ -5,7 +5,7 @@ namespace KnowledgeOps.Application.Tests.Observability;
 public sealed class OperationalContractsTests
 {
     [Fact]
-    public void AuditEventTypes_ContainsOnlySprint8EmittedEventTypes()
+    public void AuditEventTypes_ContainsApprovedOperationalAndUserManagementEventTypes()
     {
         var values = typeof(AuditEventTypes)
             .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
@@ -18,8 +18,14 @@ public sealed class OperationalContractsTests
             [
                 "HealthDetailsViewed",
                 "PermissionDenied",
+                "UserCreated",
                 "UserLoginFailure",
-                "UserLoginSuccess"
+                "UserLoginSuccess",
+                "UserManagementDenied",
+                "UserRoleAssigned",
+                "UserRoleRemoved",
+                "UserStatusChanged",
+                "UserUpdated"
             ],
             values);
     }

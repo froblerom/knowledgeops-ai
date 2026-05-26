@@ -1,0 +1,70 @@
+.user-form {
+  color: #e0e0e0;
+  max-width: 34rem;
+
+  h1 {
+    margin: 1rem 0;
+  }
+
+  h2 {
+    margin: 1.5rem 0 0.75rem;
+  }
+}
+
+.back {
+  color: #91abff;
+}
+
+form {
+  display: grid;
+  gap: 1rem;
+
+  label {
+    color: #a0a0c0;
+    display: grid;
+    gap: 0.4rem;
+  }
+}
+
+input, select {
+  background: #1a1a2e;
+  border: 1px solid #394268;
+  border-radius: 0.3rem;
+  color: #fff;
+  padding: 0.65rem;
+}
+
+button {
+  background: #6b8aff;
+  border: 0;
+  border-radius: 0.3rem;
+  color: #fff;
+  cursor: pointer;
+  padding: 0.65rem 1rem;
+
+  &:disabled {
+    opacity: 0.6;
+  }
+}
+
+.scope {
+  color: #a0a0c0;
+  margin-bottom: 1rem;
+}
+
+.roles {
+  list-style: none;
+  margin-bottom: 0.75rem;
+
+  li {
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+    margin: 0.5rem 0;
+  }
+}
+
+.role-add {
+  display: flex;
+  gap: 0.5rem;
+}
