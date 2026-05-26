@@ -47,6 +47,8 @@ public static class DependencyInjection
         services.AddScoped<IUserAuthRepository, UserAuthRepository>();
         services.AddScoped<IUserAccessStateReader, EfUserAccessStateReader>();
         services.AddScoped<IDocumentRepository, EfDocumentRepository>();
+        services.AddScoped<IDocumentStorage, LocalDocumentStorage>();
+        services.AddOptions<LocalStorageSettings>().BindConfiguration("Storage");
         services.AddScoped<IUserManagementRepository, EfUserManagementRepository>();
         services.AddSingleton<IPasswordHasher, PasswordHasherService>();
         services.AddSingleton<ITokenService, JwtTokenService>();

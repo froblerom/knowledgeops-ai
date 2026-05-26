@@ -38,6 +38,27 @@ public sealed class DocumentsController(DocumentService service, ICurrentUser cu
         CancellationToken ct) =>
         Ok(ToResponse(await service.DisableRetrievalAsync(Actor(), documentId, ct)));
 
+    [HttpPost]
+    [Consumes("multipart/form-data")]
+    [RequirePermission(KnowledgeOpsPermissions.Documents.Upload)]
+    [RequestSizeLimit(10 * 1024 * 1024 + 8192)]
+    public async Task<ActionResult<DocumentResponse>> Upload(
+        [FromForm] DocumentUploadRequest request,
+        CancellationToken ct)
+    {
+        var file = request.File!;
+        var command = new UploadDocumentCommand(
+            request.Title!,
+            file.OpenReadStream(),
+            file.FileName,
+            file.ContentType,
+            file.Length);
+
+        var result = await service.UploadAsync(Actor(), command, ct);
+
+        return CreatedAtAction(nameof(Get), new { documentId = result.DocumentId }, ToResponse(result));
+    }
+
     private DocumentActor Actor() => new(currentUser.UserId, currentUser.OrganizationId);
 
     private static DocumentResponse ToResponse(ManagedDocument doc) =>
@@ -53,6 +74,7 @@ public sealed class DocumentsController(DocumentService service, ICurrentUser cu
             IsRetrievalEnabled = doc.IsRetrievalEnabled,
             UploadedByUserId = doc.UploadedByUserId,
             UploadedAt = doc.UploadedAt,
+            ProcessingStartedAt = doc.ProcessingStartedAt,
             ProcessedAt = doc.ProcessedAt
         };
 

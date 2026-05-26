@@ -46,4 +46,22 @@ describe('DocumentService', () => {
     expect(req.request.method).toBe('POST');
     req.flush({});
   });
+
+  it('upload() calls POST /documents with FormData', () => {
+    const file = new File([new ArrayBuffer(512)], 'policy.pdf', { type: 'application/pdf' });
+    service.upload('Policy Doc', file).subscribe();
+    const req = httpMock.expectOne(baseUrl);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body instanceof FormData).toBeTruthy();
+    req.flush({ documentId: 'new-id', processingStatus: 'Uploaded' });
+  });
+
+  it('upload() does not set Content-Type header manually', () => {
+    const file = new File([new ArrayBuffer(512)], 'policy.pdf', { type: 'application/pdf' });
+    service.upload('Policy Doc', file).subscribe();
+    const req = httpMock.expectOne(baseUrl);
+    // Browser sets multipart/form-data with boundary; explicit header would break the boundary.
+    expect(req.request.headers.has('Content-Type')).toBeFalsy();
+    req.flush({});
+  });
 });

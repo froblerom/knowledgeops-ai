@@ -13,4 +13,7 @@ public static class AuditEventTypes
     public const string UserRoleRemoved = "UserRoleRemoved";
     public const string UserManagementDenied = "UserManagementDenied";
     public const string DocumentRetrievalDisabled = "DocumentRetrievalDisabled";
+    public const string DocumentUploadAccepted = "DocumentUploadAccepted";
+    public const string DocumentUploadRejected = "DocumentUploadRejected";
+    public const string DocumentUploadFailed = "DocumentUploadFailed";
 }

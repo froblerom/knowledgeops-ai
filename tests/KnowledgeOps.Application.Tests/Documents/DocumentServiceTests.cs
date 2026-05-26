@@ -114,12 +114,26 @@ public sealed class DocumentServiceTests
         Assert.DoesNotContain("pending://", messages, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static DocumentService BuildService(IDocumentRepository repository, RecordingAuditWriter? audit = null) =>
+    private static DocumentService BuildService(
+        IDocumentRepository repository,
+        RecordingAuditWriter? audit = null,
+        IDocumentStorage? storage = null) =>
         new(
             repository,
+            storage ?? new NoopStorage(),
             audit ?? new RecordingAuditWriter(),
             new StubCorrelationContext(),
             NullLogger<DocumentService>.Instance);
+
+    private sealed class NoopStorage : IDocumentStorage
+    {
+        public Task<StoredDocumentReference> StoreAsync(
+            Stream fileStream, string safeFileName, string contentType, CancellationToken ct = default) =>
+            Task.FromResult(new StoredDocumentReference("noop://test"));
+
+        public Task DeleteAsync(string storageReference, CancellationToken ct = default) =>
+            Task.CompletedTask;
+    }
 
     private static ManagedDocument MakeDocument(
         Guid documentId,

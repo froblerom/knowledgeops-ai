@@ -40,6 +40,7 @@ describe('DocumentsPage', () => {
         isRetrievalEnabled: true,
         uploadedByUserId: 'u1',
         uploadedAt: '2026-01-01T00:00:00Z',
+        processingStartedAt: null,
         processedAt: '2026-01-01T00:01:00Z'
       }
     ];

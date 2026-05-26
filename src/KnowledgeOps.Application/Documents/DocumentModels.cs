@@ -35,3 +35,10 @@ public sealed record NewManagedDocument(
     DateTimeOffset CreatedAt);
 
 public sealed record DocumentDisableResult(ManagedDocument Document, bool WasChanged);
+
+public sealed record UploadDocumentCommand(
+    string Title,
+    Stream FileStream,
+    string OriginalFileName,
+    string ContentType,
+    long FileSizeBytes);

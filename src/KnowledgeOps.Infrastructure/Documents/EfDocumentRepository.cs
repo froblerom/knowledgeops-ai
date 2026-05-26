@@ -39,6 +39,9 @@ internal sealed class EfDocumentRepository(KnowledgeOpsDbContext dbContext) : ID
 
     public async Task<ManagedDocument> CreateAsync(NewManagedDocument newDocument, CancellationToken ct = default)
     {
+        // ProcessingStatus defaults to DocumentProcessingStatus.Uploaded (enum 0, first member).
+        // IsRetrievalEnabled defaults to false (bool default) and the column has DEFAULT false.
+        // Both match the required initial state for newly uploaded documents.
         var document = new Document
         {
             Id = newDocument.DocumentId,
