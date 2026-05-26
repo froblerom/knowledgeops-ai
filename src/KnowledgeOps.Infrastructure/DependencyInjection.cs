@@ -1,3 +1,5 @@
+using KnowledgeOps.Application.Auth.Abstractions;
+using KnowledgeOps.Infrastructure.Auth;
 using KnowledgeOps.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -24,6 +26,19 @@ public static class DependencyInjection
 
             options.UseSqlServer(connectionString);
         });
+
+        services.AddOptions<JwtSettings>()
+            .BindConfiguration("Jwt")
+            .Validate(
+                s => !string.IsNullOrWhiteSpace(s.SigningKey) && s.SigningKey.Length >= 32,
+                "JWT signing key is missing or too short. Set 'Jwt:SigningKey' to a random value " +
+                "of at least 32 characters using dotnet user-secrets or an environment variable. " +
+                "Never commit a real signing key to source control.")
+            .ValidateOnStart();
+
+        services.AddScoped<IUserAuthRepository, UserAuthRepository>();
+        services.AddSingleton<IPasswordHasher, PasswordHasherService>();
+        services.AddSingleton<ITokenService, JwtTokenService>();
 
         return services;
     }
