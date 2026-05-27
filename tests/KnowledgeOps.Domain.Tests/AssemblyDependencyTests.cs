@@ -35,6 +35,12 @@ public sealed class AssemblyDependencyTests
     [InlineData("OpenAI")]
     [InlineData("Azure.Storage.Blobs")]
     [InlineData("Azure.Search.Documents")]
+    [InlineData("Microsoft.SemanticKernel")]
+    [InlineData("Qdrant")]
+    [InlineData("Pinecone")]
+    [InlineData("Chroma")]
+    [InlineData("Weaviate")]
+    [InlineData("Milvus")]
     public void Domain_Should_Not_Reference_AiProviderSdks(string forbiddenAssemblyPrefix)
     {
         AssertDoesNotReference(forbiddenAssemblyPrefix);

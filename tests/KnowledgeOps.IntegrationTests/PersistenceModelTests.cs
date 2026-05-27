@@ -179,8 +179,14 @@ public sealed class PersistenceModelTests
         Assert.True(embeddingEntity.FindProperty(nameof(ChunkEmbedding.VectorDimensions))!.IsNullable);
         Assert.True(embeddingEntity.FindProperty(nameof(ChunkEmbedding.FailureReason))!.IsNullable);
         Assert.Equal(1000, embeddingEntity.FindProperty(nameof(ChunkEmbedding.FailureReason))!.GetMaxLength());
+        Assert.True(embeddingEntity.FindProperty(nameof(ChunkEmbedding.IndexStatus))!.IsNullable);
+        Assert.Equal(50, embeddingEntity.FindProperty(nameof(ChunkEmbedding.IndexStatus))!.GetMaxLength());
+        Assert.True(embeddingEntity.FindProperty(nameof(ChunkEmbedding.IndexedAt))!.IsNullable);
+        Assert.True(embeddingEntity.FindProperty(nameof(ChunkEmbedding.IndexFailureReason))!.IsNullable);
+        Assert.Equal(1000, embeddingEntity.FindProperty(nameof(ChunkEmbedding.IndexFailureReason))!.GetMaxLength());
 
         Assert.Contains("IX_chunk_embeddings_organization_id", indexNames);
+        Assert.Contains("IX_chunk_embeddings_organization_index_status", indexNames);
         Assert.Contains("IX_chunk_embeddings_status", indexNames);
         Assert.Contains("IX_chunk_embeddings_provider_model", indexNames);
         Assert.Contains(

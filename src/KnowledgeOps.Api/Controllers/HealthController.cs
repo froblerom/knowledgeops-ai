@@ -3,6 +3,7 @@ using KnowledgeOps.Api.Controllers.Models;
 using KnowledgeOps.Application.Auth.Abstractions;
 using KnowledgeOps.Application.Authorization;
 using KnowledgeOps.Application.Observability;
+using KnowledgeOps.Application.Retrieval;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,6 +14,7 @@ namespace KnowledgeOps.Api.Controllers;
 public sealed class HealthController : ControllerBase
 {
     private readonly IDatabaseHealthCheck _databaseHealthCheck;
+    private readonly IRetrievalStorageHealthCheck _retrievalStorageHealthCheck;
     private readonly IAuditEventWriter _auditEventWriter;
     private readonly ICorrelationContext _correlationContext;
     private readonly ICurrentUser _currentUser;
@@ -20,12 +22,14 @@ public sealed class HealthController : ControllerBase
 
     public HealthController(
         IDatabaseHealthCheck databaseHealthCheck,
+        IRetrievalStorageHealthCheck retrievalStorageHealthCheck,
         IAuditEventWriter auditEventWriter,
         ICorrelationContext correlationContext,
         ICurrentUser currentUser,
         ILogger<HealthController> logger)
     {
         _databaseHealthCheck = databaseHealthCheck;
+        _retrievalStorageHealthCheck = retrievalStorageHealthCheck;
         _auditEventWriter = auditEventWriter;
         _correlationContext = correlationContext;
         _currentUser = currentUser;
@@ -42,6 +46,8 @@ public sealed class HealthController : ControllerBase
     public async Task<IActionResult> Details(CancellationToken ct)
     {
         var databaseStatus = await _databaseHealthCheck.CheckAsync(ct);
+        var retrievalStatus = await _retrievalStorageHealthCheck.CheckAsync(ct);
+        var isHealthy = databaseStatus.IsHealthy && retrievalStatus.IsHealthy;
 
         await WriteAuditBestEffortAsync(
             new AuditEvent(
@@ -54,13 +60,14 @@ public sealed class HealthController : ControllerBase
             ct);
 
         var response = new DetailedHealthResponse(
-            databaseStatus.IsHealthy ? "Healthy" : "Degraded",
+            isHealthy ? "Healthy" : "Degraded",
             new HealthDependencyResponse(
                 "Healthy",
-                databaseStatus.IsHealthy ? "Healthy" : "Unavailable"),
+                databaseStatus.IsHealthy ? "Healthy" : "Unavailable",
+                retrievalStatus.IsHealthy ? "Healthy" : "Unavailable"),
             DateTimeOffset.UtcNow);
 
-        return databaseStatus.IsHealthy
+        return isHealthy
             ? Ok(response)
             : StatusCode(StatusCodes.Status503ServiceUnavailable, response);
     }

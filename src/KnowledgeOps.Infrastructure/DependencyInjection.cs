@@ -2,6 +2,7 @@ using KnowledgeOps.Application.Auth.Abstractions;
 using KnowledgeOps.Application.Documents;
 using KnowledgeOps.Application.Embeddings;
 using KnowledgeOps.Application.Observability;
+using KnowledgeOps.Application.Retrieval;
 using KnowledgeOps.Application.Authorization;
 using KnowledgeOps.Application.Users;
 using KnowledgeOps.Infrastructure.Auth;
@@ -10,6 +11,7 @@ using KnowledgeOps.Infrastructure.Documents;
 using KnowledgeOps.Infrastructure.Embeddings;
 using KnowledgeOps.Infrastructure.Observability;
 using KnowledgeOps.Infrastructure.Persistence;
+using KnowledgeOps.Infrastructure.Retrieval;
 using KnowledgeOps.Infrastructure.Users;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -44,6 +46,10 @@ public static class DependencyInjection
         services.AddScoped<IChunkEmbeddingRepository, EfChunkEmbeddingRepository>();
         services.AddScoped<IEmbeddingProvider, FakeEmbeddingProvider>();
         services.AddOptions<FakeEmbeddingProviderSettings>().BindConfiguration("Embeddings:Fake");
+        services.AddScoped<LocalVectorStore>();
+        services.AddScoped<IRetrievalIndex>(provider => provider.GetRequiredService<LocalVectorStore>());
+        services.AddScoped<ISemanticSearchProvider>(provider => provider.GetRequiredService<LocalVectorStore>());
+        services.AddOptions<RetrievalSettings>().BindConfiguration("Retrieval");
         services.AddScoped<IDocumentStorage, LocalDocumentStorage>();
         services.AddScoped<IDocumentTextExtractor, TxtMarkdownTextExtractor>();
         services.AddScoped<IDocumentChunker, DocumentChunker>();
@@ -54,6 +60,7 @@ public static class DependencyInjection
         services.AddSingleton<ITokenService, JwtTokenService>();
         services.AddScoped<IAuditEventWriter, EfAuditEventWriter>();
         services.AddScoped<IDatabaseHealthCheck, EfDatabaseHealthCheck>();
+        services.AddScoped<IRetrievalStorageHealthCheck, LocalRetrievalStorageHealthCheck>();
 
         return services;
     }

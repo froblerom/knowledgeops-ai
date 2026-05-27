@@ -21,4 +21,10 @@ public static class AuditEventTypes
     public const string DocumentProcessingFailed = "DocumentProcessingFailed";
     public const string EmbeddingGenerationSucceeded = "EmbeddingGenerationSucceeded";
     public const string EmbeddingGenerationFailed = "EmbeddingGenerationFailed";
+    public const string VectorIndexingSucceeded = "VectorIndexingSucceeded";
+    public const string VectorIndexingFailed = "VectorIndexingFailed";
+    public const string SemanticQueryCompleted = "SemanticQueryCompleted";
+    public const string SemanticQueryFailed = "SemanticQueryFailed";
+    public const string StaleRetrievalCandidateExcluded = "StaleRetrievalCandidateExcluded";
+    public const string MalformedVectorExcluded = "MalformedVectorExcluded";
 }

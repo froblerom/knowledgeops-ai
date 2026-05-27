@@ -6,7 +6,7 @@ Last updated: 2026-05-26
 | --- | --- | --- | --- | --- |
 | Agent prompts may load excessive context and lose focus. | Medium | Harness / all future issues | Use `13-prompt-classifier.md`, level-based routing and minimum context bundles. | Open |
 | RAG may be implemented as unsupported general answer behavior rather than grounded document assistance. | High | Retrieval/RAG | Use `rag-implementation-agent.md`, citation and insufficient-context rules, and fake-provider safety tests. | Open |
-| Authorization may be skipped during retrieval or prompt construction. | Critical | Security/RAG | Load security, business-rules and RAG contexts for relevant tasks; require cross-scope tests and verification. | Open |
+| Authorization may be skipped during retrieval or prompt construction. | Critical | Security/RAG | Load security, business-rules and RAG contexts for relevant tasks; require cross-scope tests and verification. Sprint 15 now filters semantic retrieval by organization before vector loading/scoring; future prompt construction remains open. | Open |
 | Agent context summaries may diverge from canonical documents over time. | High | Documentation governance | Use documentation and verification agents; update harness when canonical docs change; treat canonical docs as authoritative. | Open |
 | Diagram artifact filename cleanup remains pending. | Low | Documentation artifacts | Address in Sprint 28 or an explicitly authorized diagram artifact task. | Open |
 
@@ -92,6 +92,26 @@ RISK-025 (CI live-provider risk): **Resolved for Sprint 14.** `FakeEmbeddingProv
 - `IsEligibleForRetrieval()` does not check chunk embedding status; deferred to retrieval workflow Sprint 15+.
 - `FakeEmbeddingProvider` is the only registered provider; no Azure OpenAI or real provider adapter exists. Production deployment requires a real provider registration before retrieval goes live.
 - `vector_data` stored as `nvarchar(max)` JSON; no SQL Server native vector type or similarity index exists. Retrieval will require full vector scan or an external vector store Sprint 15+.
+
+## Sprint 15 Issue #28 Disposition
+
+Vector storage and semantic retrieval abstractions are implemented with a local SQL-backed MVP adapter over `chunk_embeddings.vector_data` JSON. Search eligibility now requires `embedding.status = Ready`, `index_status = Indexed`, processed documents, `is_retrieval_enabled = true`, non-soft-deleted documents/chunks, and matching `organization_id` across embedding, chunk, and document records. Organization filtering is applied in the EF query before vector data is materialized or scored.
+
+RISK-002 (weak retrieval quality): **Remains open.** Deterministic fake vectors and local cosine search make behavior testable, but they are not semantically meaningful enough for production quality.
+
+RISK-006 (cross-organization retrieval leakage): **Mitigated for Sprint 15 retrieval candidate selection.** SQL-level organization filters run before scoring, and cross-organization tests seed a higher-scoring other-organization candidate that is excluded. Future prompt construction must preserve this boundary.
+
+RISK-014 (embedding failure makes chunks incorrectly retrievable): **Mitigated.** Search requires both `EmbeddingStatus.Ready` and `EmbeddingIndexStatus.Indexed`; failed, malformed, missing, or unindexed embeddings are excluded.
+
+RISK-015 (vector/index state inconsistent with source records): **Mitigated for MVP.** Index metadata tracks `Indexed` / `Failed`, stale and ineligible source records are filtered, and tests cover retrieval-disabled, soft-deleted, unprocessed, failed, unindexed, malformed, dimension-mismatch, and zero-norm candidates.
+
+RISK-020 (SDK coupling): **Guarded.** Domain and Application dependency tests reject Azure AI Search, OpenAI/Azure OpenAI, Semantic Kernel, and common vector database SDK references.
+
+RISK-025 (CI live-provider risk): **Guarded.** The local SQL-backed adapter has no external network or live-provider dependency; SQL-gated tests skip when no SQL Server connection string is configured.
+
+**Residual risks**:
+- SQL Server migration application and SQL-gated retrieval tests were not validated in this run because `ConnectionStrings__DefaultConnection` was unset.
+- Production vector retrieval provider selection, semantic quality tuning, hybrid search, query-text embedding orchestration, prompt construction, citations, chat API, and full RAG orchestration remain future work.
 
 ## Sprint 13 Issue #23 Disposition
 
