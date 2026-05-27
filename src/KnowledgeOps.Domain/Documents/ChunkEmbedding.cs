@@ -11,6 +11,9 @@ public sealed class ChunkEmbedding
     public int? VectorDimensions { get; init; }
     public EmbeddingStatus Status { get; init; }
     public string? FailureReason { get; init; }
+    public EmbeddingIndexStatus? IndexStatus { get; set; }
+    public DateTimeOffset? IndexedAt { get; set; }
+    public string? IndexFailureReason { get; set; }
     public DateTimeOffset CreatedAt { get; init; }
     public DateTimeOffset UpdatedAt { get; init; }
 }

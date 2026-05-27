@@ -52,6 +52,20 @@ internal sealed class ChunkEmbeddingConfiguration : IEntityTypeConfiguration<Chu
             .HasColumnName("failure_reason")
             .HasMaxLength(1000);
 
+        builder.Property(e => e.IndexStatus)
+            .HasColumnName("index_status")
+            .HasMaxLength(50)
+            .HasConversion<string>();
+
+        builder.Property(e => e.IndexedAt)
+            .HasColumnName("indexed_at")
+            .HasColumnType("datetime2")
+            .HasConversion(UtcDateTimeOffsetConverter.Optional);
+
+        builder.Property(e => e.IndexFailureReason)
+            .HasColumnName("index_failure_reason")
+            .HasMaxLength(1000);
+
         builder.Property(e => e.CreatedAt)
             .HasColumnName("created_at")
             .HasColumnType("datetime2")
@@ -82,6 +96,9 @@ internal sealed class ChunkEmbeddingConfiguration : IEntityTypeConfiguration<Chu
 
         builder.HasIndex(e => e.OrganizationId)
             .HasDatabaseName("IX_chunk_embeddings_organization_id");
+
+        builder.HasIndex(e => new { e.OrganizationId, e.IndexStatus })
+            .HasDatabaseName("IX_chunk_embeddings_organization_index_status");
 
         builder.HasIndex(e => e.Status)
             .HasDatabaseName("IX_chunk_embeddings_status");

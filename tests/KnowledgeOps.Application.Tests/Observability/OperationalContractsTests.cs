@@ -26,7 +26,11 @@ public sealed class OperationalContractsTests
                 "EmbeddingGenerationFailed",
                 "EmbeddingGenerationSucceeded",
                 "HealthDetailsViewed",
+                "MalformedVectorExcluded",
                 "PermissionDenied",
+                "SemanticQueryCompleted",
+                "SemanticQueryFailed",
+                "StaleRetrievalCandidateExcluded",
                 "UserCreated",
                 "UserLoginFailure",
                 "UserLoginSuccess",
@@ -34,7 +38,9 @@ public sealed class OperationalContractsTests
                 "UserRoleAssigned",
                 "UserRoleRemoved",
                 "UserStatusChanged",
-                "UserUpdated"
+                "UserUpdated",
+                "VectorIndexingFailed",
+                "VectorIndexingSucceeded"
             ],
             values);
     }

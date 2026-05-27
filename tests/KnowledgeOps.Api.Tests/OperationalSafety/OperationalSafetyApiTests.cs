@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using KnowledgeOps.Application.Auth.Abstractions;
 using KnowledgeOps.Application.Observability;
+using KnowledgeOps.Application.Retrieval;
 using KnowledgeOps.Application.Authorization;
 using KnowledgeOps.Api.Tests.Support;
 using KnowledgeOps.Domain.Users;
@@ -24,6 +25,7 @@ public sealed class OperationalSafetyApiTests : IClassFixture<OperationalSafetyA
         _factory = factory;
         _factory.AuditWriter.Reset();
         _factory.DatabaseHealth.IsHealthy = true;
+        _factory.RetrievalHealth.IsHealthy = true;
     }
 
     [Fact]
@@ -207,6 +209,7 @@ public sealed class OperationalSafetyApiTests : IClassFixture<OperationalSafetyA
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("\"application\":\"Healthy\"", text, StringComparison.Ordinal);
         Assert.Contains("\"database\":\"Healthy\"", text, StringComparison.Ordinal);
+        Assert.Contains("\"retrieval\":\"Healthy\"", text, StringComparison.Ordinal);
         Assert.DoesNotContain("provider", text, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("storage", text, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("queue", text, StringComparison.OrdinalIgnoreCase);
@@ -227,6 +230,21 @@ public sealed class OperationalSafetyApiTests : IClassFixture<OperationalSafetyA
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
         Assert.Contains("\"database\":\"Unavailable\"", text, StringComparison.Ordinal);
         Assert.DoesNotContain("connection", text, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task HealthDetails_RetrievalUnavailableReturnsSanitizedDependencyStatus()
+    {
+        var client = await CreateAuthenticatedClientAsync(OperationalSafetyApiTestFactory.AdminEmail);
+        _factory.RetrievalHealth.IsHealthy = false;
+
+        var response = await client.GetAsync("/api/v1/health/details");
+        var text = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        Assert.Contains("\"retrieval\":\"Unavailable\"", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("connection", text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("vector", text, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -287,6 +305,7 @@ public sealed class OperationalSafetyApiTestFactory : WebApplicationFactory<Prog
 
     public RecordingAuditEventWriter AuditWriter { get; } = new();
     public StubDatabaseHealthCheck DatabaseHealth { get; } = new();
+    public StubRetrievalStorageHealthCheck RetrievalHealth { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -315,6 +334,8 @@ public sealed class OperationalSafetyApiTestFactory : WebApplicationFactory<Prog
             services.AddSingleton<IAuditEventWriter>(AuditWriter);
             services.RemoveAll<IDatabaseHealthCheck>();
             services.AddSingleton<IDatabaseHealthCheck>(DatabaseHealth);
+            services.RemoveAll<IRetrievalStorageHealthCheck>();
+            services.AddSingleton<IRetrievalStorageHealthCheck>(RetrievalHealth);
             services.RemoveAll<IUserAccessStateReader>();
             services.AddSingleton(new AccessStateOverrides());
             services.AddScoped<IUserAccessStateReader, RepositoryUserAccessStateReader>();
@@ -353,6 +374,19 @@ public sealed class OperationalSafetyApiTestFactory : WebApplicationFactory<Prog
             Task.FromResult(IsHealthy
                 ? DatabaseHealthResult.Healthy
                 : DatabaseHealthResult.Unavailable);
+    }
+
+    public sealed class StubRetrievalStorageHealthCheck : IRetrievalStorageHealthCheck
+    {
+        public bool IsHealthy { get; set; } = true;
+
+        public Task<RetrievalStorageHealthResult> CheckAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(new RetrievalStorageHealthResult(
+                IsHealthy,
+                "LocalSqlVectorStore",
+                IndexedEmbeddingCount: 0,
+                FailedIndexCount: 0,
+                IsHealthy ? null : "Retrieval storage is unavailable."));
     }
 
     private sealed class FakeUserAuthRepository : IUserAuthRepository

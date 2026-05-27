@@ -7,4 +7,4 @@ public sealed record DetailedHealthResponse(
     HealthDependencyResponse Dependencies,
     DateTimeOffset Timestamp);
 
-public sealed record HealthDependencyResponse(string Application, string Database);
+public sealed record HealthDependencyResponse(string Application, string Database, string Retrieval);
