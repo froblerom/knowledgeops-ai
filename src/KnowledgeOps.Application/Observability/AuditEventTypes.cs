@@ -19,4 +19,6 @@ public static class AuditEventTypes
     public const string DocumentProcessingStarted = "DocumentProcessingStarted";
     public const string DocumentProcessingSucceeded = "DocumentProcessingSucceeded";
     public const string DocumentProcessingFailed = "DocumentProcessingFailed";
+    public const string EmbeddingGenerationSucceeded = "EmbeddingGenerationSucceeded";
+    public const string EmbeddingGenerationFailed = "EmbeddingGenerationFailed";
 }

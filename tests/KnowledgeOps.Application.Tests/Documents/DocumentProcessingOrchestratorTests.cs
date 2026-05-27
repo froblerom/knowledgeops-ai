@@ -233,7 +233,7 @@ public sealed class DocumentProcessingOrchestratorTests
         IDocumentProcessingTransactionFactory? transactionFactory = null) =>
         new(
             repo,
-            step ?? new NoopProcessingStep(),
+            new[] { step ?? new NoopProcessingStep() },
             transactionFactory ?? new NoopTransactionFactory(),
             audit ?? new RecordingAuditWriter(),
             new StubCorrelationContext(),

@@ -23,6 +23,8 @@ public sealed class OperationalContractsTests
                 "DocumentUploadAccepted",
                 "DocumentUploadFailed",
                 "DocumentUploadRejected",
+                "EmbeddingGenerationFailed",
+                "EmbeddingGenerationSucceeded",
                 "HealthDetailsViewed",
                 "PermissionDenied",
                 "UserCreated",

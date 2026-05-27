@@ -20,6 +20,8 @@ public sealed class KnowledgeOpsDbContext(DbContextOptions<KnowledgeOpsDbContext
 
     public DbSet<DocumentChunk> DocumentChunks => Set<DocumentChunk>();
 
+    public DbSet<ChunkEmbedding> ChunkEmbeddings => Set<ChunkEmbedding>();
+
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

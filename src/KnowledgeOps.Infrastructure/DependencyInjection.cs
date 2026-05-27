@@ -1,11 +1,13 @@
 using KnowledgeOps.Application.Auth.Abstractions;
 using KnowledgeOps.Application.Documents;
+using KnowledgeOps.Application.Embeddings;
 using KnowledgeOps.Application.Observability;
 using KnowledgeOps.Application.Authorization;
 using KnowledgeOps.Application.Users;
 using KnowledgeOps.Infrastructure.Auth;
 using KnowledgeOps.Infrastructure.Authorization;
 using KnowledgeOps.Infrastructure.Documents;
+using KnowledgeOps.Infrastructure.Embeddings;
 using KnowledgeOps.Infrastructure.Observability;
 using KnowledgeOps.Infrastructure.Persistence;
 using KnowledgeOps.Infrastructure.Users;
@@ -39,6 +41,9 @@ public static class DependencyInjection
         services.AddScoped<IUserAccessStateReader, EfUserAccessStateReader>();
         services.AddScoped<IDocumentRepository, EfDocumentRepository>();
         services.AddScoped<IDocumentChunkRepository, EfDocumentChunkRepository>();
+        services.AddScoped<IChunkEmbeddingRepository, EfChunkEmbeddingRepository>();
+        services.AddScoped<IEmbeddingProvider, FakeEmbeddingProvider>();
+        services.AddOptions<FakeEmbeddingProviderSettings>().BindConfiguration("Embeddings:Fake");
         services.AddScoped<IDocumentStorage, LocalDocumentStorage>();
         services.AddScoped<IDocumentTextExtractor, TxtMarkdownTextExtractor>();
         services.AddScoped<IDocumentChunker, DocumentChunker>();

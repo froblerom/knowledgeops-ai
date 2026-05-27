@@ -163,5 +163,8 @@ public sealed class ExtractAndChunkDocumentProcessingStepTests
             Saved.AddRange(chunks);
             return Task.CompletedTask;
         }
+
+        public Task<IReadOnlyList<DocumentChunkRecord>> GetChunksForDocumentAsync(Guid documentId, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<DocumentChunkRecord>>(Saved.Where(c => c.DocumentId == documentId).ToList());
     }
 }
