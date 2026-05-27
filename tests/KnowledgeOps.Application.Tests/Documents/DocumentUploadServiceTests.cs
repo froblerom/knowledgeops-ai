@@ -354,6 +354,7 @@ public sealed class DocumentUploadServiceTests
                 document.Title,
                 document.ContentType,
                 document.FileSizeBytes,
+                document.StorageLocation,
                 DocumentProcessingStatus.Uploaded,
                 null,
                 false,
@@ -395,6 +396,9 @@ public sealed class DocumentUploadServiceTests
                 throw new InvalidOperationException("Simulated storage failure.");
             return Task.FromResult(new StoredDocumentReference($"local://test-{safeFileName}"));
         }
+
+        public Task<Stream> OpenReadAsync(string storageReference, CancellationToken ct = default) =>
+            Task.FromResult<Stream>(Stream.Null);
 
         public Task DeleteAsync(string storageReference, CancellationToken ct = default)
         {

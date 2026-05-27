@@ -445,6 +445,7 @@ public sealed class DocumentsControllerTests : IClassFixture<DocumentsApiTestFac
             "Test Document",
             "application/pdf",
             42,
+            "pending://document-metadata-only",
             status,
             null,
             isRetrievalEnabled,
@@ -543,6 +544,7 @@ public sealed class DocumentsApiTestFactory : WebApplicationFactory<Program>
                 document.Title,
                 document.ContentType,
                 document.FileSizeBytes,
+                document.StorageLocation,
                 DocumentProcessingStatus.Uploaded,
                 null,
                 false,
@@ -657,6 +659,9 @@ public sealed class DocumentsApiTestFactory : WebApplicationFactory<Program>
             _stored.Add(reference);
             return Task.FromResult(new StoredDocumentReference(reference));
         }
+
+        public Task<Stream> OpenReadAsync(string storageReference, CancellationToken ct = default) =>
+            Task.FromResult<Stream>(Stream.Null);
 
         public Task DeleteAsync(string storageReference, CancellationToken ct = default)
         {

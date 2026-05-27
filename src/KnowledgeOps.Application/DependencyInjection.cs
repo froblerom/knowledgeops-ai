@@ -15,7 +15,7 @@ public static class DependencyInjection
         services.AddScoped<GetCurrentUserQueryHandler>();
         services.AddScoped<DocumentService>();
         services.AddScoped<IDocumentProcessingOrchestrator, DocumentProcessingOrchestrator>();
-        services.AddScoped<IDocumentProcessingStep, PlaceholderDocumentProcessingStep>();
+        services.AddScoped<IDocumentProcessingStep, ExtractAndChunkDocumentProcessingStep>();
         services.AddScoped<UserManagementService>();
 
         services.AddSingleton<IPermissionService, PermissionService>();

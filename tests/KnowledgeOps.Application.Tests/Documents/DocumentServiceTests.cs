@@ -131,6 +131,9 @@ public sealed class DocumentServiceTests
             Stream fileStream, string safeFileName, string contentType, CancellationToken ct = default) =>
             Task.FromResult(new StoredDocumentReference("noop://test"));
 
+        public Task<Stream> OpenReadAsync(string storageReference, CancellationToken ct = default) =>
+            Task.FromResult<Stream>(Stream.Null);
+
         public Task DeleteAsync(string storageReference, CancellationToken ct = default) =>
             Task.CompletedTask;
     }
@@ -148,6 +151,7 @@ public sealed class DocumentServiceTests
             title,
             "application/pdf",
             42,
+            "pending://document-metadata-only",
             status,
             null,
             isRetrievalEnabled,
@@ -188,6 +192,7 @@ public sealed class DocumentServiceTests
                 document.Title,
                 document.ContentType,
                 document.FileSizeBytes,
+                document.StorageLocation,
                 DocumentProcessingStatus.Uploaded,
                 null,
                 false,

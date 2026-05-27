@@ -23,4 +23,8 @@
     <TargetFramework>net10.0</TargetFramework>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="KnowledgeOps.IntegrationTests" />
+  </ItemGroup>
+
 </Project>

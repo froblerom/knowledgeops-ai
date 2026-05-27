@@ -78,6 +78,17 @@ Non-integration tests: 27 Domain + 228 Application + 102 API = 357 passed, 0 fai
 - `PlaceholderDocumentProcessingStep` does nothing; documents reach `Processed` status without any real extraction/embedding. `IsEligibleForRetrieval()` remains false until a re-enable operation is implemented (Phase 2+). Acceptable and required by Sprint 12 scope.
 - Worker runs locally via `dotnet run`; no production deployment, container, or service-manager configuration exists yet. Cloud deployment must configure `ConnectionStrings__DefaultConnection` and `Worker:PollingIntervalSeconds` via environment variables or secrets.
 
+## Sprint 13 Issue #23 Disposition
+
+Text extraction and chunking are fully implemented. `ExtractAndChunkDocumentProcessingStep` replaces `PlaceholderDocumentProcessingStep`; documents now reach `Processed` status with real text extraction and chunk persistence. The Sprint 12 residual risk "PlaceholderDocumentProcessingStep does nothing" is **resolved**.
+
+Chunk persistence and `MarkProcessedAsync` are atomic via `IDocumentProcessingTransactionFactory` / `EfDocumentProcessingTransactionFactory`; rollback on any step or commit failure ensures chunks are never saved without a corresponding `Processed` status update. `StorageLocation` is carried in `ManagedDocument` only and is never exposed through API DTOs, Angular UI, logs, audit events, or failure reasons. Unsupported content types and extraction/chunking failures produce controlled safe-message exceptions; failure reasons passed to `MarkFailedAsync` use only `ex.Message` trimmed to 200 characters.
+
+**New residual risks**:
+- PDF and DOCX extraction are deferred; affected documents reach `Failed` status with the message "Unsupported document format for text extraction." Acceptable and required by Sprint 13 scope; extractor implementations for non-text formats are deferred to Phase 2+.
+- `IsRetrievalEnabled` remains `false` after processing completes; no re-enable endpoint or retrieval workflow exists. `Document.IsEligibleForRetrieval()` encodes the predicate; re-enable is deferred to Phase 2+.
+- `LocalDocumentStorage` local-filesystem-only limitation carries over from Sprint 11; no production cloud storage adapter exists.
+
 ## Update Rule
 
 Read this file for Level 3 work and release review. Update risk status, mitigation or new issue references when implementation evidence changes the risk.

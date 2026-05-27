@@ -24,7 +24,7 @@ public sealed class DocumentProcessingOrchestratorTests
     }
 
     [Fact]
-    public async Task ProcessNextAsync_PlaceholderSucceeds_MarksProcessedAndReturnsTrue()
+    public async Task ProcessNextAsync_StepSucceeds_MarksProcessedAndReturnsTrue()
     {
         var repo = new SpyRepository();
         repo.AddPending(MakeDocument(DocId, OrgId));
@@ -38,7 +38,7 @@ public sealed class DocumentProcessingOrchestratorTests
     }
 
     [Fact]
-    public async Task ProcessNextAsync_PlaceholderFails_MarksFailedAndReturnsTrue()
+    public async Task ProcessNextAsync_StepFails_MarksFailedAndReturnsTrue()
     {
         var repo = new SpyRepository();
         repo.AddPending(MakeDocument(DocId, OrgId));
@@ -165,38 +165,6 @@ public sealed class DocumentProcessingOrchestratorTests
     }
 
     [Fact]
-    public async Task ProcessNextAsync_DoesNotReadFileContent()
-    {
-        // PlaceholderDocumentProcessingStep performs no I/O. Verify it is the step used and
-        // that executing it produces no storage reads. Because the placeholder returns
-        // Task.CompletedTask immediately, the step call count is sufficient evidence.
-        var repo = new SpyRepository();
-        repo.AddPending(MakeDocument(DocId, OrgId));
-        var spyStep = new SpyProcessingStep();
-        var orchestrator = BuildOrchestrator(repo, step: spyStep);
-
-        await orchestrator.ProcessNextAsync();
-
-        Assert.Equal(1, spyStep.CallCount);
-        Assert.False(spyStep.ReadAnyBytes);
-    }
-
-    [Fact]
-    public async Task ProcessNextAsync_DoesNotCallAIProvider()
-    {
-        // The placeholder step must not invoke any AI provider. SpyProcessingStep
-        // records a flag when an AI call occurs; it must remain false.
-        var repo = new SpyRepository();
-        repo.AddPending(MakeDocument(DocId, OrgId));
-        var spyStep = new SpyProcessingStep();
-        var orchestrator = BuildOrchestrator(repo, step: spyStep);
-
-        await orchestrator.ProcessNextAsync();
-
-        Assert.False(spyStep.CalledAiProvider);
-    }
-
-    [Fact]
     public async Task ProcessNextAsync_AuditDoesNotContainStorageLocation()
     {
         var repo = new SpyRepository();
@@ -225,6 +193,35 @@ public sealed class DocumentProcessingOrchestratorTests
         Assert.True(result);
     }
 
+    [Fact]
+    public async Task ProcessNextAsync_OnSuccess_CommitsTransaction()
+    {
+        var repo = new SpyRepository();
+        repo.AddPending(MakeDocument(DocId, OrgId));
+        var txFactory = new SpyTransactionFactory();
+        var orchestrator = BuildOrchestrator(repo, transactionFactory: txFactory);
+
+        await orchestrator.ProcessNextAsync();
+
+        Assert.True(txFactory.LastTransaction!.WasCommitted);
+        Assert.False(txFactory.LastTransaction.WasRolledBack);
+    }
+
+    [Fact]
+    public async Task ProcessNextAsync_OnFailure_RollsBackTransaction()
+    {
+        var repo = new SpyRepository();
+        repo.AddPending(MakeDocument(DocId, OrgId));
+        var txFactory = new SpyTransactionFactory();
+        var step = new FailingProcessingStep("processing error");
+        var orchestrator = BuildOrchestrator(repo, step: step, transactionFactory: txFactory);
+
+        await orchestrator.ProcessNextAsync();
+
+        Assert.True(txFactory.LastTransaction!.WasRolledBack);
+        Assert.False(txFactory.LastTransaction.WasCommitted);
+    }
+
     // ──────────────────────────────────────────────────────────────
     // Helpers
     // ──────────────────────────────────────────────────────────────
@@ -232,10 +229,12 @@ public sealed class DocumentProcessingOrchestratorTests
     private static DocumentProcessingOrchestrator BuildOrchestrator(
         SpyRepository repo,
         IAuditEventWriter? audit = null,
-        IDocumentProcessingStep? step = null) =>
+        IDocumentProcessingStep? step = null,
+        IDocumentProcessingTransactionFactory? transactionFactory = null) =>
         new(
             repo,
-            step ?? new PlaceholderDocumentProcessingStep(),
+            step ?? new NoopProcessingStep(),
+            transactionFactory ?? new NoopTransactionFactory(),
             audit ?? new RecordingAuditWriter(),
             new StubCorrelationContext(),
             NullLogger<DocumentProcessingOrchestrator>.Instance);
@@ -252,6 +251,7 @@ public sealed class DocumentProcessingOrchestratorTests
             "Test Document",
             "application/pdf",
             1024,
+            storageLocation,
             DocumentProcessingStatus.Uploaded,
             null,
             isRetrievalEnabled,
@@ -341,23 +341,60 @@ public sealed class DocumentProcessingOrchestratorTests
         }
     }
 
+    private sealed class NoopProcessingStep : IDocumentProcessingStep
+    {
+        public Task ExecuteAsync(ManagedDocument document, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+    }
+
     private sealed class FailingProcessingStep(string message) : IDocumentProcessingStep
     {
         public Task ExecuteAsync(ManagedDocument document, CancellationToken cancellationToken = default) =>
             throw new InvalidOperationException(message);
     }
 
-    private sealed class SpyProcessingStep : IDocumentProcessingStep
+    private sealed class NoopTransactionFactory : IDocumentProcessingTransactionFactory
     {
-        public int CallCount { get; private set; }
-        public bool ReadAnyBytes { get; } = false;
-        public bool CalledAiProvider { get; } = false;
+        public Task<IDocumentProcessingTransaction> BeginAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult<IDocumentProcessingTransaction>(new NoopTransaction());
 
-        public Task ExecuteAsync(ManagedDocument document, CancellationToken cancellationToken = default)
+        private sealed class NoopTransaction : IDocumentProcessingTransaction
         {
-            CallCount++;
+            public Task CommitAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+            public Task RollbackAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+            public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class SpyTransactionFactory : IDocumentProcessingTransactionFactory
+    {
+        public SpyTransaction? LastTransaction { get; private set; }
+
+        public Task<IDocumentProcessingTransaction> BeginAsync(CancellationToken cancellationToken = default)
+        {
+            LastTransaction = new SpyTransaction();
+            return Task.FromResult<IDocumentProcessingTransaction>(LastTransaction);
+        }
+    }
+
+    private sealed class SpyTransaction : IDocumentProcessingTransaction
+    {
+        public bool WasCommitted { get; private set; }
+        public bool WasRolledBack { get; private set; }
+
+        public Task CommitAsync(CancellationToken cancellationToken = default)
+        {
+            WasCommitted = true;
             return Task.CompletedTask;
         }
+
+        public Task RollbackAsync(CancellationToken cancellationToken = default)
+        {
+            WasRolledBack = true;
+            return Task.CompletedTask;
+        }
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
     private sealed class RecordingAuditWriter : IAuditEventWriter
