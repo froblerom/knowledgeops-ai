@@ -39,6 +39,46 @@ internal sealed class LocalDocumentStorage(
         return new StoredDocumentReference($"{LocalScheme}{storedName}");
     }
 
+    public Task<Stream> OpenReadAsync(string storageReference, CancellationToken cancellationToken = default)
+    {
+        if (!storageReference.StartsWith(LocalScheme, StringComparison.Ordinal))
+            throw new InvalidOperationException(
+                "Unrecognized storage reference scheme.");
+
+        var storedName = storageReference[LocalScheme.Length..];
+        if (string.IsNullOrWhiteSpace(storedName))
+            throw new InvalidOperationException("Storage reference contains an empty stored name.");
+
+        var root = ResolveRoot();
+        var rootWithSeparator = root.EndsWith(Path.DirectorySeparatorChar)
+            ? root
+            : root + Path.DirectorySeparatorChar;
+
+        var fullPath = Path.GetFullPath(Path.Combine(root, storedName));
+        if (!fullPath.StartsWith(rootWithSeparator, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException(
+                "Resolved path is outside the configured storage root.");
+
+        logger.LogDebug("Opening document for read. StoredName={StoredName}", storedName);
+
+        try
+        {
+            Stream stream = new FileStream(
+                fullPath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read,
+                bufferSize: 81920,
+                useAsync: true);
+            return Task.FromResult(stream);
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException
+            or UnauthorizedAccessException or IOException)
+        {
+            throw new InvalidOperationException("Document file could not be opened for reading.");
+        }
+    }
+
     public Task DeleteAsync(string storageReference, CancellationToken cancellationToken = default)
     {
         if (!storageReference.StartsWith(LocalScheme, StringComparison.Ordinal))

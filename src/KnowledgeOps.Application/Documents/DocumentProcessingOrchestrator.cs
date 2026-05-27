@@ -6,6 +6,7 @@ namespace KnowledgeOps.Application.Documents;
 public sealed class DocumentProcessingOrchestrator(
     IDocumentRepository repository,
     IDocumentProcessingStep processingStep,
+    IDocumentProcessingTransactionFactory transactionFactory,
     IAuditEventWriter auditEventWriter,
     ICorrelationContext correlationContext,
     ILogger<DocumentProcessingOrchestrator> logger) : IDocumentProcessingOrchestrator
@@ -43,25 +44,35 @@ public sealed class DocumentProcessingOrchestrator(
         var started = DateTimeOffset.UtcNow;
         try
         {
-            await processingStep.ExecuteAsync(claimed, cancellationToken);
+            await using var transaction = await transactionFactory.BeginAsync(cancellationToken);
+            try
+            {
+                await processingStep.ExecuteAsync(claimed, cancellationToken);
 
-            var completedAt = DateTimeOffset.UtcNow;
-            await repository.MarkProcessedAsync(claimed.DocumentId, completedAt, cancellationToken);
+                var completedAt = DateTimeOffset.UtcNow;
+                await repository.MarkProcessedAsync(claimed.DocumentId, completedAt, cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
 
-            logger.LogInformation(
-                "Document processing succeeded. CorrelationId={CorrelationId} DocumentId={DocumentId} " +
-                "OrganizationId={OrganizationId} DurationMs={DurationMs}",
-                correlationContext.CorrelationId,
-                claimed.DocumentId,
-                claimed.OrganizationId,
-                (long)(completedAt - started).TotalMilliseconds);
+                logger.LogInformation(
+                    "Document processing succeeded. CorrelationId={CorrelationId} DocumentId={DocumentId} " +
+                    "OrganizationId={OrganizationId} DurationMs={DurationMs}",
+                    correlationContext.CorrelationId,
+                    claimed.DocumentId,
+                    claimed.OrganizationId,
+                    (long)(completedAt - started).TotalMilliseconds);
 
-            await WriteAuditAsync(
-                AuditEventTypes.DocumentProcessingSucceeded,
-                "Document processing succeeded.",
-                claimed.OrganizationId,
-                claimed.DocumentId,
-                cancellationToken);
+                await WriteAuditAsync(
+                    AuditEventTypes.DocumentProcessingSucceeded,
+                    "Document processing succeeded.",
+                    claimed.OrganizationId,
+                    claimed.DocumentId,
+                    cancellationToken);
+            }
+            catch
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                throw;
+            }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

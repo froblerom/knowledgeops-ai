@@ -194,6 +194,7 @@ internal sealed class EfDocumentRepository(KnowledgeOpsDbContext dbContext) : ID
             doc.Title,
             doc.ContentType,
             doc.FileSizeBytes,
+            doc.StorageLocation,
             doc.ProcessingStatus,
             doc.FailureReason,
             doc.IsRetrievalEnabled,

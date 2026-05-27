@@ -22,7 +22,7 @@ public sealed class PersistenceModelTests
             .ToArray();
 
         Assert.Equal(
-            ["audit_log_entries", "documents", "organizations", "user_roles", "users"],
+            ["audit_log_entries", "document_chunks", "documents", "organizations", "user_roles", "users"],
             tableNames);
     }
 
@@ -124,6 +124,40 @@ public sealed class PersistenceModelTests
             documentEntity.GetForeignKeys(),
             key => key.Properties.Single().Name == nameof(Document.UploadedByUserId)
                 && key.PrincipalEntityType.ClrType == typeof(User));
+    }
+
+    [Fact]
+    public void Model_Maps_DocumentChunks_Schema_Indexes_And_ForeignKeys()
+    {
+        using var context = CreateContext();
+
+        var chunkEntity = context.Model.FindEntityType(typeof(DocumentChunk))!;
+        var indexNames = chunkEntity.GetIndexes()
+            .Select(index => index.GetDatabaseName())
+            .ToArray();
+
+        Assert.Equal("document_chunks", chunkEntity.GetTableName());
+        Assert.False(chunkEntity.FindProperty(nameof(DocumentChunk.Text))!.IsNullable);
+        Assert.True(chunkEntity.FindProperty(nameof(DocumentChunk.PageNumber))!.IsNullable);
+        Assert.True(chunkEntity.FindProperty(nameof(DocumentChunk.SectionLabel))!.IsNullable);
+        Assert.Equal(300, chunkEntity.FindProperty(nameof(DocumentChunk.SectionLabel))!.GetMaxLength());
+        Assert.True(chunkEntity.FindProperty(nameof(DocumentChunk.DeletedAt))!.IsNullable);
+
+        Assert.Contains("IX_document_chunks_document_id", indexNames);
+        Assert.Contains("IX_document_chunks_organization_id", indexNames);
+        Assert.Contains("IX_document_chunks_deleted_at", indexNames);
+        Assert.Contains(
+            chunkEntity.GetIndexes(),
+            idx => idx.GetDatabaseName() == "UX_document_chunks_document_index" && idx.IsUnique);
+
+        Assert.Contains(
+            chunkEntity.GetForeignKeys(),
+            key => key.Properties.Single().Name == nameof(DocumentChunk.DocumentId)
+                && key.PrincipalEntityType.ClrType == typeof(Document));
+        Assert.Contains(
+            chunkEntity.GetForeignKeys(),
+            key => key.Properties.Single().Name == nameof(DocumentChunk.OrganizationId)
+                && key.PrincipalEntityType.ClrType == typeof(Organization));
     }
 
     private static KnowledgeOpsDbContext CreateContext()

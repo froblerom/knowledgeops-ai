@@ -11,6 +11,7 @@ public sealed record ManagedDocument(
     string Title,
     string ContentType,
     long FileSizeBytes,
+    string StorageLocation,
     DocumentProcessingStatus ProcessingStatus,
     string? FailureReason,
     bool IsRetrievalEnabled,
