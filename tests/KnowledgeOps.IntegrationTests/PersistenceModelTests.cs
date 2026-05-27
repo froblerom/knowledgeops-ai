@@ -22,7 +22,7 @@ public sealed class PersistenceModelTests
             .ToArray();
 
         Assert.Equal(
-            ["audit_log_entries", "document_chunks", "documents", "organizations", "user_roles", "users"],
+            ["audit_log_entries", "chunk_embeddings", "document_chunks", "documents", "organizations", "user_roles", "users"],
             tableNames);
     }
 
@@ -157,6 +157,43 @@ public sealed class PersistenceModelTests
         Assert.Contains(
             chunkEntity.GetForeignKeys(),
             key => key.Properties.Single().Name == nameof(DocumentChunk.OrganizationId)
+                && key.PrincipalEntityType.ClrType == typeof(Organization));
+    }
+
+    [Fact]
+    public void Model_Maps_ChunkEmbeddings_Schema_Indexes_And_ForeignKeys()
+    {
+        using var context = CreateContext();
+
+        var embeddingEntity = context.Model.FindEntityType(typeof(ChunkEmbedding))!;
+        var indexNames = embeddingEntity.GetIndexes()
+            .Select(index => index.GetDatabaseName())
+            .ToArray();
+
+        Assert.Equal("chunk_embeddings", embeddingEntity.GetTableName());
+        Assert.False(embeddingEntity.FindProperty(nameof(ChunkEmbedding.ProviderName))!.IsNullable);
+        Assert.Equal(100, embeddingEntity.FindProperty(nameof(ChunkEmbedding.ProviderName))!.GetMaxLength());
+        Assert.False(embeddingEntity.FindProperty(nameof(ChunkEmbedding.ModelName))!.IsNullable);
+        Assert.Equal(150, embeddingEntity.FindProperty(nameof(ChunkEmbedding.ModelName))!.GetMaxLength());
+        Assert.True(embeddingEntity.FindProperty(nameof(ChunkEmbedding.VectorData))!.IsNullable);
+        Assert.True(embeddingEntity.FindProperty(nameof(ChunkEmbedding.VectorDimensions))!.IsNullable);
+        Assert.True(embeddingEntity.FindProperty(nameof(ChunkEmbedding.FailureReason))!.IsNullable);
+        Assert.Equal(1000, embeddingEntity.FindProperty(nameof(ChunkEmbedding.FailureReason))!.GetMaxLength());
+
+        Assert.Contains("IX_chunk_embeddings_organization_id", indexNames);
+        Assert.Contains("IX_chunk_embeddings_status", indexNames);
+        Assert.Contains("IX_chunk_embeddings_provider_model", indexNames);
+        Assert.Contains(
+            embeddingEntity.GetIndexes(),
+            idx => idx.GetDatabaseName() == "UX_chunk_embeddings_chunk_id" && idx.IsUnique);
+
+        Assert.Contains(
+            embeddingEntity.GetForeignKeys(),
+            key => key.Properties.Single().Name == nameof(ChunkEmbedding.ChunkId)
+                && key.PrincipalEntityType.ClrType == typeof(DocumentChunk));
+        Assert.Contains(
+            embeddingEntity.GetForeignKeys(),
+            key => key.Properties.Single().Name == nameof(ChunkEmbedding.OrganizationId)
                 && key.PrincipalEntityType.ClrType == typeof(Organization));
     }
 

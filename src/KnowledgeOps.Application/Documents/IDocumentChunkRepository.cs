@@ -15,4 +15,8 @@ public interface IDocumentChunkRepository
     Task SaveChunksAsync(
         IReadOnlyList<DocumentChunkRecord> chunks,
         CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<DocumentChunkRecord>> GetChunksForDocumentAsync(
+        Guid documentId,
+        CancellationToken cancellationToken = default);
 }

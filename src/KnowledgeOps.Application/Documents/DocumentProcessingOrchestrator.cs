@@ -3,33 +3,50 @@ using Microsoft.Extensions.Logging;
 
 namespace KnowledgeOps.Application.Documents;
 
-public sealed class DocumentProcessingOrchestrator(
-    IDocumentRepository repository,
-    IDocumentProcessingStep processingStep,
-    IDocumentProcessingTransactionFactory transactionFactory,
-    IAuditEventWriter auditEventWriter,
-    ICorrelationContext correlationContext,
-    ILogger<DocumentProcessingOrchestrator> logger) : IDocumentProcessingOrchestrator
+public sealed class DocumentProcessingOrchestrator : IDocumentProcessingOrchestrator
 {
     private const int MaxFailureReasonLength = 200;
 
+    private readonly IDocumentRepository _repository;
+    private readonly IReadOnlyList<IDocumentProcessingStep> _steps;
+    private readonly IDocumentProcessingTransactionFactory _transactionFactory;
+    private readonly IAuditEventWriter _auditEventWriter;
+    private readonly ICorrelationContext _correlationContext;
+    private readonly ILogger<DocumentProcessingOrchestrator> _logger;
+
+    public DocumentProcessingOrchestrator(
+        IDocumentRepository repository,
+        IEnumerable<IDocumentProcessingStep> processingSteps,
+        IDocumentProcessingTransactionFactory transactionFactory,
+        IAuditEventWriter auditEventWriter,
+        ICorrelationContext correlationContext,
+        ILogger<DocumentProcessingOrchestrator> logger)
+    {
+        _repository = repository;
+        _steps = processingSteps.ToList();
+        _transactionFactory = transactionFactory;
+        _auditEventWriter = auditEventWriter;
+        _correlationContext = correlationContext;
+        _logger = logger;
+    }
+
     public async Task<bool> ProcessNextAsync(CancellationToken cancellationToken = default)
     {
-        var pending = await repository.FindPendingForProcessingAsync(maxCount: 1, cancellationToken);
+        var pending = await _repository.FindPendingForProcessingAsync(maxCount: 1, cancellationToken);
         if (pending.Count == 0)
             return false;
 
         var candidate = pending[0];
         var now = DateTimeOffset.UtcNow;
 
-        var claimed = await repository.ClaimForProcessingAsync(candidate.DocumentId, now, cancellationToken);
+        var claimed = await _repository.ClaimForProcessingAsync(candidate.DocumentId, now, cancellationToken);
         if (claimed is null)
             return false;
 
-        logger.LogInformation(
+        _logger.LogInformation(
             "Document processing started. CorrelationId={CorrelationId} DocumentId={DocumentId} " +
             "OrganizationId={OrganizationId} Status={Status}",
-            correlationContext.CorrelationId,
+            _correlationContext.CorrelationId,
             claimed.DocumentId,
             claimed.OrganizationId,
             claimed.ProcessingStatus);
@@ -44,19 +61,20 @@ public sealed class DocumentProcessingOrchestrator(
         var started = DateTimeOffset.UtcNow;
         try
         {
-            await using var transaction = await transactionFactory.BeginAsync(cancellationToken);
+            await using var transaction = await _transactionFactory.BeginAsync(cancellationToken);
             try
             {
-                await processingStep.ExecuteAsync(claimed, cancellationToken);
+                foreach (var step in _steps)
+                    await step.ExecuteAsync(claimed, cancellationToken);
 
                 var completedAt = DateTimeOffset.UtcNow;
-                await repository.MarkProcessedAsync(claimed.DocumentId, completedAt, cancellationToken);
+                await _repository.MarkProcessedAsync(claimed.DocumentId, completedAt, cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
 
-                logger.LogInformation(
+                _logger.LogInformation(
                     "Document processing succeeded. CorrelationId={CorrelationId} DocumentId={DocumentId} " +
                     "OrganizationId={OrganizationId} DurationMs={DurationMs}",
-                    correlationContext.CorrelationId,
+                    _correlationContext.CorrelationId,
                     claimed.DocumentId,
                     claimed.OrganizationId,
                     (long)(completedAt - started).TotalMilliseconds);
@@ -79,12 +97,12 @@ public sealed class DocumentProcessingOrchestrator(
             var failedAt = DateTimeOffset.UtcNow;
             var safeReason = BuildSafeFailureReason(ex);
 
-            await repository.MarkFailedAsync(claimed.DocumentId, safeReason, failedAt, cancellationToken);
+            await _repository.MarkFailedAsync(claimed.DocumentId, safeReason, failedAt, cancellationToken);
 
-            logger.LogWarning(
+            _logger.LogWarning(
                 "Document processing failed. CorrelationId={CorrelationId} DocumentId={DocumentId} " +
                 "OrganizationId={OrganizationId} DurationMs={DurationMs}",
-                correlationContext.CorrelationId,
+                _correlationContext.CorrelationId,
                 claimed.DocumentId,
                 claimed.OrganizationId,
                 (long)(failedAt - started).TotalMilliseconds);
@@ -126,12 +144,12 @@ public sealed class DocumentProcessingOrchestrator(
     {
         try
         {
-            await auditEventWriter.WriteAsync(
+            await _auditEventWriter.WriteAsync(
                 new AuditEvent(
                     eventType,
                     message,
                     severity,
-                    correlationContext.CorrelationId,
+                    _correlationContext.CorrelationId,
                     organizationId,
                     null,
                     "Document",
@@ -140,10 +158,10 @@ public sealed class DocumentProcessingOrchestrator(
         }
         catch
         {
-            logger.LogWarning(
+            _logger.LogWarning(
                 "Audit write failed. EventType={EventType} CorrelationId={CorrelationId}",
                 eventType,
-                correlationContext.CorrelationId);
+                _correlationContext.CorrelationId);
         }
     }
 }

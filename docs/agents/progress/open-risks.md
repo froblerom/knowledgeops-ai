@@ -78,6 +78,21 @@ Non-integration tests: 27 Domain + 228 Application + 102 API = 357 passed, 0 fai
 - `PlaceholderDocumentProcessingStep` does nothing; documents reach `Processed` status without any real extraction/embedding. `IsEligibleForRetrieval()` remains false until a re-enable operation is implemented (Phase 2+). Acceptable and required by Sprint 12 scope.
 - Worker runs locally via `dotnet run`; no production deployment, container, or service-manager configuration exists yet. Cloud deployment must configure `ConnectionStrings__DefaultConnection` and `Worker:PollingIntervalSeconds` via environment variables or secrets.
 
+## Sprint 14 Issue #27 Disposition
+
+Embedding abstraction and deterministic fake provider are fully implemented. `IEmbeddingProvider` / `FakeEmbeddingProvider` (Infrastructure) generates deterministic, network-free embeddings using SHA-256 hashing of `{modelName}|{dimensions}|{text}` — no Azure/OpenAI SDK is required, and no live provider configuration is needed for tests or CI. `GenerateChunkEmbeddingsProcessingStep` reads saved chunks via `IDocumentChunkRepository.GetChunksForDocumentAsync`, calls the provider per chunk with a per-chunk try/catch, saves a `ChunkEmbeddingRecord` per chunk (status `Ready` or `Failed`), and emits `EmbeddingGenerationSucceeded` / `EmbeddingGenerationFailed` audit events best-effort. Invalid or empty vectors map to `status=Failed` with `FailureReason="Embedding vector was invalid."`. `DocumentProcessingOrchestrator` now accepts `IEnumerable<IDocumentProcessingStep>` materialized to an ordered list; both steps execute in registration order within a single transaction. `ChunkEmbeddingsFoundation` EF migration adds `chunk_embeddings` (12 columns, 4 indexes, FKs to `document_chunks` and `organizations`, unique constraint `UX_chunk_embeddings_chunk_id` for MVP one-embedding-per-chunk invariant). `EmbeddingStatus` enum has only `Ready` and `Failed` (terminal states). `vector_data` stored as `nvarchar(max)` JSON `float[]` for MVP. `EmbeddingRequest.Text` is never logged, audited, or included in failure reasons.
+
+RISK-014 (embedding failure makes chunks incorrectly retrievable): **Partially mitigated.** Failed embeddings are stored with `status=Failed`; retrieval eligibility predicate (`IsEligibleForRetrieval`) does not yet check embedding status — enforcement deferred to Sprint 15+ retrieval workflow. The risk remains open until chunk-level retrieval eligibility is enforced.
+
+RISK-020 (SDK coupling): **Resolved for Sprint 14.** `IEmbeddingProvider` is owned by Application; Domain and Application have no Azure/OpenAI SDK references. Assembly dependency tests guard the boundary. `FakeEmbeddingProvider` (Infrastructure) has no external SDK dependency.
+
+RISK-025 (CI live-provider risk): **Resolved for Sprint 14.** `FakeEmbeddingProvider` is deterministic and network-free; no API key or Azure config is required for `FakeEmbeddingProviderTests` or `GenerateChunkEmbeddingsProcessingStepTests`. All tests pass without a live provider.
+
+**New residual risks**:
+- `IsEligibleForRetrieval()` does not check chunk embedding status; deferred to retrieval workflow Sprint 15+.
+- `FakeEmbeddingProvider` is the only registered provider; no Azure OpenAI or real provider adapter exists. Production deployment requires a real provider registration before retrieval goes live.
+- `vector_data` stored as `nvarchar(max)` JSON; no SQL Server native vector type or similarity index exists. Retrieval will require full vector scan or an external vector store Sprint 15+.
+
 ## Sprint 13 Issue #23 Disposition
 
 Text extraction and chunking are fully implemented. `ExtractAndChunkDocumentProcessingStep` replaces `PlaceholderDocumentProcessingStep`; documents now reach `Processed` status with real text extraction and chunk persistence. The Sprint 12 residual risk "PlaceholderDocumentProcessingStep does nothing" is **resolved**.

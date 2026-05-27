@@ -1,6 +1,7 @@
 using KnowledgeOps.Application.Documents;
 using KnowledgeOps.Domain.Documents;
 using KnowledgeOps.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 namespace KnowledgeOps.Infrastructure.Documents;
 
@@ -24,5 +25,24 @@ internal sealed class EfDocumentChunkRepository(KnowledgeOpsDbContext dbContext)
 
         dbContext.DocumentChunks.AddRange(entities);
         await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<DocumentChunkRecord>> GetChunksForDocumentAsync(
+        Guid documentId,
+        CancellationToken cancellationToken = default)
+    {
+        return await dbContext.DocumentChunks
+            .Where(c => c.DocumentId == documentId && c.DeletedAt == null)
+            .OrderBy(c => c.ChunkIndex)
+            .Select(c => new DocumentChunkRecord(
+                c.Id,
+                c.DocumentId,
+                c.OrganizationId,
+                c.ChunkIndex,
+                c.Text,
+                c.CharacterLength ?? 0,
+                c.TokenEstimate ?? 0,
+                c.CreatedAt))
+            .ToListAsync(cancellationToken);
     }
 }

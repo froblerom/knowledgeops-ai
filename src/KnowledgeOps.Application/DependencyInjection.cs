@@ -16,6 +16,7 @@ public static class DependencyInjection
         services.AddScoped<DocumentService>();
         services.AddScoped<IDocumentProcessingOrchestrator, DocumentProcessingOrchestrator>();
         services.AddScoped<IDocumentProcessingStep, ExtractAndChunkDocumentProcessingStep>();
+        services.AddScoped<IDocumentProcessingStep, GenerateChunkEmbeddingsProcessingStep>();
         services.AddScoped<UserManagementService>();
 
         services.AddSingleton<IPermissionService, PermissionService>();

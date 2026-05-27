@@ -29,7 +29,13 @@
       "PowerShell($env:ConnectionStrings__DefaultConnection = \"Server=localhost,1433;Database=KnowledgeOpsDevDb;User Id=sa;Password=Dev@12345;TrustServerCertificate=True\"; dotnet ef migrations add DocumentMetadataFoundation --project C:\\\\Dev\\\\knowdledgeops_ai\\\\src\\\\KnowledgeOps.Infrastructure\\\\KnowledgeOps.Infrastructure.csproj --startup-project C:\\\\Dev\\\\knowdledgeops_ai\\\\src\\\\KnowledgeOps.Infrastructure\\\\KnowledgeOps.Infrastructure.csproj --output-dir Persistence/Migrations 2>&1)",
       "PowerShell($env:ConnectionStrings__DefaultConnection = \"Server=localhost;Database=KnowledgeOps_Dev;Trusted_Connection=True;TrustServerCertificate=True;\"; Set-Location \"c:\\\\Dev\\\\knowdledgeops_ai\"; dotnet ef migrations add DocumentChunksFoundation --project src/KnowledgeOps.Infrastructure --startup-project src/KnowledgeOps.Infrastructure 2>&1)",
       "PowerShell(cd c:\\\\Dev\\\\knowdledgeops_ai; $env:ConnectionStrings__DefaultConnection = \"Server=localhost,1433;Database=KnowledgeOpsMigrationList;User Id=sa;Password=placeholder;TrustServerCertificate=True;Encrypt=True\"; dotnet tool run dotnet-ef migrations list --project src/KnowledgeOps.Infrastructure --startup-project src/KnowledgeOps.Infrastructure 2>&1)",
-      "PowerShell(cd c:\\\\Dev\\\\knowdledgeops_ai; git grep -n \"StorageLocation\" -- \"src/KnowledgeOps.Api/\" 2>$null; Write-Host \"exit:$LASTEXITCODE\")"
+      "PowerShell(cd c:\\\\Dev\\\\knowdledgeops_ai; git grep -n \"StorageLocation\" -- \"src/KnowledgeOps.Api/\" 2>$null; Write-Host \"exit:$LASTEXITCODE\")",
+      "Bash(ConnectionStrings__DefaultConnection=\"Server=localhost,1433;Database=KnowledgeOpsLocal;User Id=sa;Password=KnowledgeOps_Dev2025!;TrustServerCertificate=True;\" dotnet tool run dotnet-ef migrations add ChunkEmbeddingsFoundation --project src/KnowledgeOps.Infrastructure --startup-project src/KnowledgeOps.Infrastructure)",
+      "Read(//c/Users/frobl/.claude/projects/c--Dev-knowdledgeops-ai/memory/**)",
+      "Bash(xargs wc -l)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\frobl\\.claude\\projects\\c--Dev-knowdledgeops-ai\\memory"
     ]
   }
 }
