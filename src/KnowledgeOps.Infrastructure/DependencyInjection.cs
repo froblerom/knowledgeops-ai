@@ -49,6 +49,7 @@ public static class DependencyInjection
         services.AddScoped<LocalVectorStore>();
         services.AddScoped<IRetrievalIndex>(provider => provider.GetRequiredService<LocalVectorStore>());
         services.AddScoped<ISemanticSearchProvider>(provider => provider.GetRequiredService<LocalVectorStore>());
+        services.AddScoped<IRetrievalEligibilityRepository, EfRetrievalEligibilityRepository>();
         services.AddOptions<RetrievalSettings>().BindConfiguration("Retrieval");
         services.AddScoped<IDocumentStorage, LocalDocumentStorage>();
         services.AddScoped<IDocumentTextExtractor, TxtMarkdownTextExtractor>();
