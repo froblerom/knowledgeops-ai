@@ -1,4 +1,5 @@
 using KnowledgeOps.Domain.Audit;
+using KnowledgeOps.Domain.Chat;
 using KnowledgeOps.Domain.Documents;
 using KnowledgeOps.Domain.Organizations;
 using KnowledgeOps.Domain.Users;
@@ -23,6 +24,10 @@ public sealed class KnowledgeOpsDbContext(DbContextOptions<KnowledgeOpsDbContext
     public DbSet<ChunkEmbedding> ChunkEmbeddings => Set<ChunkEmbedding>();
 
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
+
+    public DbSet<ChatSession> ChatSessions => Set<ChatSession>();
+
+    public DbSet<ChatInteraction> ChatInteractions => Set<ChatInteraction>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

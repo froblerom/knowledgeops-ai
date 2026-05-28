@@ -31,4 +31,9 @@ public static class AuditEventTypes
     public const string RetrievalInsufficientResults = "RetrievalInsufficientResults";
     public const string StaleRetrievalCandidateExcluded = "StaleRetrievalCandidateExcluded";
     public const string MalformedVectorExcluded = "MalformedVectorExcluded";
+    public const string ChatInteractionStarted = "ChatInteractionStarted";
+    public const string ChatAnswerGenerationCompleted = "ChatAnswerGenerationCompleted";
+    public const string ChatAnswerGenerationFailed = "ChatAnswerGenerationFailed";
+    public const string ChatInteractionStored = "ChatInteractionStored";
+    public const string InsufficientContextReturned = "InsufficientContextReturned";
 }
