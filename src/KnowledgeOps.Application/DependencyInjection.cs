@@ -2,6 +2,7 @@ using KnowledgeOps.Application.Auth.Commands;
 using KnowledgeOps.Application.Auth.Queries;
 using KnowledgeOps.Application.Authorization;
 using KnowledgeOps.Application.Documents;
+using KnowledgeOps.Application.Retrieval;
 using KnowledgeOps.Application.Users;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -18,6 +19,7 @@ public static class DependencyInjection
         services.AddScoped<IDocumentProcessingStep, ExtractAndChunkDocumentProcessingStep>();
         services.AddScoped<IDocumentProcessingStep, GenerateChunkEmbeddingsProcessingStep>();
         services.AddScoped<UserManagementService>();
+        services.AddScoped<IEligibleSemanticRetrievalService, EligibleSemanticRetrievalService>();
 
         services.AddSingleton<IPermissionService, PermissionService>();
         services.AddSingleton<IOrganizationScopeService, OrganizationScopeService>();

@@ -52,3 +52,45 @@ public sealed record RetrievalStorageHealthResult(
     int IndexedEmbeddingCount,
     int FailedIndexCount,
     string? DegradedReason = null);
+
+public sealed record EligibleSemanticRetrievalRequest(
+    string QueryText,
+    int TopK,
+    double? MinimumScore = null);
+
+public sealed record EligibleSemanticRetrievalResult(
+    Guid RetrievalQueryId,
+    string QueryHash,
+    bool IsInsufficientResult,
+    IReadOnlyList<EligibleSemanticRetrievalCandidate> Candidates,
+    int RequestedTopK,
+    int ReturnedCount,
+    RetrievalProviderMetadata? ProviderMetadata,
+    string? FailureCode = null,
+    string? FailureReason = null);
+
+public sealed record EligibleSemanticRetrievalCandidate(
+    int Rank,
+    Guid OrganizationId,
+    Guid DocumentId,
+    Guid ChunkId,
+    Guid ChunkEmbeddingId,
+    RetrievalScore RetrievalScore,
+    string ScoreMethod,
+    string ProviderName,
+    string ModelName,
+    int? ChunkIndex = null,
+    int? PageNumber = null,
+    string? SectionLabel = null);
+
+public sealed record RetrievalCandidateIdentity(
+    Guid OrganizationId,
+    Guid DocumentId,
+    Guid ChunkId,
+    Guid ChunkEmbeddingId);
+
+public sealed record RetrievalEligibleCandidateIdentity(
+    Guid OrganizationId,
+    Guid DocumentId,
+    Guid ChunkId,
+    Guid ChunkEmbeddingId);

@@ -1,12 +1,12 @@
 # Open Implementation Risks
 
-Last updated: 2026-05-26
+Last updated: 2026-05-27
 
 | Risk | Severity | Related Area | Mitigation | Status |
 | --- | --- | --- | --- | --- |
 | Agent prompts may load excessive context and lose focus. | Medium | Harness / all future issues | Use `13-prompt-classifier.md`, level-based routing and minimum context bundles. | Open |
 | RAG may be implemented as unsupported general answer behavior rather than grounded document assistance. | High | Retrieval/RAG | Use `rag-implementation-agent.md`, citation and insufficient-context rules, and fake-provider safety tests. | Open |
-| Authorization may be skipped during retrieval or prompt construction. | Critical | Security/RAG | Load security, business-rules and RAG contexts for relevant tasks; require cross-scope tests and verification. Sprint 15 now filters semantic retrieval by organization before vector loading/scoring; future prompt construction remains open. | Open |
+| Authorization may be skipped during retrieval or prompt construction. | Critical | Security/RAG | Load security, business-rules and RAG contexts for relevant tasks; require cross-scope tests and verification. Sprint 16 validates active persisted user state, `Chat.AskQuestion`, organization scope, and Application-level candidate revalidation before returning retrieval candidates; future prompt construction remains open. | Open |
 | Agent context summaries may diverge from canonical documents over time. | High | Documentation governance | Use documentation and verification agents; update harness when canonical docs change; treat canonical docs as authoritative. | Open |
 | Diagram artifact filename cleanup remains pending. | Low | Documentation artifacts | Address in Sprint 28 or an explicitly authorized diagram artifact task. | Open |
 
@@ -112,6 +112,28 @@ RISK-025 (CI live-provider risk): **Guarded.** The local SQL-backed adapter has 
 **Residual risks**:
 - SQL Server migration application and SQL-gated retrieval tests were not validated in this run because `ConnectionStrings__DefaultConnection` was unset.
 - Production vector retrieval provider selection, semantic quality tuning, hybrid search, query-text embedding orchestration, prompt construction, citations, chat API, and full RAG orchestration remain future work.
+
+## Sprint 16 Issue #29 Disposition
+
+Eligible organization-scoped semantic retrieval is implemented as an Application-level service only. The service validates authentication, re-reads active persisted user access state, requires `Chat.AskQuestion`, uses `UserAccessState.OrganizationId` as the authoritative scope, hashes trimmed query text, generates a query embedding with the fake-compatible `IEmbeddingProvider`, calls semantic search with QueryVector only, bulk revalidates returned candidates with `IRetrievalEligibilityRepository`, excludes cross-organization and stale candidates, assigns rank only after filtering, and emits an insufficient-result signal when no authorized candidates remain.
+
+RISK-006 (cross-organization retrieval leakage): **Mitigated for Sprint 16 retrieval orchestration.** Organization scope comes from active persisted user state, cross-organization semantic candidates are excluded before database revalidation, and the EF repository revalidates document, chunk, embedding, and candidate identities in the requested organization.
+
+RISK-014 (embedding failure makes chunks incorrectly retrievable): **Mitigated.** Application revalidation requires embedding `Ready` and index `Indexed` in addition to the Sprint 15 provider filter.
+
+RISK-015 (vector/index state inconsistent with source records): **Mitigated for Sprint 16.** Stale semantic candidates are excluded after bulk revalidation, including missing embeddings, unindexed embeddings, disabled/deleted/unprocessed documents, and identity mismatches.
+
+RISK-018 (insufficient results not handled safely): **Partially mitigated.** The eligible retrieval service returns `IsInsufficientResult = true` with no candidates when no authorized chunks remain; future chat/RAG must turn that signal into the canonical user-facing insufficient-context response.
+
+RISK-020 (SDK coupling): **Guarded.** The Application service depends only on abstractions; no provider SDK package or Infrastructure reference is introduced.
+
+RISK-025 (CI live-provider risk): **Guarded.** Query embedding remains fake-provider-compatible and semantic retrieval remains local/testable; no live provider dependency is required for normal tests.
+
+**Residual risks**:
+- SQL-gated eligibility repository tests were not validated in this run because `ConnectionStrings__DefaultConnection` was unset.
+- Physical `retrieval_results` persistence remains deferred until the chat interaction sprint where `chat_interaction_id` exists.
+- Future prompt construction must consume only the final authorized candidate set returned by the Sprint 16 service.
+- Fake embeddings remain deterministic but not semantically production-quality; production retrieval provider selection and full RAG answer generation remain future work.
 
 ## Sprint 13 Issue #23 Disposition
 

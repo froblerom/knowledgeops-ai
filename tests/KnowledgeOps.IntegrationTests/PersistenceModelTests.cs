@@ -27,6 +27,28 @@ public sealed class PersistenceModelTests
     }
 
     [Fact]
+    public void Model_DoesNotIntroduce_RetrievalQueryOrResultPersistence()
+    {
+        using var context = CreateContext();
+
+        var tableNames = context.Model.GetEntityTypes()
+            .Select(entityType => entityType.GetTableName()!)
+            .ToArray();
+        var dbSetNames = typeof(KnowledgeOpsDbContext)
+            .GetProperties()
+            .Where(property =>
+                property.PropertyType.IsGenericType
+                && property.PropertyType.GetGenericTypeDefinition() == typeof(DbSet<>))
+            .Select(property => property.Name)
+            .ToArray();
+
+        Assert.DoesNotContain("retrieval_results", tableNames);
+        Assert.DoesNotContain("retrieval_queries", tableNames);
+        Assert.DoesNotContain(dbSetNames, name => name.Contains("RetrievalResult", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(dbSetNames, name => name.Contains("RetrievalQuery", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void Model_Maps_Organization_Scope_Keys_And_Canonical_Indexes()
     {
         using var context = CreateContext();

@@ -25,6 +25,10 @@ public static class AuditEventTypes
     public const string VectorIndexingFailed = "VectorIndexingFailed";
     public const string SemanticQueryCompleted = "SemanticQueryCompleted";
     public const string SemanticQueryFailed = "SemanticQueryFailed";
+    public const string QueryEmbeddingFailed = "QueryEmbeddingFailed";
+    public const string EligibleSemanticRetrievalCompleted = "EligibleSemanticRetrievalCompleted";
+    public const string EligibleSemanticRetrievalFailed = "EligibleSemanticRetrievalFailed";
+    public const string RetrievalInsufficientResults = "RetrievalInsufficientResults";
     public const string StaleRetrievalCandidateExcluded = "StaleRetrievalCandidateExcluded";
     public const string MalformedVectorExcluded = "MalformedVectorExcluded";
 }
