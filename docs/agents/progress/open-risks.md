@@ -1,12 +1,12 @@
 # Open Implementation Risks
 
-Last updated: 2026-05-27
+Last updated: 2026-05-28
 
 | Risk | Severity | Related Area | Mitigation | Status |
 | --- | --- | --- | --- | --- |
 | Agent prompts may load excessive context and lose focus. | Medium | Harness / all future issues | Use `13-prompt-classifier.md`, level-based routing and minimum context bundles. | Open |
-| RAG may be implemented as unsupported general answer behavior rather than grounded document assistance. | High | Retrieval/RAG | Use `rag-implementation-agent.md`, citation and insufficient-context rules, and fake-provider safety tests. | Open |
-| Authorization may be skipped during retrieval or prompt construction. | Critical | Security/RAG | Load security, business-rules and RAG contexts for relevant tasks; require cross-scope tests and verification. Sprint 16 validates active persisted user state, `Chat.AskQuestion`, organization scope, and Application-level candidate revalidation before returning retrieval candidates; future prompt construction remains open. | Open |
+| RAG may be implemented as unsupported general answer behavior rather than grounded document assistance. | High | Retrieval/RAG | Use `rag-implementation-agent.md`, citation and insufficient-context rules, and fake-provider safety tests. Sprint 17 `RagChatOrchestrationService` enforces retrieval-before-generation, skips generation when `IsInsufficientResult=true`, and records `InsufficientContext` outcome. Prompt construction details remain deferred to Sprint 18. | Partially mitigated — Sprint 18 prompt builder remains open |
+| Authorization may be skipped during retrieval or prompt construction. | Critical | Security/RAG | Load security, business-rules and RAG contexts for relevant tasks; require cross-scope tests and verification. Sprint 16 validates active persisted user state, `Chat.AskQuestion`, organization scope, and Application-level candidate revalidation. Sprint 17 `RagChatOrchestrationService` re-validates org scope from `UserAccessState` (not JWT claims) before passing chunks to generator; chunk text reader enforces org scope. Prompt construction (Sprint 18) must apply `IPromptAuthorizationFilter` hook before including chunks. | Open — prompt construction authorization deferred to Sprint 18 |
 | Agent context summaries may diverge from canonical documents over time. | High | Documentation governance | Use documentation and verification agents; update harness when canonical docs change; treat canonical docs as authoritative. | Open |
 | Diagram artifact filename cleanup remains pending. | Low | Documentation artifacts | Address in Sprint 28 or an explicitly authorized diagram artifact task. | Open |
 
@@ -134,6 +134,26 @@ RISK-025 (CI live-provider risk): **Guarded.** Query embedding remains fake-prov
 - Physical `retrieval_results` persistence remains deferred until the chat interaction sprint where `chat_interaction_id` exists.
 - Future prompt construction must consume only the final authorized candidate set returned by the Sprint 16 service.
 - Fake embeddings remain deterministic but not semantically production-quality; production retrieval provider selection and full RAG answer generation remain future work.
+
+## Sprint 17 Issue #36 Disposition
+
+RAG chat domain model and application orchestration are fully implemented. `RagChatOrchestrationService` enforces retrieval-before-generation as an invariant: retrieval must complete before the generator is called; `IsInsufficientResult = true` skips the generator; retrieval failure also skips the generator. Organization scope is sourced exclusively from `UserAccessState` (persisted database state), not JWT claims. Chunk text fetched for generation is organization-scoped via `EfChunkTextReader.GetChunkTextsAsync(chunkIds, organizationId)`. Provider exceptions are caught and stored as `ProviderFailed` with a safe failure code — no exception message or stack trace is persisted or returned to the caller. All cost/token/latency fields are `nullable` types; zero is never stored for unavailable values. `FakeAnswerGenerator` is SHA-256 deterministic, requires no network, and is CI-safe.
+
+RISK-018 (insufficient results not handled safely): **Resolved for Sprint 17.** `RagChatOrchestrationService` checks `IsInsufficientResult` before calling the generator and stores `AnswerState.InsufficientContext` with null answer text. The test `RagChatOrchestrationService_DoesNotGenerateWhenRetrievalInsufficient` enforces this.
+
+RISK-006 (cross-organization retrieval leakage): **Mitigated for Sprint 17 generation path.** After retrieval, the orchestration service re-filters candidates to `OrganizationId == activeState.OrganizationId` before passing chunk IDs to `EfChunkTextReader`. Chunk text lookup also enforces `organization_id` at query level. The test `RagChatOrchestrationService_DoesNotPassUnauthorizedChunksToGenerator` enforces this.
+
+RISK-020 (SDK coupling): **Guarded for Sprint 17.** `IAiAnswerGenerator` is Application-owned. `FakeAnswerGenerator` in Infrastructure has no external SDK. Assembly dependency tests continue to reject Azure AI, OpenAI, and Semantic Kernel references from Application and Domain.
+
+RISK-025 (CI live-provider risk): **Guarded for Sprint 17.** `FakeAnswerGenerator` is registered for tests and default configuration; no live API key is needed for normal CI.
+
+**Residual risks**:
+- Prompt construction details (system prompt template, context window management, token budget) are deferred to Sprint 18; current implementation passes chunk text directly to generator without a final prompt builder.
+- Physical `retrieval_results` persistence (linking interactions to specific retrieved chunks for citation traceability) remains deferred to Sprint 19 citation sprint.
+- Citation mapping and citation persistence remain deferred to Sprint 19.
+- Angular chat UI and public HTTP chat endpoint remain deferred to Sprint 20.
+- Real Azure OpenAI answer generation adapter remains deferred to Phase 2+.
+- SQL-gated chat persistence integration tests were not run in this session (require `ConnectionStrings__DefaultConnection`); validate against running SQL Server before or during PR review.
 
 ## Sprint 13 Issue #23 Disposition
 

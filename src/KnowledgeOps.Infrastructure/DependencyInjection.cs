@@ -1,4 +1,5 @@
 using KnowledgeOps.Application.Auth.Abstractions;
+using KnowledgeOps.Application.Chat;
 using KnowledgeOps.Application.Documents;
 using KnowledgeOps.Application.Embeddings;
 using KnowledgeOps.Application.Observability;
@@ -7,6 +8,7 @@ using KnowledgeOps.Application.Authorization;
 using KnowledgeOps.Application.Users;
 using KnowledgeOps.Infrastructure.Auth;
 using KnowledgeOps.Infrastructure.Authorization;
+using KnowledgeOps.Infrastructure.Chat;
 using KnowledgeOps.Infrastructure.Documents;
 using KnowledgeOps.Infrastructure.Embeddings;
 using KnowledgeOps.Infrastructure.Observability;
@@ -59,6 +61,11 @@ public static class DependencyInjection
         services.AddScoped<IUserManagementRepository, EfUserManagementRepository>();
         services.AddSingleton<IPasswordHasher, PasswordHasherService>();
         services.AddSingleton<ITokenService, JwtTokenService>();
+        services.AddScoped<IChatSessionRepository, EfChatSessionRepository>();
+        services.AddScoped<IChatInteractionRepository, EfChatInteractionRepository>();
+        services.AddScoped<IChunkTextReader, EfChunkTextReader>();
+        services.AddScoped<IAiAnswerGenerator, FakeAnswerGenerator>();
+        services.AddOptions<FakeAnswerGeneratorSettings>().BindConfiguration("FakeAnswerGenerator");
         services.AddScoped<IAuditEventWriter, EfAuditEventWriter>();
         services.AddScoped<IDatabaseHealthCheck, EfDatabaseHealthCheck>();
         services.AddScoped<IRetrievalStorageHealthCheck, LocalRetrievalStorageHealthCheck>();

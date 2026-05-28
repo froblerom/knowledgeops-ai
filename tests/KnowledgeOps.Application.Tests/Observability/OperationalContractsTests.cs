@@ -16,6 +16,10 @@ public sealed class OperationalContractsTests
 
         Assert.Equal(
             [
+                "ChatAnswerGenerationCompleted",
+                "ChatAnswerGenerationFailed",
+                "ChatInteractionStarted",
+                "ChatInteractionStored",
                 "DocumentProcessingFailed",
                 "DocumentProcessingStarted",
                 "DocumentProcessingSucceeded",
@@ -28,6 +32,7 @@ public sealed class OperationalContractsTests
                 "EmbeddingGenerationFailed",
                 "EmbeddingGenerationSucceeded",
                 "HealthDetailsViewed",
+                "InsufficientContextReturned",
                 "MalformedVectorExcluded",
                 "PermissionDenied",
                 "QueryEmbeddingFailed",

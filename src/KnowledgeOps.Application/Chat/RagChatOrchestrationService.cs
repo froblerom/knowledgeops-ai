@@ -1,0 +1,371 @@
+using System.Diagnostics;
+using System.Security.Cryptography;
+using System.Text;
+using KnowledgeOps.Application.Auth.Abstractions;
+using KnowledgeOps.Application.Authorization;
+using KnowledgeOps.Application.Observability;
+using KnowledgeOps.Application.Retrieval;
+using KnowledgeOps.Domain.Chat;
+using Microsoft.Extensions.Logging;
+
+namespace KnowledgeOps.Application.Chat;
+
+internal sealed class RagChatOrchestrationService(
+    ICurrentUser currentUser,
+    IUserAccessStateReader accessStateReader,
+    IPermissionService permissionService,
+    IEligibleSemanticRetrievalService retrievalService,
+    IAiAnswerGenerator answerGenerator,
+    IChatSessionRepository sessionRepository,
+    IChatInteractionRepository interactionRepository,
+    IChunkTextReader chunkTextReader,
+    IAuditEventWriter auditWriter,
+    ICorrelationContext correlationContext,
+    ILogger<RagChatOrchestrationService> logger) : IRagChatOrchestrationService
+{
+    public async Task<AskQuestionResponse> AskAsync(
+        AskQuestionRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        // Step 1: Validate authenticated user
+        if (!currentUser.IsAuthenticated)
+            throw new UnauthorizedAccessException("User is not authenticated.");
+
+        // Step 2: Load UserAccessState
+        UserAccessState? activeState;
+        try
+        {
+            activeState = await accessStateReader.FindActiveByIdAsync(currentUser.UserId, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(
+                "Chat authorization state lookup failed. CorrelationId={CorrelationId} UserId={UserId}",
+                correlationContext.CorrelationId,
+                currentUser.UserId);
+            throw new UnauthorizedAccessException("Authorization state is unavailable.");
+        }
+
+        if (activeState is null)
+            throw new UnauthorizedAccessException("User is not active.");
+
+        // Step 3: Check Chat.AskQuestion permission
+        if (!permissionService.HasPermission(activeState, KnowledgeOpsPermissions.Chat.AskQuestion))
+            throw new UnauthorizedAccessException("Permission denied.");
+
+        // Step 4: Validate organization scope
+        if (activeState.OrganizationId == Guid.Empty)
+            throw new InvalidOperationException("Organization scope is not set.");
+
+        // Step 5: Validate question text
+        var trimmedQuestion = request.QuestionText?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(trimmedQuestion))
+            throw new ArgumentException("Question text is required.", nameof(request));
+
+        var questionHash = ComputeHash(trimmedQuestion);
+        var correlationId = correlationContext.CorrelationId;
+
+        // Step 6: Create or load ChatSession
+        ChatSession session;
+        var isNewSession = false;
+        if (request.ChatSessionId.HasValue)
+        {
+            var existing = await sessionRepository.FindByIdAsync(request.ChatSessionId.Value, cancellationToken);
+            if (existing is null || !existing.IsOwnedBy(activeState.UserId, activeState.OrganizationId))
+                throw new UnauthorizedAccessException("Chat session not found or not accessible.");
+            session = existing;
+        }
+        else
+        {
+            session = ChatSession.Create(activeState.OrganizationId, activeState.UserId, title: null);
+            isNewSession = true;
+        }
+
+        // Step 7: Create ChatInteraction (pending)
+        var interaction = ChatInteraction.Create(
+            session.Id,
+            activeState.OrganizationId,
+            activeState.UserId,
+            trimmedQuestion,
+            questionHash,
+            correlationId);
+
+        await AuditAsync(
+            AuditEventTypes.ChatInteractionStarted,
+            $"Chat interaction started. SessionId={session.Id}",
+            AuditSeverity.Info,
+            activeState.OrganizationId,
+            activeState.UserId,
+            interaction.Id,
+            cancellationToken);
+
+        // Step 8: Execute authorized semantic retrieval
+        var retrievalStopwatch = Stopwatch.StartNew();
+        var retrievalResult = await retrievalService.RetrieveAsync(
+            new EligibleSemanticRetrievalRequest(trimmedQuestion, TopK: 5),
+            cancellationToken);
+        retrievalStopwatch.Stop();
+        var retrievalMs = retrievalStopwatch.ElapsedMilliseconds;
+
+        var totalStopwatch = Stopwatch.StartNew();
+
+        // Step 9: If retrieval is insufficient → record InsufficientContext, skip generator
+        if (retrievalResult.IsInsufficientResult)
+        {
+            totalStopwatch.Stop();
+            interaction.RecordInsufficientContextOutcome(
+                retrievalResult.RetrievalQueryId,
+                retrievalResult.ReturnedCount,
+                retrievalMs,
+                totalStopwatch.ElapsedMilliseconds);
+
+            await AuditAsync(
+                AuditEventTypes.InsufficientContextReturned,
+                $"Insufficient retrieval context. SessionId={session.Id}",
+                AuditSeverity.Info,
+                activeState.OrganizationId,
+                activeState.UserId,
+                interaction.Id,
+                cancellationToken);
+
+            await PersistAsync(session, interaction, isNewSession, cancellationToken);
+
+            return new AskQuestionResponse(
+                interaction.Id,
+                session.Id,
+                AnswerState.InsufficientContext,
+                AnswerText: null,
+                retrievalResult.ReturnedCount,
+                IsInsufficientContext: true,
+                correlationId);
+        }
+
+        // Step 10: If retrieval has a failure code → record ProviderFailed, skip generator
+        if (retrievalResult.FailureCode is not null)
+        {
+            totalStopwatch.Stop();
+            interaction.RecordProviderFailedOutcome(
+                retrievalResult.FailureCode,
+                retrievalResult.RetrievalQueryId,
+                retrievalMs,
+                generationMs: null,
+                totalStopwatch.ElapsedMilliseconds);
+
+            await AuditAsync(
+                AuditEventTypes.ChatAnswerGenerationFailed,
+                $"Retrieval failed before generation. SessionId={session.Id}",
+                AuditSeverity.Warning,
+                activeState.OrganizationId,
+                activeState.UserId,
+                interaction.Id,
+                cancellationToken);
+
+            await PersistAsync(session, interaction, isNewSession, cancellationToken);
+
+            return new AskQuestionResponse(
+                interaction.Id,
+                session.Id,
+                AnswerState.ProviderFailed,
+                AnswerText: null,
+                retrievalResult.ReturnedCount,
+                IsInsufficientContext: false,
+                correlationId);
+        }
+
+        // Step 11: Resolve chunk texts — fetch text for each authorized candidate
+        var authorizedCandidates = retrievalResult.Candidates
+            .Where(c => c.OrganizationId == activeState.OrganizationId)
+            .ToArray();
+
+        var chunkIds = authorizedCandidates.Select(c => c.ChunkId).ToArray();
+        var chunkTexts = await chunkTextReader.GetChunkTextsAsync(chunkIds, activeState.OrganizationId, cancellationToken);
+
+        var authorizedChunks = authorizedCandidates
+            .Where(c => chunkTexts.ContainsKey(c.ChunkId))
+            .Select(c => new AuthorizedChunkContext(
+                c.ChunkId,
+                c.DocumentId,
+                c.OrganizationId,
+                chunkTexts[c.ChunkId],
+                c.ChunkIndex ?? 0,
+                c.PageNumber,
+                c.SectionLabel))
+            .ToArray();
+
+        // Step 12: Call IAiAnswerGenerator with authorized chunks only
+        var generationStopwatch = Stopwatch.StartNew();
+        AnswerGenerationResult generationResult;
+        try
+        {
+            generationResult = await answerGenerator.GenerateAsync(
+                new AnswerGenerationRequest(
+                    authorizedChunks,
+                    trimmedQuestion,
+                    PromptVersion: null,
+                    ModelName: null),
+                cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            generationStopwatch.Stop();
+            totalStopwatch.Stop();
+
+            logger.LogWarning(
+                "AI answer generation threw an exception. CorrelationId={CorrelationId} SessionId={SessionId}",
+                correlationId,
+                session.Id);
+
+            interaction.RecordProviderFailedOutcome(
+                "GenerationException",
+                retrievalResult.RetrievalQueryId,
+                retrievalMs,
+                generationStopwatch.ElapsedMilliseconds,
+                totalStopwatch.ElapsedMilliseconds);
+
+            await AuditAsync(
+                AuditEventTypes.ChatAnswerGenerationFailed,
+                $"Answer generation failed with exception. SessionId={session.Id}",
+                AuditSeverity.Error,
+                activeState.OrganizationId,
+                activeState.UserId,
+                interaction.Id,
+                cancellationToken);
+
+            await PersistAsync(session, interaction, isNewSession, cancellationToken);
+
+            return new AskQuestionResponse(
+                interaction.Id,
+                session.Id,
+                AnswerState.ProviderFailed,
+                AnswerText: null,
+                authorizedCandidates.Length,
+                IsInsufficientContext: false,
+                correlationId);
+        }
+
+        generationStopwatch.Stop();
+        totalStopwatch.Stop();
+
+        // Step 13: Record grounded or provider-failed outcome
+        if (generationResult.State == Domain.Chat.AnswerState.Grounded && generationResult.AnswerText is not null)
+        {
+            interaction.RecordGroundedOutcome(
+                generationResult.AnswerText,
+                retrievalResult.RetrievalQueryId,
+                authorizedCandidates.Length,
+                retrievalMs,
+                generationStopwatch.ElapsedMilliseconds,
+                totalStopwatch.ElapsedMilliseconds,
+                generationResult.InputTokens,
+                generationResult.OutputTokens,
+                cost: null,
+                generationResult.ProviderName,
+                generationResult.ModelUsed);
+
+            await AuditAsync(
+                AuditEventTypes.ChatAnswerGenerationCompleted,
+                $"Answer generation completed. SessionId={session.Id} CandidateCount={authorizedCandidates.Length}",
+                AuditSeverity.Info,
+                activeState.OrganizationId,
+                activeState.UserId,
+                interaction.Id,
+                cancellationToken);
+        }
+        else
+        {
+            interaction.RecordProviderFailedOutcome(
+                generationResult.SafeFailureCode,
+                retrievalResult.RetrievalQueryId,
+                retrievalMs,
+                generationStopwatch.ElapsedMilliseconds,
+                totalStopwatch.ElapsedMilliseconds);
+
+            await AuditAsync(
+                AuditEventTypes.ChatAnswerGenerationFailed,
+                $"Answer generation returned provider failure. SessionId={session.Id}",
+                AuditSeverity.Warning,
+                activeState.OrganizationId,
+                activeState.UserId,
+                interaction.Id,
+                cancellationToken);
+        }
+
+        // Step 14: Persist session + interaction
+        await PersistAsync(session, interaction, isNewSession, cancellationToken);
+
+        // Step 15: Return AskQuestionResponse
+        return new AskQuestionResponse(
+            interaction.Id,
+            session.Id,
+            interaction.AnswerState,
+            interaction.AnswerText,
+            interaction.RetrievalCandidateCount,
+            IsInsufficientContext: false,
+            correlationId);
+    }
+
+    private async Task PersistAsync(
+        ChatSession session,
+        ChatInteraction interaction,
+        bool isNewSession,
+        CancellationToken cancellationToken)
+    {
+        var now = DateTimeOffset.UtcNow;
+        session.UpdateLastInteractionAt(now);
+
+        if (isNewSession)
+            await sessionRepository.AddAsync(session, cancellationToken);
+        else
+            await sessionRepository.SaveChangesAsync(cancellationToken);
+
+        await interactionRepository.AddAsync(interaction, cancellationToken);
+        await interactionRepository.SaveChangesAsync(cancellationToken);
+
+        await AuditAsync(
+            AuditEventTypes.ChatInteractionStored,
+            $"Chat interaction stored. SessionId={session.Id} InteractionId={interaction.Id}",
+            AuditSeverity.Info,
+            interaction.OrganizationId,
+            interaction.UserId,
+            interaction.Id,
+            cancellationToken);
+    }
+
+    private static string ComputeHash(string text)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(text));
+        return Convert.ToHexString(bytes).ToLowerInvariant();
+    }
+
+    private async Task AuditAsync(
+        string eventType,
+        string message,
+        AuditSeverity severity,
+        Guid organizationId,
+        Guid userId,
+        Guid interactionId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await auditWriter.WriteAsync(
+                new AuditEvent(
+                    eventType,
+                    message,
+                    severity,
+                    correlationContext.CorrelationId,
+                    organizationId,
+                    userId,
+                    "ChatInteraction",
+                    interactionId),
+                cancellationToken);
+        }
+        catch
+        {
+            logger.LogWarning(
+                "Chat audit write failed. EventType={EventType} CorrelationId={CorrelationId}",
+                eventType,
+                correlationContext.CorrelationId);
+        }
+    }
+}
