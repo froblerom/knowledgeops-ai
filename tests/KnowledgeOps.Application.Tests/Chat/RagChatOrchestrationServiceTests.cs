@@ -1,6 +1,8 @@
 using KnowledgeOps.Application.Auth.Abstractions;
 using KnowledgeOps.Application.Authorization;
+using KnowledgeOps.Application.Authorization.Hooks;
 using KnowledgeOps.Application.Chat;
+using KnowledgeOps.Application.Chat.Prompting;
 using KnowledgeOps.Application.Observability;
 using KnowledgeOps.Application.Retrieval;
 using KnowledgeOps.Domain.Chat;
@@ -210,10 +212,13 @@ public sealed class RagChatOrchestrationServiceTests
         var auditWriter = new CapturingAuditEventWriter();
         var correlationContext = new StaticCorrelationContext();
 
+        var promptBuilder = new GroundedPromptBuilder(new DefaultPromptAuthorizationFilter());
+        var sufficiencyPolicy = new ContextSufficiencyPolicy();
+
         var service = new RagChatOrchestrationService(
             currentUser, accessReader, permissionService, retrievalService,
             throwingGenerator, sessionRepository, interactionRepository,
-            chunkTextReader, auditWriter, correlationContext,
+            chunkTextReader, promptBuilder, sufficiencyPolicy, auditWriter, correlationContext,
             NullLogger<RagChatOrchestrationService>.Instance);
 
         var response = await service.AskAsync(new AskQuestionRequest("What is the policy?"));
@@ -230,6 +235,58 @@ public sealed class RagChatOrchestrationServiceTests
             Assert.DoesNotContain(secretMessage, stored.AnswerText, StringComparison.Ordinal);
         if (stored.AiModel is not null)
             Assert.DoesNotContain(secretMessage, stored.AiModel, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RagChatOrchestrationService_StoresPromptVersionForGroundedInteraction()
+    {
+        var harness = CreateHarness(candidates: [AuthorizedCandidate()]);
+
+        await harness.Service.AskAsync(new AskQuestionRequest("What is the policy?"));
+
+        var stored = Assert.Single(harness.InteractionRepository.StoredInteractions);
+        Assert.Equal("rag-grounded-v1", stored.PromptVersion);
+    }
+
+    [Fact]
+    public async Task RagChatOrchestrationService_DoesNotStorePromptVersionForInsufficientContext()
+    {
+        var harness = CreateHarness(isInsufficientResult: true);
+
+        await harness.Service.AskAsync(new AskQuestionRequest("What is the policy?"));
+
+        var stored = Assert.Single(harness.InteractionRepository.StoredInteractions);
+        Assert.Null(stored.PromptVersion);
+    }
+
+    [Fact]
+    public async Task RagChatOrchestrationService_DoesNotStorePromptVersionForProviderFailure()
+    {
+        var harness = CreateHarness(
+            candidates: [AuthorizedCandidate()],
+            generatorState: AnswerState.ProviderFailed,
+            generatorFailureCode: "ModelUnavailable");
+
+        await harness.Service.AskAsync(new AskQuestionRequest("What is the policy?"));
+
+        var stored = Assert.Single(harness.InteractionRepository.StoredInteractions);
+        Assert.Null(stored.PromptVersion);
+    }
+
+    [Fact]
+    public async Task RagChatOrchestrationService_AuditEventsDoNotContainQuestionOrAnswerText()
+    {
+        const string questionText = "What-is-the-confidential-policy-text?";
+        var harness = CreateHarness(candidates: [AuthorizedCandidate()]);
+
+        var response = await harness.Service.AskAsync(new AskQuestionRequest(questionText));
+
+        foreach (var auditEvent in harness.AuditWriter.Events)
+        {
+            Assert.DoesNotContain(questionText, auditEvent.Message, StringComparison.Ordinal);
+            if (response.AnswerText is not null)
+                Assert.DoesNotContain(response.AnswerText, auditEvent.Message, StringComparison.Ordinal);
+        }
     }
 
     // ─── Harness ──────────────────────────────────────────────────────────────
@@ -267,6 +324,9 @@ public sealed class RagChatOrchestrationServiceTests
         var auditWriter = new CapturingAuditEventWriter();
         var correlationContext = new StaticCorrelationContext();
 
+        var promptBuilder = new GroundedPromptBuilder(new DefaultPromptAuthorizationFilter());
+        var sufficiencyPolicy = new ContextSufficiencyPolicy();
+
         var service = new RagChatOrchestrationService(
             currentUser,
             accessReader,
@@ -276,6 +336,8 @@ public sealed class RagChatOrchestrationServiceTests
             sessionRepository,
             interactionRepository,
             chunkTextReader,
+            promptBuilder,
+            sufficiencyPolicy,
             auditWriter,
             correlationContext,
             NullLogger<RagChatOrchestrationService>.Instance);

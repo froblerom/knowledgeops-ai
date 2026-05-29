@@ -35,6 +35,7 @@ public sealed class OperationalContractsTests
                 "InsufficientContextReturned",
                 "MalformedVectorExcluded",
                 "PermissionDenied",
+                "PromptBuildFailed",
                 "QueryEmbeddingFailed",
                 "RetrievalInsufficientResults",
                 "SemanticQueryCompleted",

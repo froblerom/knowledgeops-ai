@@ -6,7 +6,7 @@ Last updated: 2026-05-28
 | --- | --- | --- | --- | --- |
 | Agent prompts may load excessive context and lose focus. | Medium | Harness / all future issues | Use `13-prompt-classifier.md`, level-based routing and minimum context bundles. | Open |
 | RAG may be implemented as unsupported general answer behavior rather than grounded document assistance. | High | Retrieval/RAG | Use `rag-implementation-agent.md`, citation and insufficient-context rules, and fake-provider safety tests. Sprint 17 `RagChatOrchestrationService` enforces retrieval-before-generation, skips generation when `IsInsufficientResult=true`, and records `InsufficientContext` outcome. Prompt construction details remain deferred to Sprint 18. | Partially mitigated — Sprint 18 prompt builder remains open |
-| Authorization may be skipped during retrieval or prompt construction. | Critical | Security/RAG | Load security, business-rules and RAG contexts for relevant tasks; require cross-scope tests and verification. Sprint 16 validates active persisted user state, `Chat.AskQuestion`, organization scope, and Application-level candidate revalidation. Sprint 17 `RagChatOrchestrationService` re-validates org scope from `UserAccessState` (not JWT claims) before passing chunks to generator; chunk text reader enforces org scope. Prompt construction (Sprint 18) must apply `IPromptAuthorizationFilter` hook before including chunks. | Open — prompt construction authorization deferred to Sprint 18 |
+| Authorization may be skipped during retrieval or prompt construction. | Critical | Security/RAG | Load security, business-rules and RAG contexts for relevant tasks; require cross-scope tests and verification. Sprint 16 validates active persisted user state, `Chat.AskQuestion`, organization scope, and Application-level candidate revalidation. Sprint 17 `RagChatOrchestrationService` re-validates org scope from `UserAccessState` (not JWT claims) before passing chunks to generator; chunk text reader enforces org scope. Sprint 18 `GroundedPromptBuilder` applies `IPromptAuthorizationFilter` (org-scope check via `DefaultPromptAuthorizationFilter`) as a second enforcement gate before including any chunk in the grounded prompt. `ContextSufficiencyPolicy` gates on zero authorized chunks. Issue #37 closes this risk for the prompt construction path. | Resolved — Sprint 18 Issue #37 applied IPromptAuthorizationFilter in GroundedPromptBuilder |
 | Agent context summaries may diverge from canonical documents over time. | High | Documentation governance | Use documentation and verification agents; update harness when canonical docs change; treat canonical docs as authoritative. | Open |
 | Diagram artifact filename cleanup remains pending. | Low | Documentation artifacts | Address in Sprint 28 or an explicitly authorized diagram artifact task. | Open |
 
@@ -134,6 +134,18 @@ RISK-025 (CI live-provider risk): **Guarded.** Query embedding remains fake-prov
 - Physical `retrieval_results` persistence remains deferred until the chat interaction sprint where `chat_interaction_id` exists.
 - Future prompt construction must consume only the final authorized candidate set returned by the Sprint 16 service.
 - Fake embeddings remain deterministic but not semantically production-quality; production retrieval provider selection and full RAG answer generation remain future work.
+
+## Sprint 18 Issue #37 Disposition
+
+RAG prompt building and defense-in-depth authorization are fully implemented. `GroundedPromptBuilder` applies `IPromptAuthorizationFilter.IsChunkAuthorizedForPrompt` for every candidate chunk — a second org-scope enforcement gate after the orchestration-level filter applied in Step 11 of `RagChatOrchestrationService`. Chunks that fail the filter are excluded and counted as `ExcludedChunkCount`. `ContextSufficiencyPolicy` returns `IsSufficient=false` when zero authorized chunks are available. `InsufficientContextFallbackText` is returned in `AskQuestionResponse.AnswerText` for InsufficientContext outcomes (`ChatInteraction.AnswerText` remains null per spec). `AuditEventTypes.PromptBuildFailed` is emitted if prompt build fails but not logged with chunk/question/answer text. `PromptVersion="rag-grounded-v1"` is stored only for Grounded outcomes via the extended `RecordGroundedOutcome` parameter.
+
+RISK "Authorization may be skipped during prompt construction": **Resolved.** `DefaultPromptAuthorizationFilter` (org-scope equality) is registered as `IPromptAuthorizationFilter` singleton in Application DI and injected into `GroundedPromptBuilder`. `GroundedPromptBuilderTests.GroundedPromptBuilder_ExcludesChunksThatFailPromptAuthorizationFilter` and `GroundedPromptBuilder_ReturnsFailureResultWhenNoChunksPassFilter` enforce this behavior.
+
+**Residual risks**:
+- Citation mapping and retrieval result persistence (linking `chat_interactions` to retrieved chunks) remain deferred to Sprint 19.
+- Angular chat UI and HTTP chat endpoint remain deferred to Sprint 20.
+- Real Azure OpenAI answer generation adapter remains deferred to Phase 2+.
+- SQL-gated chat persistence integration tests require `ConnectionStrings__DefaultConnection`; validate before or during PR review.
 
 ## Sprint 17 Issue #36 Disposition
 
