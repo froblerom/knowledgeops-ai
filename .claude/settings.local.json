@@ -38,7 +38,19 @@
       "Bash(Sort-Object -Property Name -Descending)",
       "Bash(Select-Object -First 5)",
       "Bash(Get-ChildItem \"C:\\\\Dev\\\\knowdledgeops_ai\\\\src\\\\KnowledgeOps.Infrastructure\\\\Persistence\\\\Configurations\" -Filter \"*.cs\")",
-      "Bash(Select-Object -ExpandProperty FullName)"
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(xargs grep -l \"record AuthorizedChunkContext\")",
+      "Bash(gh pr create --title 'feat\\(chat\\): implement grounded prompt building and defense-in-depth authorization \\(Issue #37\\)' --body ' *)",
+      "Read(//c/Program Files/**)",
+      "Read(//c/Users/frobl/scoop/apps/**)",
+      "Bash(xargs ls -la)",
+      "Bash(grep -v \"^$\")",
+      "Bash(printenv)",
+      "Bash(ConnectionStrings__DefaultConnection=\"Server=localhost,1433;Database=KnowledgeOpsLocal;User Id=sa;Password=Change_this_local_password_123!;TrustServerCertificate=True;Encrypt=True\" dotnet tool run dotnet-ef migrations add AddCitationsTable --project src/KnowledgeOps.Infrastructure --startup-project src/KnowledgeOps.Infrastructure)",
+      "Bash(Get-ChildItem \"src\\\\KnowledgeOps.Infrastructure\\\\Persistence\\\\Migrations\\\\\" -Filter \"*Citation*\" -Name)",
+      "PowerShell(wc -l \"C:\\\\Dev\\\\knowdledgeops_ai\\\\tests\\\\KnowledgeOps.Application.Tests\\\\Chat\\\\RagChatOrchestrationServiceTests.cs\")",
+      "PowerShell(\\(Get-Content \"C:\\\\Dev\\\\knowdledgeops_ai\\\\tests\\\\KnowledgeOps.Application.Tests\\\\Chat\\\\RagChatOrchestrationServiceTests.cs\" | Measure-Object -Line\\).Lines)",
+      "PowerShell(cd \"C:\\\\Dev\\\\knowdledgeops_ai\"; $output = dotnet test KnowledgeOpsAI.sln --no-build -c Release 2>&1; $lines = @\\($output\\); $lines | Where-Object { $_ -match 'Correctas!' })"
     ],
     "additionalDirectories": [
       "c:\\Users\\frobl\\.claude\\projects\\c--Dev-knowdledgeops-ai\\memory"

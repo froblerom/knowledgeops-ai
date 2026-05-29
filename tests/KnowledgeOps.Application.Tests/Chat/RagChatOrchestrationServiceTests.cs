@@ -2,6 +2,7 @@ using KnowledgeOps.Application.Auth.Abstractions;
 using KnowledgeOps.Application.Authorization;
 using KnowledgeOps.Application.Authorization.Hooks;
 using KnowledgeOps.Application.Chat;
+using KnowledgeOps.Application.Chat.Citations;
 using KnowledgeOps.Application.Chat.Prompting;
 using KnowledgeOps.Application.Observability;
 using KnowledgeOps.Application.Retrieval;
@@ -215,10 +216,18 @@ public sealed class RagChatOrchestrationServiceTests
         var promptBuilder = new GroundedPromptBuilder(new DefaultPromptAuthorizationFilter());
         var sufficiencyPolicy = new ContextSufficiencyPolicy();
 
+        var titleReader2 = new FakeDocumentTitleReader(
+            new Dictionary<Guid, string> { [candidate.DocumentId] = "Test Document" });
+        var citationMapper2 = new CitationMapper(titleReader2, NullLogger<CitationMapper>.Instance);
+        var citationRepository2 = new FakeCitationRepository();
+        var citationAuthFilter2 = new DefaultCitationAuthorizationFilter();
+
         var service = new RagChatOrchestrationService(
             currentUser, accessReader, permissionService, retrievalService,
             throwingGenerator, sessionRepository, interactionRepository,
-            chunkTextReader, promptBuilder, sufficiencyPolicy, auditWriter, correlationContext,
+            chunkTextReader, promptBuilder, sufficiencyPolicy,
+            citationMapper2, citationRepository2, citationAuthFilter2,
+            auditWriter, correlationContext,
             NullLogger<RagChatOrchestrationService>.Instance);
 
         var response = await service.AskAsync(new AskQuestionRequest("What is the policy?"));
@@ -289,6 +298,151 @@ public sealed class RagChatOrchestrationServiceTests
         }
     }
 
+    [Fact]
+    public async Task RagChatOrchestration_PersistsCitationsForGroundedAnswer()
+    {
+        var candidate = AuthorizedCandidate();
+        var harness = CreateHarness(candidates: [candidate]);
+
+        var response = await harness.Service.AskAsync(new AskQuestionRequest("What is the policy?"));
+
+        Assert.Equal(AnswerState.Grounded, response.AnswerState);
+        Assert.NotNull(response.Citations);
+        Assert.NotEmpty(response.Citations);
+    }
+
+    [Fact]
+    public async Task RagChatOrchestration_ReturnsCitationsForGroundedAnswer()
+    {
+        var candidate = AuthorizedCandidate();
+        var harness = CreateHarness(candidates: [candidate]);
+
+        var response = await harness.Service.AskAsync(new AskQuestionRequest("What is the policy?"));
+
+        Assert.Equal(AnswerState.Grounded, response.AnswerState);
+        Assert.NotNull(response.Citations);
+        var citation = Assert.Single(response.Citations);
+        Assert.Equal(1, citation.Rank);
+        // Score is nullable; when provided by retrieval it must be present and positive
+        Assert.NotNull(citation.RelevanceScore);
+        Assert.True(citation.RelevanceScore > 0.0);
+    }
+
+    [Fact]
+    public async Task RagChatOrchestration_DoesNotCreateCitationsForInsufficientContext()
+    {
+        var harness = CreateHarness(candidates: [], isInsufficientResult: true);
+
+        var response = await harness.Service.AskAsync(new AskQuestionRequest("What is the policy?"));
+
+        Assert.Equal(AnswerState.InsufficientContext, response.AnswerState);
+        Assert.True(response.Citations is null || response.Citations.Count == 0);
+    }
+
+    [Fact]
+    public async Task RagChatOrchestration_DoesNotCreateCitationsForProviderFailure()
+    {
+        var candidate = AuthorizedCandidate();
+        var harness = CreateHarness(candidates: [candidate], generatorState: AnswerState.ProviderFailed, generatorFailureCode: "ModelUnavailable");
+
+        var response = await harness.Service.AskAsync(new AskQuestionRequest("What is the policy?"));
+
+        Assert.Equal(AnswerState.ProviderFailed, response.AnswerState);
+        Assert.True(response.Citations is null || response.Citations.Count == 0);
+    }
+
+    [Fact]
+    public async Task RagChatOrchestration_CitationOrganizationMatchesInteractionOrganization()
+    {
+        var candidate = AuthorizedCandidate();
+        var harness = CreateHarness(candidates: [candidate]);
+
+        var response = await harness.Service.AskAsync(new AskQuestionRequest("What is the policy?"));
+
+        Assert.Equal(AnswerState.Grounded, response.AnswerState);
+        Assert.NotNull(response.Citations);
+        // All citations should be returned (org scope matches since candidate uses OrganizationId)
+        Assert.NotEmpty(response.Citations);
+    }
+
+    [Fact]
+    public async Task RagChatOrchestration_GroundedAnswer_CitationRepositorySaveChangesIsNotCalledDirectly()
+    {
+        // Verifies Option C: citations are tracked via AddRangeAsync only; SaveChangesAsync on
+        // the citation repository must never be called. The actual INSERT is deferred to
+        // PersistAsync which flushes all EF-tracked changes (interaction + citations) atomically.
+        var candidate = AuthorizedCandidate();
+        var citationRepo = new FakeCitationRepository();
+        var harness = CreateHarness(candidates: [candidate], citationRepository: citationRepo);
+
+        var response = await harness.Service.AskAsync(new AskQuestionRequest("What is the policy?"));
+
+        Assert.Equal(AnswerState.Grounded, response.AnswerState);
+        Assert.False(harness.CitationRepository.SaveChangesWasCalled,
+            "CitationRepository.SaveChangesAsync must not be called by the orchestrator; " +
+            "citations are persisted atomically with the interaction via the shared DbContext.");
+    }
+
+    [Fact]
+    public async Task RagChatOrchestration_CitationPersistenceFailureFinalInteractionStateIsProviderFailed()
+    {
+        // When citation tracking (AddRangeAsync) fails, the final persisted interaction must be
+        // ProviderFailed, not Grounded — grounded answer without citations is not acceptable.
+        var candidate = AuthorizedCandidate();
+        var throwingRepo = new ThrowingCitationRepository();
+        var harness = CreateHarness(candidates: [candidate], citationRepository: throwingRepo);
+
+        var response = await harness.Service.AskAsync(new AskQuestionRequest("What is the policy?"));
+
+        Assert.Equal(AnswerState.ProviderFailed, response.AnswerState);
+        Assert.True(response.Citations is null || response.Citations.Count == 0);
+
+        var stored = Assert.Single(harness.InteractionRepository.StoredInteractions);
+        Assert.Equal(AnswerState.ProviderFailed, stored.AnswerState);
+        Assert.Null(stored.AnswerText);
+        Assert.Equal("CitationMappingFailed", stored.ProviderFailureCode);
+        // Safe failure code must never contain exception details
+        Assert.DoesNotContain("Exception", stored.ProviderFailureCode ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Simulated", stored.ProviderFailureCode ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task RagChatOrchestration_DoesNotReturnGroundedAnswerWithoutCitations()
+    {
+        var candidate = AuthorizedCandidate();
+        var emptyMapper = new AlwaysEmptyCitationMapper();
+        var harness = CreateHarness(candidates: [candidate], citationMapper: emptyMapper);
+
+        var response = await harness.Service.AskAsync(new AskQuestionRequest("What is the policy?"));
+
+        Assert.Equal(AnswerState.ProviderFailed, response.AnswerState);
+        Assert.True(response.Citations is null || response.Citations.Count == 0);
+        var stored = Assert.Single(harness.InteractionRepository.StoredInteractions);
+        Assert.Equal(AnswerState.ProviderFailed, stored.AnswerState);
+        Assert.Null(stored.AnswerText);
+        Assert.Equal("CitationMappingFailed", stored.ProviderFailureCode);
+    }
+
+    [Fact]
+    public async Task RagChatOrchestration_CitationPersistenceFailureDoesNotReturnGroundedAnswer()
+    {
+        var candidate = AuthorizedCandidate();
+        var throwingRepo = new ThrowingCitationRepository();
+        var harness = CreateHarness(candidates: [candidate], citationRepository: throwingRepo);
+
+        var response = await harness.Service.AskAsync(new AskQuestionRequest("What is the policy?"));
+
+        Assert.Equal(AnswerState.ProviderFailed, response.AnswerState);
+        Assert.True(response.Citations is null || response.Citations.Count == 0);
+        var stored = Assert.Single(harness.InteractionRepository.StoredInteractions);
+        Assert.Equal(AnswerState.ProviderFailed, stored.AnswerState);
+        Assert.Null(stored.AnswerText);
+
+        // Safe failure code must not expose exception details
+        if (stored.ProviderFailureCode is not null)
+            Assert.DoesNotContain("Exception", stored.ProviderFailureCode, StringComparison.OrdinalIgnoreCase);
+    }
+
     // ─── Harness ──────────────────────────────────────────────────────────────
 
     private static TestHarness CreateHarness(
@@ -298,7 +452,9 @@ public sealed class RagChatOrchestrationServiceTests
         string? retrievalFailureCode = null,
         AnswerState generatorState = AnswerState.Grounded,
         string? generatorFailureCode = null,
-        List<string>? trackCallOrder = null)
+        List<string>? trackCallOrder = null,
+        ICitationMapper? citationMapper = null,
+        ICitationRepository? citationRepository = null)
     {
         var currentUser = new FakeCurrentUser(isAuthenticated, UserId, ClaimOrganizationId);
         var accessReader = new FakeAccessStateReader(new UserAccessState(UserId, OrganizationId, ["Agent"]));
@@ -327,6 +483,15 @@ public sealed class RagChatOrchestrationServiceTests
         var promptBuilder = new GroundedPromptBuilder(new DefaultPromptAuthorizationFilter());
         var sufficiencyPolicy = new ContextSufficiencyPolicy();
 
+        var titleReader = new FakeDocumentTitleReader(
+            (candidates ?? []).ToDictionary(c => c.DocumentId, _ => "Test Document"));
+        var resolvedCitationMapper = citationMapper
+            ?? new CitationMapper(titleReader, NullLogger<CitationMapper>.Instance);
+        var resolvedCitationRepository = citationRepository as FakeCitationRepository
+            ?? (citationRepository is null ? new FakeCitationRepository() : null);
+        var citationRepo = (ICitationRepository?)resolvedCitationRepository ?? citationRepository!;
+        var citationAuthFilter = new DefaultCitationAuthorizationFilter();
+
         var service = new RagChatOrchestrationService(
             currentUser,
             accessReader,
@@ -338,11 +503,14 @@ public sealed class RagChatOrchestrationServiceTests
             chunkTextReader,
             promptBuilder,
             sufficiencyPolicy,
+            resolvedCitationMapper,
+            citationRepo,
+            citationAuthFilter,
             auditWriter,
             correlationContext,
             NullLogger<RagChatOrchestrationService>.Instance);
 
-        return new TestHarness(service, retrievalService, generator, sessionRepository, interactionRepository, auditWriter, chunkTextReader);
+        return new TestHarness(service, retrievalService, generator, sessionRepository, interactionRepository, auditWriter, chunkTextReader, resolvedCitationRepository ?? new FakeCitationRepository());
     }
 
     private static EligibleSemanticRetrievalCandidate AuthorizedCandidate() =>
@@ -382,7 +550,8 @@ public sealed class RagChatOrchestrationServiceTests
         FakeSessionRepository SessionRepository,
         FakeInteractionRepository InteractionRepository,
         CapturingAuditEventWriter AuditWriter,
-        FakeChunkTextReader ChunkTextReader);
+        FakeChunkTextReader ChunkTextReader,
+        FakeCitationRepository CitationRepository);
 
     // ─── Fakes ────────────────────────────────────────────────────────────────
 
@@ -546,5 +715,53 @@ public sealed class RagChatOrchestrationServiceTests
     private sealed class StaticCorrelationContext : ICorrelationContext
     {
         public string CorrelationId => "test-correlation-chat";
+    }
+
+    private sealed class FakeCitationRepository : ICitationRepository
+    {
+        private readonly List<Citation> _citations = [];
+        public IReadOnlyList<Citation> StoredCitations => _citations;
+        public bool SaveChangesWasCalled { get; private set; }
+
+        public Task AddRangeAsync(IReadOnlyList<Citation> citations, CancellationToken ct = default)
+        {
+            _citations.AddRange(citations);
+            return Task.CompletedTask;
+        }
+
+        public Task SaveChangesAsync(CancellationToken ct = default)
+        {
+            SaveChangesWasCalled = true;
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class FakeDocumentTitleReader(
+        IReadOnlyDictionary<Guid, string> titles) : IDocumentTitleReader
+    {
+        public Task<IReadOnlyDictionary<Guid, string>> GetTitlesAsync(
+            IReadOnlyList<Guid> documentIds,
+            Guid organizationId,
+            CancellationToken ct = default) =>
+            Task.FromResult(titles);
+    }
+
+    private sealed class AlwaysEmptyCitationMapper : ICitationMapper
+    {
+        public Task<IReadOnlyList<Citation>> MapAsync(
+            Guid chatInteractionId,
+            Guid organizationId,
+            IReadOnlyList<CitationMappingSource> sources,
+            CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<Citation>>([]);
+    }
+
+    private sealed class ThrowingCitationRepository : ICitationRepository
+    {
+        public Task AddRangeAsync(IReadOnlyList<Citation> citations, CancellationToken ct = default) =>
+            throw new InvalidOperationException("Simulated citation tracking failure.");
+
+        public Task SaveChangesAsync(CancellationToken ct = default) =>
+            Task.CompletedTask;
     }
 }

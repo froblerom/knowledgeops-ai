@@ -26,5 +26,6 @@ public sealed record PromptSourceHandle(
     Guid ChunkId,
     Guid DocumentId,
     int Rank,
+    double? RelevanceScore,
     int? PageNumber,
     string? SectionLabel);

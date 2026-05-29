@@ -15,7 +15,8 @@ public sealed record AuthorizedChunkContext(
     string ChunkText,
     int ChunkIndex,
     int? PageNumber = null,
-    string? SectionLabel = null);
+    string? SectionLabel = null,
+    double? RelevanceScore = null);
 
 public sealed record AnswerGenerationResult(
     AnswerState State,
@@ -30,6 +31,15 @@ public sealed record AskQuestionRequest(
     string QuestionText,
     Guid? ChatSessionId = null);
 
+public sealed record CitationResponse(
+    Guid DocumentId,
+    Guid ChunkId,
+    int Rank,
+    string DocumentTitle,
+    int? PageNumber,
+    string? SectionLabel,
+    double? RelevanceScore);
+
 public sealed record AskQuestionResponse(
     Guid ChatInteractionId,
     Guid ChatSessionId,
@@ -37,4 +47,5 @@ public sealed record AskQuestionResponse(
     string? AnswerText,
     int RetrievalCandidateCount,
     bool IsInsufficientContext,
-    string CorrelationId);
+    string CorrelationId,
+    IReadOnlyList<CitationResponse>? Citations = null);

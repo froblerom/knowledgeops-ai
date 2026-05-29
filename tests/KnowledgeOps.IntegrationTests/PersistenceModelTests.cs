@@ -22,7 +22,7 @@ public sealed class PersistenceModelTests
             .ToArray();
 
         Assert.Equal(
-            ["audit_log_entries", "chat_interactions", "chat_sessions", "chunk_embeddings", "document_chunks", "documents", "organizations", "user_roles", "users"],
+            ["audit_log_entries", "chat_interactions", "chat_sessions", "chunk_embeddings", "citations", "document_chunks", "documents", "organizations", "user_roles", "users"],
             tableNames);
     }
 

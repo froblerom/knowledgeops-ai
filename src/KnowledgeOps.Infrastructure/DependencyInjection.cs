@@ -1,5 +1,6 @@
 using KnowledgeOps.Application.Auth.Abstractions;
 using KnowledgeOps.Application.Chat;
+using KnowledgeOps.Application.Chat.Citations;
 using KnowledgeOps.Application.Documents;
 using KnowledgeOps.Application.Embeddings;
 using KnowledgeOps.Application.Observability;
@@ -64,6 +65,8 @@ public static class DependencyInjection
         services.AddScoped<IChatSessionRepository, EfChatSessionRepository>();
         services.AddScoped<IChatInteractionRepository, EfChatInteractionRepository>();
         services.AddScoped<IChunkTextReader, EfChunkTextReader>();
+        services.AddScoped<ICitationRepository, EfCitationRepository>();
+        services.AddScoped<IDocumentTitleReader, EfDocumentTitleReader>();
         services.AddScoped<IAiAnswerGenerator, FakeAnswerGenerator>();
         services.AddOptions<FakeAnswerGeneratorSettings>().BindConfiguration("FakeAnswerGenerator");
         services.AddScoped<IAuditEventWriter, EfAuditEventWriter>();
