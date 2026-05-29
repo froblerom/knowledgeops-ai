@@ -37,4 +37,6 @@ public static class AuditEventTypes
     public const string ChatInteractionStored = "ChatInteractionStored";
     public const string InsufficientContextReturned = "InsufficientContextReturned";
     public const string PromptBuildFailed = "PromptBuildFailed";
+    public const string CitationsPersisted = "CitationsPersisted";
+    public const string CitationMappingFailed = "CitationMappingFailed";
 }

@@ -89,6 +89,7 @@ internal sealed class GroundedPromptBuilder(IPromptAuthorizationFilter authoriza
                 ChunkId: chunk.ChunkId,
                 DocumentId: chunk.DocumentId,
                 Rank: rank,
+                RelevanceScore: chunk.RelevanceScore,
                 PageNumber: chunk.PageNumber,
                 SectionLabel: chunk.SectionLabel));
         }

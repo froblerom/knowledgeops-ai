@@ -3,6 +3,8 @@ using System.Security.Cryptography;
 using System.Text;
 using KnowledgeOps.Application.Auth.Abstractions;
 using KnowledgeOps.Application.Authorization;
+using KnowledgeOps.Application.Authorization.Hooks;
+using KnowledgeOps.Application.Chat.Citations;
 using KnowledgeOps.Application.Chat.Prompting;
 using KnowledgeOps.Application.Observability;
 using KnowledgeOps.Application.Retrieval;
@@ -22,6 +24,9 @@ internal sealed class RagChatOrchestrationService(
     IChunkTextReader chunkTextReader,
     IGroundedPromptBuilder promptBuilder,
     IContextSufficiencyPolicy sufficiencyPolicy,
+    ICitationMapper citationMapper,
+    ICitationRepository citationRepository,
+    ICitationAuthorizationFilter citationAuthorizationFilter,
     IAuditEventWriter auditWriter,
     ICorrelationContext correlationContext,
     ILogger<RagChatOrchestrationService> logger) : IRagChatOrchestrationService
@@ -194,7 +199,8 @@ internal sealed class RagChatOrchestrationService(
                 chunkTexts[c.ChunkId],
                 c.ChunkIndex ?? 0,
                 c.PageNumber,
-                c.SectionLabel))
+                c.SectionLabel,
+                c.RetrievalScore.Value))
             .ToArray();
 
         // Step 11a: Evaluate context sufficiency
@@ -323,6 +329,48 @@ internal sealed class RagChatOrchestrationService(
         // Step 13: Record grounded or provider-failed outcome
         if (generationResult.State == Domain.Chat.AnswerState.Grounded && generationResult.AnswerText is not null)
         {
+            // Step 13.5: Map citations and track them in the shared EF context BEFORE recording
+            // grounded outcome. Actual INSERT happens atomically with the chat_interaction row
+            // in PersistAsync via a single SaveChangesAsync (EF topological ordering ensures
+            // chat_interactions is inserted before citations, satisfying the FK constraint).
+            var citations = await MapAndTrackCitationsAsync(
+                interaction.Id,
+                activeState.OrganizationId,
+                builtPrompt.SourceHandles,
+                cancellationToken);
+
+            if (citations is null || citations.Count == 0)
+            {
+                // Citation mapping or persistence failed — grounded answer without citations is invalid.
+                interaction.RecordProviderFailedOutcome(
+                    "CitationMappingFailed",
+                    retrievalResult.RetrievalQueryId,
+                    retrievalMs,
+                    generationStopwatch.ElapsedMilliseconds,
+                    totalStopwatch.ElapsedMilliseconds);
+
+                await AuditAsync(
+                    AuditEventTypes.CitationMappingFailed,
+                    $"Citation mapping produced no citations for grounded answer. SessionId={session.Id}",
+                    AuditSeverity.Warning,
+                    activeState.OrganizationId,
+                    activeState.UserId,
+                    interaction.Id,
+                    cancellationToken);
+
+                await PersistAsync(session, interaction, isNewSession, cancellationToken);
+
+                return new AskQuestionResponse(
+                    interaction.Id,
+                    session.Id,
+                    AnswerState.ProviderFailed,
+                    AnswerText: null,
+                    authorizedCandidates.Length,
+                    IsInsufficientContext: false,
+                    correlationId);
+            }
+
+            // Citations succeeded — now record the grounded outcome
             interaction.RecordGroundedOutcome(
                 generationResult.AnswerText,
                 retrievalResult.RetrievalQueryId,
@@ -345,30 +393,64 @@ internal sealed class RagChatOrchestrationService(
                 activeState.UserId,
                 interaction.Id,
                 cancellationToken);
-        }
-        else
-        {
-            interaction.RecordProviderFailedOutcome(
-                generationResult.SafeFailureCode,
-                retrievalResult.RetrievalQueryId,
-                retrievalMs,
-                generationStopwatch.ElapsedMilliseconds,
-                totalStopwatch.ElapsedMilliseconds);
+
+            // Step 14: Persist session + interaction + tracked citations atomically.
+            // interactionRepository.SaveChangesAsync() flushes all EF-tracked changes (interaction
+            // and citations) in one round-trip, satisfying the chat_interaction FK before citations.
+            await PersistAsync(session, interaction, isNewSession, cancellationToken);
 
             await AuditAsync(
-                AuditEventTypes.ChatAnswerGenerationFailed,
-                $"Answer generation returned provider failure. SessionId={session.Id}",
-                AuditSeverity.Warning,
+                AuditEventTypes.CitationsPersisted,
+                $"Citations persisted. InteractionId={interaction.Id} CitationCount={citations.Count}",
+                AuditSeverity.Info,
                 activeState.OrganizationId,
                 activeState.UserId,
                 interaction.Id,
                 cancellationToken);
+
+            // Step 15: Return grounded response with citations (all already org-scoped by mapper)
+            var citationResponses = citations
+                .Where(c => citationAuthorizationFilter.IsCitationAuthorizedForUser(c.OrganizationId, activeState.OrganizationId))
+                .Select(c => new CitationResponse(
+                    c.DocumentId,
+                    c.ChunkId,
+                    c.Rank,
+                    c.DocumentTitle,
+                    c.PageNumber,
+                    c.SectionLabel,
+                    c.RelevanceScore))
+                .ToArray();
+
+            return new AskQuestionResponse(
+                interaction.Id,
+                session.Id,
+                interaction.AnswerState,
+                interaction.AnswerText,
+                interaction.RetrievalCandidateCount,
+                IsInsufficientContext: false,
+                correlationId,
+                Citations: citationResponses);
         }
 
-        // Step 14: Persist session + interaction
+        // Provider-failed path (from generation)
+        interaction.RecordProviderFailedOutcome(
+            generationResult.SafeFailureCode,
+            retrievalResult.RetrievalQueryId,
+            retrievalMs,
+            generationStopwatch.ElapsedMilliseconds,
+            totalStopwatch.ElapsedMilliseconds);
+
+        await AuditAsync(
+            AuditEventTypes.ChatAnswerGenerationFailed,
+            $"Answer generation returned provider failure. SessionId={session.Id}",
+            AuditSeverity.Warning,
+            activeState.OrganizationId,
+            activeState.UserId,
+            interaction.Id,
+            cancellationToken);
+
         await PersistAsync(session, interaction, isNewSession, cancellationToken);
 
-        // Step 15: Return AskQuestionResponse
         return new AskQuestionResponse(
             interaction.Id,
             session.Id,
@@ -404,6 +486,61 @@ internal sealed class RagChatOrchestrationService(
             interaction.UserId,
             interaction.Id,
             cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<Citation>?> MapAndTrackCitationsAsync(
+        Guid interactionId,
+        Guid organizationId,
+        IReadOnlyList<PromptSourceHandle> sourceHandles,
+        CancellationToken cancellationToken)
+    {
+        if (sourceHandles.Count == 0)
+            return null;
+
+        var mappingSources = sourceHandles
+            .Select(h => new CitationMappingSource(
+                h.DocumentId,
+                h.ChunkId,
+                h.Rank,
+                h.RelevanceScore,
+                h.PageNumber,
+                h.SectionLabel))
+            .ToArray();
+
+        IReadOnlyList<Citation> citations;
+        try
+        {
+            citations = await citationMapper.MapAsync(interactionId, organizationId, mappingSources, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(
+                "Citation mapping failed. InteractionId={InteractionId} CorrelationId={CorrelationId}",
+                interactionId,
+                correlationContext.CorrelationId);
+            return null;
+        }
+
+        if (citations.Count == 0)
+            return null;
+
+        try
+        {
+            // Track citations in the shared EF context. SaveChangesAsync is NOT called here;
+            // the actual INSERT is deferred to PersistAsync which saves the interaction and
+            // citations together in one db.SaveChangesAsync(), satisfying the FK constraint.
+            await citationRepository.AddRangeAsync(citations, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(
+                "Citation tracking failed. InteractionId={InteractionId} CorrelationId={CorrelationId}",
+                interactionId,
+                correlationContext.CorrelationId);
+            return null;
+        }
+
+        return citations;
     }
 
     private static string ComputeHash(string text)

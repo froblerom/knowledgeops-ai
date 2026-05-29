@@ -3,6 +3,7 @@ using KnowledgeOps.Application.Auth.Queries;
 using KnowledgeOps.Application.Authorization;
 using KnowledgeOps.Application.Authorization.Hooks;
 using KnowledgeOps.Application.Chat;
+using KnowledgeOps.Application.Chat.Citations;
 using KnowledgeOps.Application.Chat.Prompting;
 using KnowledgeOps.Application.Documents;
 using KnowledgeOps.Application.Retrieval;
@@ -24,8 +25,10 @@ public static class DependencyInjection
         services.AddScoped<UserManagementService>();
         services.AddScoped<IEligibleSemanticRetrievalService, EligibleSemanticRetrievalService>();
         services.AddSingleton<IPromptAuthorizationFilter, DefaultPromptAuthorizationFilter>();
+        services.AddSingleton<ICitationAuthorizationFilter, DefaultCitationAuthorizationFilter>();
         services.AddScoped<IGroundedPromptBuilder, GroundedPromptBuilder>();
         services.AddScoped<IContextSufficiencyPolicy, ContextSufficiencyPolicy>();
+        services.AddScoped<ICitationMapper, CitationMapper>();
         services.AddScoped<IRagChatOrchestrationService, RagChatOrchestrationService>();
 
         services.AddSingleton<IPermissionService, PermissionService>();

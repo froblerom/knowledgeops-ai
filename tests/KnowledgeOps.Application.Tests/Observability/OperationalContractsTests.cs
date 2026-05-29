@@ -20,6 +20,8 @@ public sealed class OperationalContractsTests
                 "ChatAnswerGenerationFailed",
                 "ChatInteractionStarted",
                 "ChatInteractionStored",
+                "CitationMappingFailed",
+                "CitationsPersisted",
                 "DocumentProcessingFailed",
                 "DocumentProcessingStarted",
                 "DocumentProcessingSucceeded",

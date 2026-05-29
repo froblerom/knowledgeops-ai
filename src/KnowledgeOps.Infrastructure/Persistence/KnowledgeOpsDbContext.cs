@@ -29,6 +29,8 @@ public sealed class KnowledgeOpsDbContext(DbContextOptions<KnowledgeOpsDbContext
 
     public DbSet<ChatInteraction> ChatInteractions => Set<ChatInteraction>();
 
+    public DbSet<Citation> Citations => Set<Citation>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(KnowledgeOpsDbContext).Assembly);
