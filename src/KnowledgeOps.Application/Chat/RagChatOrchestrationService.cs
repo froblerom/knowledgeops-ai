@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using KnowledgeOps.Application.Auth.Abstractions;
 using KnowledgeOps.Application.Authorization;
+using KnowledgeOps.Application.Chat.Prompting;
 using KnowledgeOps.Application.Observability;
 using KnowledgeOps.Application.Retrieval;
 using KnowledgeOps.Domain.Chat;
@@ -19,10 +20,14 @@ internal sealed class RagChatOrchestrationService(
     IChatSessionRepository sessionRepository,
     IChatInteractionRepository interactionRepository,
     IChunkTextReader chunkTextReader,
+    IGroundedPromptBuilder promptBuilder,
+    IContextSufficiencyPolicy sufficiencyPolicy,
     IAuditEventWriter auditWriter,
     ICorrelationContext correlationContext,
     ILogger<RagChatOrchestrationService> logger) : IRagChatOrchestrationService
 {
+    private const string InsufficientContextFallbackText =
+        "I could not find sufficient information in the knowledge base to answer your question.";
     public async Task<AskQuestionResponse> AskAsync(
         AskQuestionRequest request,
         CancellationToken cancellationToken = default)
@@ -134,7 +139,7 @@ internal sealed class RagChatOrchestrationService(
                 interaction.Id,
                 session.Id,
                 AnswerState.InsufficientContext,
-                AnswerText: null,
+                AnswerText: InsufficientContextFallbackText,
                 retrievalResult.ReturnedCount,
                 IsInsufficientContext: true,
                 correlationId);
@@ -192,6 +197,75 @@ internal sealed class RagChatOrchestrationService(
                 c.SectionLabel))
             .ToArray();
 
+        // Step 11a: Evaluate context sufficiency
+        var sufficiencyResult = sufficiencyPolicy.Evaluate(authorizedChunks);
+        if (!sufficiencyResult.IsSufficient)
+        {
+            totalStopwatch.Stop();
+            interaction.RecordInsufficientContextOutcome(
+                retrievalResult.RetrievalQueryId,
+                authorizedCandidates.Length,
+                retrievalMs,
+                totalStopwatch.ElapsedMilliseconds);
+
+            await AuditAsync(
+                AuditEventTypes.InsufficientContextReturned,
+                $"Context sufficiency policy returned insufficient. SessionId={session.Id} FailureCode={sufficiencyResult.FailureCode}",
+                AuditSeverity.Info,
+                activeState.OrganizationId,
+                activeState.UserId,
+                interaction.Id,
+                cancellationToken);
+
+            await PersistAsync(session, interaction, isNewSession, cancellationToken);
+
+            return new AskQuestionResponse(
+                interaction.Id,
+                session.Id,
+                AnswerState.InsufficientContext,
+                AnswerText: InsufficientContextFallbackText,
+                authorizedCandidates.Length,
+                IsInsufficientContext: true,
+                correlationId);
+        }
+
+        // Step 11b: Build grounded prompt
+        var promptBuildResult = promptBuilder.Build(
+            new GroundedPromptBuildRequest(trimmedQuestion, activeState.OrganizationId, authorizedChunks));
+
+        if (!promptBuildResult.IsSuccess)
+        {
+            totalStopwatch.Stop();
+            interaction.RecordProviderFailedOutcome(
+                promptBuildResult.FailureCode ?? "PromptBuildFailed",
+                retrievalResult.RetrievalQueryId,
+                retrievalMs,
+                generationMs: null,
+                totalStopwatch.ElapsedMilliseconds);
+
+            await AuditAsync(
+                AuditEventTypes.PromptBuildFailed,
+                $"Prompt build failed. SessionId={session.Id} IncludedChunkCount={promptBuildResult.IncludedChunkCount} ExcludedChunkCount={promptBuildResult.ExcludedChunkCount}",
+                AuditSeverity.Warning,
+                activeState.OrganizationId,
+                activeState.UserId,
+                interaction.Id,
+                cancellationToken);
+
+            await PersistAsync(session, interaction, isNewSession, cancellationToken);
+
+            return new AskQuestionResponse(
+                interaction.Id,
+                session.Id,
+                AnswerState.ProviderFailed,
+                AnswerText: null,
+                authorizedCandidates.Length,
+                IsInsufficientContext: false,
+                correlationId);
+        }
+
+        var builtPrompt = promptBuildResult.GroundedPrompt!;
+
         // Step 12: Call IAiAnswerGenerator with authorized chunks only
         var generationStopwatch = Stopwatch.StartNew();
         AnswerGenerationResult generationResult;
@@ -199,9 +273,9 @@ internal sealed class RagChatOrchestrationService(
         {
             generationResult = await answerGenerator.GenerateAsync(
                 new AnswerGenerationRequest(
-                    authorizedChunks,
+                    builtPrompt.AuthorizedChunksForGeneration,
                     trimmedQuestion,
-                    PromptVersion: null,
+                    PromptVersion: builtPrompt.PromptVersion,
                     ModelName: null),
                 cancellationToken);
         }
@@ -260,7 +334,8 @@ internal sealed class RagChatOrchestrationService(
                 generationResult.OutputTokens,
                 cost: null,
                 generationResult.ProviderName,
-                generationResult.ModelUsed);
+                generationResult.ModelUsed,
+                promptVersion: builtPrompt.PromptVersion);
 
             await AuditAsync(
                 AuditEventTypes.ChatAnswerGenerationCompleted,

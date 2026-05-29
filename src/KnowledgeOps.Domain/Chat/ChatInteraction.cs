@@ -22,7 +22,7 @@ public sealed class ChatInteraction
     public decimal? EstimatedCost { get; private set; }
     public string? ProviderFailureCode { get; private set; }
     public string? CorrelationId { get; init; }
-    public string? PromptVersion { get; init; }
+    public string? PromptVersion { get; private set; }
     public DateTimeOffset CreatedAt { get; init; }
     public DateTimeOffset UpdatedAt { get; private set; }
 
@@ -61,7 +61,8 @@ public sealed class ChatInteraction
         int? outputTokens,
         decimal? cost,
         string? provider,
-        string? model)
+        string? model,
+        string? promptVersion = null)
     {
         AnswerState = AnswerState.Grounded;
         AnswerText = answerText;
@@ -75,6 +76,7 @@ public sealed class ChatInteraction
         EstimatedCost = cost;
         AiProvider = provider;
         AiModel = model;
+        PromptVersion = promptVersion;
         UpdatedAt = DateTimeOffset.UtcNow;
     }
 
