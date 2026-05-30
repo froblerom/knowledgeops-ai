@@ -160,7 +160,7 @@ public sealed class AnswerFeedbackServiceTests
         await harness.Service.SubmitAsync(new SubmitAnswerFeedbackRequest(InteractionId, AnswerFeedbackRating.Useful));
 
         var messages = string.Join("|", harness.Audit.Events.Select(e => e.Message));
-        Assert.Contains(AuditEventTypes.FeedbackSubmitted, harness.Audit.Events.Select(e => e.EventType));
+        Assert.Contains(AuditEventTypes.AnswerFeedbackSubmitted, harness.Audit.Events.Select(e => e.EventType));
         Assert.All(harness.Audit.Events, e => Assert.Equal("Feedback", e.EntityType));
         foreach (var term in sensitiveAnswer.Split(' '))
         {

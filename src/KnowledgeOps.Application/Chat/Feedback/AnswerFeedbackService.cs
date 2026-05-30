@@ -53,7 +53,7 @@ internal sealed class AnswerFeedbackService(
         await repository.SaveChangesAsync(ct);
 
         await AuditAsync(
-            AuditEventTypes.FeedbackSubmitted,
+            AuditEventTypes.AnswerFeedbackSubmitted,
             $"Feedback submitted. InteractionId={feedback.ChatInteractionId} Rating={feedback.Rating}",
             feedback,
             ct);
@@ -95,7 +95,7 @@ internal sealed class AnswerFeedbackService(
         await repository.SaveChangesAsync(ct);
 
         await AuditAsync(
-            AuditEventTypes.FeedbackUpdated,
+            AuditEventTypes.AnswerFeedbackUpdated,
             $"Feedback updated. InteractionId={feedback.ChatInteractionId} Rating={feedback.Rating}",
             feedback,
             ct);
