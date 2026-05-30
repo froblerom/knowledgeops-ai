@@ -1,0 +1,112 @@
+<section class="chat-interaction-detail-page">
+  <nav class="breadcrumb">
+    <a routerLink="/chat/history">Chat History</a>
+    @if (interaction) {
+      <span>&rsaquo;</span>
+      <a [routerLink]="['/chat/history/', interaction.chatSessionId]">Session</a>
+    }
+    <span>&rsaquo;</span>
+    <span>Interaction</span>
+  </nav>
+
+  @if (loading) {
+    <app-loading-state />
+  } @else if (error) {
+    <app-error-state [message]="error.message" [errorId]="error.errorId" />
+  } @else if (!interaction) {
+    <p class="not-found">Interaction not found.</p>
+  } @else {
+    <article class="interaction-detail">
+      <header>
+        <time class="interaction-date" [attr.datetime]="interaction.createdAt">
+          {{ interaction.createdAt | date:'medium' }}
+        </time>
+      </header>
+
+      @if (interaction.questionText) {
+        <div class="message user-message">
+          <span class="message-label">You</span>
+          <p>{{ interaction.questionText }}</p>
+        </div>
+      }
+
+      <div class="message assistant-message">
+        <span class="message-label">Assistant</span>
+
+        @if (interaction.insufficientContext || interaction.answerState === 'InsufficientContext') {
+          <p>{{ interaction.answerText || 'I could not find sufficient information to answer this question.' }}</p>
+        } @else if (interaction.answerState === 'ProviderFailure') {
+          <p>The assistant could not generate an answer for this interaction.</p>
+        } @else if (interaction.answerState === 'GroundedAnswer' && interaction.citations.length === 0) {
+          <p>No safe cited answer was recorded for this interaction.</p>
+        } @else {
+          <p>{{ interaction.answerText }}</p>
+        }
+
+        @if (interaction.citations.length > 0) {
+          <div class="citations" aria-label="Citations">
+            <h2>Citations</h2>
+            <ul>
+              @for (citation of interaction.citations; track citation.citationId) {
+                <li>
+                  <span class="citation-title">{{ citation.documentTitle || 'Untitled document' }}</span>
+                  <span>Rank {{ citation.rank }}</span>
+                  @if (citation.pageNumber != null) {
+                    <span>Page {{ citation.pageNumber }}</span>
+                  }
+                  @if (citation.sectionLabel) {
+                    <span>Section {{ citation.sectionLabel }}</span>
+                  }
+                  @if (citation.relevanceScore != null) {
+                    <span>Score {{ citation.relevanceScore | number:'1.2-2' }}</span>
+                  }
+                </li>
+              }
+            </ul>
+          </div>
+        }
+      </div>
+
+      <aside class="interaction-metadata" aria-label="Interaction metadata">
+        <h2>Metadata</h2>
+        <dl>
+          <dt>Retrieved chunks</dt>
+          <dd>{{ interaction.metadata.retrievalCandidateCount }}</dd>
+          @if (interaction.metadata.totalLatencyMs != null) {
+            <dt>Total latency</dt>
+            <dd>{{ interaction.metadata.totalLatencyMs }} ms</dd>
+          }
+          @if (interaction.metadata.retrievalLatencyMs != null) {
+            <dt>Retrieval latency</dt>
+            <dd>{{ interaction.metadata.retrievalLatencyMs }} ms</dd>
+          }
+          @if (interaction.metadata.generationLatencyMs != null) {
+            <dt>Generation latency</dt>
+            <dd>{{ interaction.metadata.generationLatencyMs }} ms</dd>
+          }
+          @if (interaction.metadata.tokenUsageInput != null) {
+            <dt>Input tokens</dt>
+            <dd>{{ interaction.metadata.tokenUsageInput }}</dd>
+          }
+          @if (interaction.metadata.tokenUsageOutput != null) {
+            <dt>Output tokens</dt>
+            <dd>{{ interaction.metadata.tokenUsageOutput }}</dd>
+          }
+          @if (interaction.metadata.estimatedCost != null) {
+            <dt>Estimated cost</dt>
+            <dd>{{ interaction.metadata.estimatedCost | number:'1.4-6' }}</dd>
+          }
+          @if (interaction.promptVersion) {
+            <dt>Prompt version</dt>
+            <dd>{{ interaction.promptVersion }}</dd>
+          }
+        </dl>
+      </aside>
+    </article>
+
+    <p class="disclaimer" role="note">
+      Assistant responses are for operational support and are not final authority.
+      Verify against the cited source material and approved procedures.
+    </p>
+  }
+</section>

@@ -39,4 +39,7 @@ public static class AuditEventTypes
     public const string PromptBuildFailed = "PromptBuildFailed";
     public const string CitationsPersisted = "CitationsPersisted";
     public const string CitationMappingFailed = "CitationMappingFailed";
+    public const string ChatHistoryViewed = "ChatHistoryViewed";
+    public const string ChatInteractionViewed = "ChatInteractionViewed";
+    public const string ChatHistoryDenied = "ChatHistoryDenied";
 }

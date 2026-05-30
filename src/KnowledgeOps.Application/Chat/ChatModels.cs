@@ -2,6 +2,67 @@ using KnowledgeOps.Domain.Chat;
 
 namespace KnowledgeOps.Application.Chat;
 
+// ── Chat history read models ─────────────────────────────────────────────────
+
+public sealed record ChatSessionSummaryDto(
+    Guid ChatSessionId,
+    string? Title,
+    string Status,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt,
+    DateTimeOffset? LastInteractionAt,
+    int InteractionCount);
+
+public sealed record ChatSessionDetailDto(
+    Guid ChatSessionId,
+    string? Title,
+    string Status,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt,
+    DateTimeOffset? LastInteractionAt,
+    IReadOnlyList<ChatInteractionSummaryDto> Interactions);
+
+public sealed record ChatInteractionSummaryDto(
+    Guid ChatInteractionId,
+    string AnswerState,
+    bool InsufficientContext,
+    DateTimeOffset CreatedAt);
+
+public sealed record ChatInteractionDetailDto(
+    Guid ChatInteractionId,
+    Guid ChatSessionId,
+    string AnswerState,
+    bool InsufficientContext,
+    string? QuestionText,
+    string? AnswerText,
+    string? PromptVersion,
+    string? CorrelationId,
+    ChatRetrievalMetadataDto Metadata,
+    IReadOnlyList<ChatCitationHistoryDto> Citations,
+    DateTimeOffset CreatedAt);
+
+public sealed record ChatRetrievalMetadataDto(
+    int RetrievalCandidateCount,
+    long? RetrievalLatencyMs,
+    long? GenerationLatencyMs,
+    long? TotalLatencyMs,
+    int? TokenUsageInput,
+    int? TokenUsageOutput,
+    decimal? EstimatedCost);
+
+public sealed record ChatCitationHistoryDto(
+    Guid CitationId,
+    Guid ChatInteractionId,
+    Guid DocumentId,
+    Guid ChunkId,
+    int Rank,
+    string DocumentTitle,
+    int? PageNumber,
+    string? SectionLabel,
+    double? RelevanceScore);
+
+// ── Chat history service ─────────────────────────────────────────────────────
+
 public sealed record AnswerGenerationRequest(
     IReadOnlyList<AuthorizedChunkContext> AuthorizedChunks,
     string UserQuestion,

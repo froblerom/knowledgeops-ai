@@ -1,0 +1,38 @@
+<section class="chat-history-page">
+  <header>
+    <h1>Chat History</h1>
+    <p>Your recent conversations with the knowledge assistant.</p>
+    @if (canViewScoped) {
+      <div class="scope-actions">
+        <button type="button" (click)="loadSessions(false)">My History</button>
+        <button type="button" (click)="loadSessions(true)">Organization History</button>
+      </div>
+    }
+  </header>
+
+  @if (loading) {
+    <app-loading-state />
+  } @else if (error) {
+    <app-error-state [message]="error.message" [errorId]="error.errorId" />
+  } @else if (sessions.length === 0) {
+    <div class="empty-state">
+      <p>No chat sessions found.</p>
+      <a routerLink="/chat">Start a conversation</a>
+    </div>
+  } @else {
+    <ul class="session-list" aria-label="Chat sessions">
+      @for (session of sessions; track session.chatSessionId) {
+        <li class="session-item">
+          <a [routerLink]="['/chat/history', session.chatSessionId]" class="session-link">
+            <span class="session-title">{{ session.title || 'Untitled session' }}</span>
+            <span class="session-meta">
+              {{ session.interactionCount }} {{ session.interactionCount === 1 ? 'question' : 'questions' }}
+              &middot;
+              {{ (session.lastInteractionAt ?? session.createdAt) | date:'medium' }}
+            </span>
+          </a>
+        </li>
+      }
+    </ul>
+  }
+</section>
