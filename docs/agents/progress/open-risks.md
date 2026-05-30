@@ -1,11 +1,11 @@
 # Open Implementation Risks
 
-Last updated: 2026-05-28
+Last updated: 2026-05-30
 
 | Risk | Severity | Related Area | Mitigation | Status |
 | --- | --- | --- | --- | --- |
 | Agent prompts may load excessive context and lose focus. | Medium | Harness / all future issues | Use `13-prompt-classifier.md`, level-based routing and minimum context bundles. | Open |
-| RAG may be implemented as unsupported general answer behavior rather than grounded document assistance. | High | Retrieval/RAG | Use `rag-implementation-agent.md`, citation and insufficient-context rules, and fake-provider safety tests. Sprint 17 `RagChatOrchestrationService` enforces retrieval-before-generation, skips generation when `IsInsufficientResult=true`, and records `InsufficientContext` outcome. Prompt construction details remain deferred to Sprint 18. | Partially mitigated — Sprint 18 prompt builder remains open |
+| RAG may be implemented as unsupported general answer behavior rather than grounded document assistance. | High | Retrieval/RAG | Use `rag-implementation-agent.md`, citation and insufficient-context rules, and fake-provider safety tests. Sprint 17 `RagChatOrchestrationService` enforces retrieval-before-generation and insufficient-context handling. Sprint 18 added grounded prompt construction and context sufficiency policy. Sprint 19 added citation mapping and persistence. Sprint 20 exposes only an authorized chat API/UI with safe outcomes and metadata-only citations. | Mitigated for MVP chat surface through Sprint 20 Issue #40 |
 | Authorization may be skipped during retrieval or prompt construction. | Critical | Security/RAG | Load security, business-rules and RAG contexts for relevant tasks; require cross-scope tests and verification. Sprint 16 validates active persisted user state, `Chat.AskQuestion`, organization scope, and Application-level candidate revalidation. Sprint 17 `RagChatOrchestrationService` re-validates org scope from `UserAccessState` (not JWT claims) before passing chunks to generator; chunk text reader enforces org scope. Sprint 18 `GroundedPromptBuilder` applies `IPromptAuthorizationFilter` (org-scope check via `DefaultPromptAuthorizationFilter`) as a second enforcement gate before including any chunk in the grounded prompt. `ContextSufficiencyPolicy` gates on zero authorized chunks. Issue #37 closes this risk for the prompt construction path. | Resolved — Sprint 18 Issue #37 applied IPromptAuthorizationFilter in GroundedPromptBuilder |
 | Agent context summaries may diverge from canonical documents over time. | High | Documentation governance | Use documentation and verification agents; update harness when canonical docs change; treat canonical docs as authoritative. | Open |
 | Diagram artifact filename cleanup remains pending. | Low | Documentation artifacts | Address in Sprint 28 or an explicitly authorized diagram artifact task. | Open |
@@ -177,6 +177,10 @@ Chunk persistence and `MarkProcessedAsync` are atomic via `IDocumentProcessingTr
 - PDF and DOCX extraction are deferred; affected documents reach `Failed` status with the message "Unsupported document format for text extraction." Acceptable and required by Sprint 13 scope; extractor implementations for non-text formats are deferred to Phase 2+.
 - `IsRetrievalEnabled` remains `false` after processing completes; no re-enable endpoint or retrieval workflow exists. `Document.IsEligibleForRetrieval()` encodes the predicate; re-enable is deferred to Phase 2+.
 - `LocalDocumentStorage` local-filesystem-only limitation carries over from Sprint 11; no production cloud storage adapter exists.
+
+## Sprint 20 Issue #40 Disposition
+
+The RAG generic-chatbot risk is mitigated for the exposed Sprint 20 chat surface. `POST /api/v1/chat/questions` is authenticated and permission-gated with `Chat.AskQuestion`, delegates to `IRagChatOrchestrationService`, returns real citations for grounded answers, returns safe insufficient-context and provider-failure outcomes, and does not expose provider payloads or raw source content. The Angular `/chat` page presents the assistant as an internal approved-document assistant, renders metadata-only citations, keeps session continuity in component state only, and avoids final-authority language. Future feedback, dashboard, and history surfaces must preserve these same controls.
 
 ## Update Rule
 

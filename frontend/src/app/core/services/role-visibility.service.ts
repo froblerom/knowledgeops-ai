@@ -25,7 +25,8 @@ export class RoleVisibilityService {
 
   // Chat.AskQuestion: all authenticated MVP roles.
   canAskChat(): boolean {
-    return this.session.isAuthenticated();
+    return this.session.isAuthenticated()
+      && this.hasAnyRole('Agent', 'Supervisor', 'KnowledgeAdmin', 'Manager', 'Admin');
   }
 
   // Documents.View: KnowledgeAdmin, Manager, Admin.

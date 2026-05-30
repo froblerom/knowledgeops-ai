@@ -412,6 +412,7 @@ internal sealed class RagChatOrchestrationService(
             var citationResponses = citations
                 .Where(c => citationAuthorizationFilter.IsCitationAuthorizedForUser(c.OrganizationId, activeState.OrganizationId))
                 .Select(c => new CitationResponse(
+                    c.Id,
                     c.DocumentId,
                     c.ChunkId,
                     c.Rank,

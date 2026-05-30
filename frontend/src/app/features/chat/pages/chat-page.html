@@ -1,4 +1,99 @@
-<div class="placeholder-page">
-  <h1>Chat</h1>
-  <p>AI-powered chat interface with citations — reserved for Sprint 20.</p>
-</div>
+<section class="chat-page">
+  <header>
+    <div>
+      <h1>Chat</h1>
+      <p>Ask a question against approved organizational knowledge.</p>
+    </div>
+  </header>
+
+  <p class="disclaimer" role="note">
+    Internal assistant responses are for operational support and are not final authority.
+    Verify against the cited source material and approved procedures.
+  </p>
+
+  @if (!roleVisibility.canAskChat()) {
+    <p class="access-denied">You do not have permission to ask chat questions.</p>
+  } @else {
+    @if (error) {
+      <app-error-state [message]="error.message" [errorId]="error.errorId" />
+    }
+
+    @if (validationError) {
+      <p class="validation-error" role="alert">{{ validationError }}</p>
+    }
+
+    <div class="transcript" aria-live="polite">
+      @if (transcript.length === 0) {
+        <div class="empty-state">
+          <h2>Start with a specific operational question.</h2>
+          <p>Answers may include citations when enough approved context is available.</p>
+        </div>
+      } @else {
+        @for (item of transcript; track item.id) {
+          <article class="exchange">
+            <div class="message user-message">
+              <span class="message-label">You</span>
+              <p>{{ item.questionText }}</p>
+            </div>
+
+            <div class="message assistant-message">
+              <span class="message-label">Assistant</span>
+              @if (item.answerState === 'Pending') {
+                <app-loading-state />
+              } @else if (item.insufficientContext || item.answerState === 'InsufficientContext') {
+                <p>{{ item.answer || 'I do not have enough approved context to answer that question.' }}</p>
+              } @else if (item.answerState === 'ProviderFailure') {
+                <p>The assistant could not generate an answer. Please try again.</p>
+              } @else if (item.answerState === 'GroundedAnswer' && item.citations.length === 0) {
+                <p>The assistant could not return a safe cited answer. Please try again.</p>
+              } @else {
+                <p>{{ item.answer }}</p>
+              }
+
+              @if (item.citations.length > 0) {
+                <div class="citations" aria-label="Citations">
+                  <h2>Citations</h2>
+                  <ul>
+                    @for (citation of item.citations; track citation.citationId) {
+                      <li>
+                        <span class="citation-title">{{ citation.documentTitle || 'Untitled document' }}</span>
+                        <span>Rank {{ citation.rank }}</span>
+                        @if (citation.pageNumber != null) {
+                          <span>Page {{ citation.pageNumber }}</span>
+                        }
+                        @if (citation.sectionLabel) {
+                          <span>Section {{ citation.sectionLabel }}</span>
+                        }
+                        @if (citation.score != null) {
+                          <span>Score {{ citation.score | number:'1.2-2' }}</span>
+                        }
+                      </li>
+                    }
+                  </ul>
+                </div>
+              }
+            </div>
+          </article>
+        }
+      }
+    </div>
+
+    <form class="composer" (ngSubmit)="onSubmit()" novalidate>
+      <label for="questionText">Question</label>
+      <textarea
+        id="questionText"
+        name="questionText"
+        rows="4"
+        maxlength="4000"
+        [(ngModel)]="questionText"
+        [disabled]="submitting"
+        placeholder="Ask about a policy, case workflow, or approved knowledge base topic."></textarea>
+      <div class="composer-actions">
+        <span>{{ questionText.trim().length }}/4000</span>
+        <button type="submit" [disabled]="!canSubmit">
+          {{ submitting ? 'Asking...' : 'Ask' }}
+        </button>
+      </div>
+    </form>
+  }
+</section>

@@ -172,6 +172,7 @@ describe('RoleVisibilityService', () => {
 
   it('unknown role returns false for all restricted visibility helpers', () => {
     sessionService.saveSession(makeSession(['UnknownRole']));
+    expect(service.canAskChat()).toBe(false);
     expect(service.canViewDocuments()).toBe(false);
     expect(service.canUploadDocuments()).toBe(false);
     expect(service.canDisableDocumentRetrieval()).toBe(false);
@@ -182,7 +183,7 @@ describe('RoleVisibilityService', () => {
 
   it('empty roles returns false for restricted visibility helpers', () => {
     sessionService.saveSession(makeSession([]));
-    // canAskChat and canViewSystemHealth check isAuthenticated, not roles
+    expect(service.canAskChat()).toBe(false);
     expect(service.canViewDocuments()).toBe(false);
     expect(service.canUploadDocuments()).toBe(false);
     expect(service.canDisableDocumentRetrieval()).toBe(false);
