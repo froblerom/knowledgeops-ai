@@ -32,6 +32,7 @@ public sealed record AskQuestionRequest(
     Guid? ChatSessionId = null);
 
 public sealed record CitationResponse(
+    Guid CitationId,
     Guid DocumentId,
     Guid ChunkId,
     int Rank,
