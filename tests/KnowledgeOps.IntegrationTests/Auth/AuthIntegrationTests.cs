@@ -118,6 +118,7 @@ public sealed class AuthIntegrationTests
             services.AddSingleton<IConfiguration>(configuration);
             services.AddApplication();
             services.AddInfrastructure(configuration);
+            services.AddJwtInfrastructure();
 
             await using var provider = services.BuildServiceProvider();
             using var scope = provider.CreateScope();

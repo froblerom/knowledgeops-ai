@@ -33,6 +33,8 @@ public sealed class OperationalContractsTests
                 "EligibleSemanticRetrievalFailed",
                 "EmbeddingGenerationFailed",
                 "EmbeddingGenerationSucceeded",
+                "FeedbackSubmitted",
+                "FeedbackUpdated",
                 "HealthDetailsViewed",
                 "InsufficientContextReturned",
                 "MalformedVectorExcluded",

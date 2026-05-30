@@ -31,6 +31,8 @@ public sealed class KnowledgeOpsDbContext(DbContextOptions<KnowledgeOpsDbContext
 
     public DbSet<Citation> Citations => Set<Citation>();
 
+    public DbSet<AnswerFeedback> AnswerFeedback => Set<AnswerFeedback>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(KnowledgeOpsDbContext).Assembly);

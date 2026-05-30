@@ -1,6 +1,7 @@
 using KnowledgeOps.Application.Auth.Abstractions;
 using KnowledgeOps.Application.Chat;
 using KnowledgeOps.Application.Chat.Citations;
+using KnowledgeOps.Application.Chat.Feedback;
 using KnowledgeOps.Application.Documents;
 using KnowledgeOps.Application.Embeddings;
 using KnowledgeOps.Application.Observability;
@@ -19,6 +20,7 @@ using KnowledgeOps.Infrastructure.Users;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace KnowledgeOps.Infrastructure;
 
@@ -28,6 +30,8 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
+        services.TryAddSingleton(configuration);
+
         services.AddDbContext<KnowledgeOpsDbContext>(options =>
         {
             var connectionString = configuration.GetConnectionString("DefaultConnection");
@@ -64,6 +68,7 @@ public static class DependencyInjection
         services.AddSingleton<ITokenService, JwtTokenService>();
         services.AddScoped<IChatSessionRepository, EfChatSessionRepository>();
         services.AddScoped<IChatInteractionRepository, EfChatInteractionRepository>();
+        services.AddScoped<IAnswerFeedbackRepository, EfAnswerFeedbackRepository>();
         services.AddScoped<IChunkTextReader, EfChunkTextReader>();
         services.AddScoped<ICitationRepository, EfCitationRepository>();
         services.AddScoped<IDocumentTitleReader, EfDocumentTitleReader>();

@@ -5,6 +5,8 @@ using System.Text.Json;
 using KnowledgeOps.Application.Auth.Abstractions;
 using KnowledgeOps.Application.Authorization;
 using KnowledgeOps.Application.Chat;
+using KnowledgeOps.Application.Chat.Feedback;
+using KnowledgeOps.Application.Errors;
 using KnowledgeOps.Application.Observability;
 using KnowledgeOps.Domain.Chat;
 using KnowledgeOps.Domain.Users;
@@ -270,10 +272,12 @@ public sealed class ChatApiTestFactory : WebApplicationFactory<Program>
     public static readonly Guid ChunkId = Guid.Parse("dddddddd-dddd-4ddd-8ddd-dddddddddddd");
 
     public FakeRagChatOrchestrationService RagService { get; } = new();
+    public FakeAnswerFeedbackService FeedbackService { get; } = new();
 
     public void Reset()
     {
         RagService.Reset();
+        FeedbackService.Reset();
     }
 
     public static AskQuestionResponse GroundedResponse() =>
@@ -334,11 +338,93 @@ public sealed class ChatApiTestFactory : WebApplicationFactory<Program>
                 new FixedAccessStateReader(sp.GetRequiredService<IUserAuthRepository>()));
             services.RemoveAll<IRagChatOrchestrationService>();
             services.AddSingleton<IRagChatOrchestrationService>(RagService);
+            services.RemoveAll<IAnswerFeedbackService>();
+            services.AddSingleton<IAnswerFeedbackService>(FeedbackService);
             services.RemoveAll<IPasswordHasher>();
             services.AddSingleton<IPasswordHasher, TestPasswordHasher>();
             services.RemoveAll<IAuditEventWriter>();
             services.AddSingleton<IAuditEventWriter, NoopAuditEventWriter>();
         });
+    }
+
+    public sealed class FakeAnswerFeedbackService : IAnswerFeedbackService
+    {
+        public bool SubmitWasCalled { get; private set; }
+        public bool UpdateWasCalled { get; private set; }
+        public bool ReviewWasCalled { get; private set; }
+        public SubmitAnswerFeedbackRequest? LastSubmitRequest { get; private set; }
+        public UpdateAnswerFeedbackRequest? LastUpdateRequest { get; private set; }
+        public Exception? ExceptionToThrow { get; set; }
+        public AnswerFeedbackResult NextFeedbackResult { get; set; } =
+            FeedbackResult(Guid.Parse("11111111-1111-4111-8111-111111111111"), AnswerFeedbackRating.Useful);
+        public AnswerFeedbackReviewResult NextReviewResult { get; set; } =
+            new(UsefulCount: 1, NotUsefulCount: 1, Items:
+            [
+                new AnswerFeedbackReviewItem(
+                    Guid.Parse("11111111-1111-4111-8111-111111111111"),
+                    Guid.Parse("22222222-2222-4222-8222-222222222222"),
+                    Guid.Parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"),
+                    AnswerFeedbackRating.Useful,
+                    DateTimeOffset.Parse("2026-05-30T00:00:00Z"),
+                    DateTimeOffset.Parse("2026-05-30T00:00:00Z"))
+            ]);
+
+        public void Reset()
+        {
+            SubmitWasCalled = false;
+            UpdateWasCalled = false;
+            ReviewWasCalled = false;
+            LastSubmitRequest = null;
+            LastUpdateRequest = null;
+            ExceptionToThrow = null;
+            NextFeedbackResult = FeedbackResult(
+                Guid.Parse("11111111-1111-4111-8111-111111111111"),
+                AnswerFeedbackRating.Useful);
+        }
+
+        public Task<AnswerFeedbackResult> SubmitAsync(
+            SubmitAnswerFeedbackRequest request,
+            CancellationToken ct = default)
+        {
+            SubmitWasCalled = true;
+            LastSubmitRequest = request;
+            if (ExceptionToThrow is not null)
+                throw ExceptionToThrow;
+            return Task.FromResult(NextFeedbackResult);
+        }
+
+        public Task<AnswerFeedbackResult> UpdateOwnAsync(
+            UpdateAnswerFeedbackRequest request,
+            CancellationToken ct = default)
+        {
+            UpdateWasCalled = true;
+            LastUpdateRequest = request;
+            if (ExceptionToThrow is not null)
+                throw ExceptionToThrow;
+            return Task.FromResult(NextFeedbackResult with
+            {
+                ChatInteractionId = request.ChatInteractionId,
+                Rating = request.Rating
+            });
+        }
+
+        public Task<AnswerFeedbackReviewResult> GetReviewDataAsync(CancellationToken ct = default)
+        {
+            ReviewWasCalled = true;
+            if (ExceptionToThrow is not null)
+                throw ExceptionToThrow;
+            return Task.FromResult(NextReviewResult);
+        }
+
+        private static AnswerFeedbackResult FeedbackResult(Guid id, AnswerFeedbackRating rating) =>
+            new(
+                id,
+                Guid.Parse("22222222-2222-4222-8222-222222222222"),
+                Guid.Parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"),
+                OrgId,
+                rating,
+                DateTimeOffset.Parse("2026-05-30T00:00:00Z"),
+                DateTimeOffset.Parse("2026-05-30T00:00:00Z"));
     }
 
     public sealed class FakeRagChatOrchestrationService : IRagChatOrchestrationService

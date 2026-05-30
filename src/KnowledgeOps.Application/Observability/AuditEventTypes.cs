@@ -39,4 +39,6 @@ public static class AuditEventTypes
     public const string PromptBuildFailed = "PromptBuildFailed";
     public const string CitationsPersisted = "CitationsPersisted";
     public const string CitationMappingFailed = "CitationMappingFailed";
+    public const string FeedbackSubmitted = "FeedbackSubmitted";
+    public const string FeedbackUpdated = "FeedbackUpdated";
 }

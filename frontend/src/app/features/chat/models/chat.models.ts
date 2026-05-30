@@ -35,3 +35,37 @@ export interface AskChatQuestionResponse {
   metadata: ChatResponseMetadata;
   correlationId: string | null;
 }
+
+export type AnswerFeedbackRating = 'Useful' | 'NotUseful';
+
+export interface SubmitAnswerFeedbackRequest {
+  rating: AnswerFeedbackRating;
+}
+
+export interface UpdateAnswerFeedbackRequest {
+  rating: AnswerFeedbackRating;
+}
+
+export interface AnswerFeedbackResponse {
+  feedbackId: string;
+  chatInteractionId: string;
+  userId: string;
+  rating: AnswerFeedbackRating;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AnswerFeedbackReviewItem {
+  feedbackId: string;
+  chatInteractionId: string;
+  userId: string;
+  rating: AnswerFeedbackRating;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AnswerFeedbackReviewResponse {
+  usefulCount: number;
+  notUsefulCount: number;
+  items: AnswerFeedbackReviewItem[];
+}

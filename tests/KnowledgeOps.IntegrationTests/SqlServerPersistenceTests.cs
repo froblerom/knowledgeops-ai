@@ -120,7 +120,13 @@ public sealed class SqlServerPersistenceTests
             Assert.Equal(
                 [
                     "__EFMigrationsHistory",
+                    "answer_feedback",
                     "audit_log_entries",
+                    "chat_interactions",
+                    "chat_sessions",
+                    "chunk_embeddings",
+                    "citations",
+                    "document_chunks",
                     "documents",
                     "organizations",
                     "user_roles",

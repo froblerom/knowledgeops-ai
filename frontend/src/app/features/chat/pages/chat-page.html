@@ -72,6 +72,34 @@
                   </ul>
                 </div>
               }
+
+              @if (canShowFeedback(item)) {
+                <div class="feedback-controls" aria-label="Answer feedback">
+                  <button
+                    type="button"
+                    [class.selected]="item.feedbackRating === 'Useful'"
+                    [disabled]="item.feedbackSubmitting"
+                    (click)="submitFeedback(item, 'Useful')">
+                    Useful
+                  </button>
+                  <button
+                    type="button"
+                    [class.selected]="item.feedbackRating === 'NotUseful'"
+                    [disabled]="item.feedbackSubmitting"
+                    (click)="submitFeedback(item, 'NotUseful')">
+                    Not useful
+                  </button>
+                  @if (item.feedbackSubmitting) {
+                    <span class="feedback-status">Saving</span>
+                  }
+                  @if (item.feedbackMessage) {
+                    <span class="feedback-status">{{ item.feedbackMessage }}</span>
+                  }
+                  @if (item.feedbackError) {
+                    <span class="feedback-error" role="alert">{{ item.feedbackError }}</span>
+                  }
+                </div>
+              }
             </div>
           </article>
         }
