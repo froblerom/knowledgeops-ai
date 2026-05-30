@@ -203,4 +203,34 @@ describe('RoleVisibilityService', () => {
     expect(service.canViewAdmin()).toBe(false);
     expect(service.canViewSystemHealth()).toBe(false);
   });
+
+  // ── canViewChatHistory ───────────────────────────────────────────────────────
+
+  it('canViewChatHistory returns true for all authenticated MVP roles', () => {
+    for (const role of ['Agent', 'Supervisor', 'KnowledgeAdmin', 'Manager', 'Admin']) {
+      sessionService.saveSession(makeSession([role]));
+      expect(service.canViewChatHistory()).toBe(true);
+    }
+  });
+
+  it('canViewChatHistory returns false when not authenticated', () => {
+    localStorage.clear();
+    expect(service.canViewChatHistory()).toBe(false);
+  });
+
+  // ── canViewScopedChatHistory ─────────────────────────────────────────────────
+
+  it('canViewScopedChatHistory returns true for Supervisor, Manager, Admin only', () => {
+    for (const role of ['Supervisor', 'Manager', 'Admin']) {
+      sessionService.saveSession(makeSession([role]));
+      expect(service.canViewScopedChatHistory()).toBe(true);
+    }
+  });
+
+  it('canViewScopedChatHistory returns false for Agent and KnowledgeAdmin', () => {
+    for (const role of ['Agent', 'KnowledgeAdmin']) {
+      sessionService.saveSession(makeSession([role]));
+      expect(service.canViewScopedChatHistory()).toBe(false);
+    }
+  });
 });

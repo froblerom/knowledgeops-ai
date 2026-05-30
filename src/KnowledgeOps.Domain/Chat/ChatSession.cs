@@ -2,10 +2,13 @@ namespace KnowledgeOps.Domain.Chat;
 
 public sealed class ChatSession
 {
+    public const string StatusActive = "Active";
+
     public Guid Id { get; init; }
     public Guid OrganizationId { get; init; }
     public Guid UserId { get; init; }
     public string? Title { get; init; }
+    public string Status { get; private set; } = StatusActive;
     public DateTimeOffset CreatedAt { get; init; }
     public DateTimeOffset UpdatedAt { get; private set; }
     public DateTimeOffset? DeletedAt { get; set; }
@@ -20,6 +23,7 @@ public sealed class ChatSession
             OrganizationId = orgId,
             UserId = userId,
             Title = title,
+            Status = StatusActive,
             CreatedAt = now,
             UpdatedAt = now,
         };

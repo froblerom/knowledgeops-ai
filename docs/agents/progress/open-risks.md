@@ -1,6 +1,6 @@
 # Open Implementation Risks
 
-Last updated: 2026-05-30
+Last updated: 2026-05-30 (updated for Sprint 21 Issue #41)
 
 | Risk | Severity | Related Area | Mitigation | Status |
 | --- | --- | --- | --- | --- |
@@ -177,6 +177,12 @@ Chunk persistence and `MarkProcessedAsync` are atomic via `IDocumentProcessingTr
 - PDF and DOCX extraction are deferred; affected documents reach `Failed` status with the message "Unsupported document format for text extraction." Acceptable and required by Sprint 13 scope; extractor implementations for non-text formats are deferred to Phase 2+.
 - `IsRetrievalEnabled` remains `false` after processing completes; no re-enable endpoint or retrieval workflow exists. `Document.IsEligibleForRetrieval()` encodes the predicate; re-enable is deferred to Phase 2+.
 - `LocalDocumentStorage` local-filesystem-only limitation carries over from Sprint 11; no production cloud storage adapter exists.
+
+## Sprint 21 Issue #41 Disposition
+
+Secure chat history and interaction detail views are implemented. `ChatHistoryService` enforces organization scope from `UserAccessState`, own-only access for Agent and KnowledgeAdmin, and scoped-reviewer access for Supervisor/Manager/Admin via `Chat.ViewScopedHistory`. Cross-organization access returns null (safe 404). Historical citations remain visible independent of source document retrieval state. No new AI generation, prompt construction, or retrieval behavior was introduced. The deferred `Chat.ViewInteraction`/`Chat.ViewCitations` own-only-vs-scoped enforcement (flagged in Sprint 7 with a code comment "deferred to Sprint 17+") is now **resolved for Sprint 21** through `ChatHistoryService.IsAuthorizedForResource`.
+
+The KnowledgeAdmin ambiguity (flagged in the pre-implementation audit) was resolved by explicit decision: KnowledgeAdmin is own-only for Sprint 21 chat history access. The `Chat.ViewScopedHistory` absence from KnowledgeAdmin's permission matrix is the authoritative signal.
 
 ## Sprint 20 Issue #40 Disposition
 

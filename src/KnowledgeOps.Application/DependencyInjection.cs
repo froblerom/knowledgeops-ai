@@ -30,6 +30,7 @@ public static class DependencyInjection
         services.AddScoped<IContextSufficiencyPolicy, ContextSufficiencyPolicy>();
         services.AddScoped<ICitationMapper, CitationMapper>();
         services.AddScoped<IRagChatOrchestrationService, RagChatOrchestrationService>();
+        services.AddScoped<IChatHistoryService, ChatHistoryService>();
 
         services.AddSingleton<IPermissionService, PermissionService>();
         services.AddSingleton<IOrganizationScopeService, OrganizationScopeService>();

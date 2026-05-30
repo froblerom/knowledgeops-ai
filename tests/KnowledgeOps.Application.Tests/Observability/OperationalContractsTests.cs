@@ -18,8 +18,11 @@ public sealed class OperationalContractsTests
             [
                 "ChatAnswerGenerationCompleted",
                 "ChatAnswerGenerationFailed",
+                "ChatHistoryDenied",
+                "ChatHistoryViewed",
                 "ChatInteractionStarted",
                 "ChatInteractionStored",
+                "ChatInteractionViewed",
                 "CitationMappingFailed",
                 "CitationsPersisted",
                 "DocumentProcessingFailed",

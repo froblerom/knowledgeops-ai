@@ -66,6 +66,12 @@ internal sealed class CitationConfiguration : IEntityTypeConfiguration<Citation>
             .OnDelete(DeleteBehavior.Restrict)
             .HasConstraintName("FK_citations_chat_interactions_chat_interaction_id");
 
+        builder.HasOne<Document>()
+            .WithMany()
+            .HasForeignKey(c => c.DocumentId)
+            .OnDelete(DeleteBehavior.Restrict)
+            .HasConstraintName("FK_citations_documents_document_id");
+
         builder.HasOne<DocumentChunk>()
             .WithMany()
             .HasForeignKey(c => c.ChunkId)

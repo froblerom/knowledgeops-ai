@@ -1,0 +1,44 @@
+<section class="chat-session-detail-page">
+  <nav class="breadcrumb">
+    <a routerLink="/chat/history">Chat History</a>
+    <span>&rsaquo;</span>
+    <span>Session</span>
+  </nav>
+
+  @if (loading) {
+    <app-loading-state />
+  } @else if (error) {
+    <app-error-state [message]="error.message" [errorId]="error.errorId" />
+  } @else if (!session) {
+    <p class="not-found">Session not found.</p>
+  } @else {
+    <header>
+      <h1>{{ session.title || 'Untitled session' }}</h1>
+      <p class="session-meta">
+        {{ session.interactions.length }} {{ session.interactions.length === 1 ? 'question' : 'questions' }}
+        &middot; Started {{ session.createdAt | date:'medium' }}
+      </p>
+    </header>
+
+    @if (session.interactions.length === 0) {
+      <div class="empty-state">
+        <p>No interactions in this session.</p>
+      </div>
+    } @else {
+      <ul class="interaction-list" aria-label="Interactions">
+        @for (interaction of session.interactions; track interaction.chatInteractionId) {
+          <li class="interaction-item">
+            <a [routerLink]="['/chat/interactions/', interaction.chatInteractionId]" class="interaction-link">
+              <span class="interaction-state" [class]="'state-' + interaction.answerState.toLowerCase()">
+                {{ interaction.answerState === 'GroundedAnswer' ? 'Answered' :
+                   interaction.answerState === 'InsufficientContext' ? 'Insufficient context' :
+                   'Provider failure' }}
+              </span>
+              <span class="interaction-date">{{ interaction.createdAt | date:'medium' }}</span>
+            </a>
+          </li>
+        }
+      </ul>
+    }
+  }
+</section>

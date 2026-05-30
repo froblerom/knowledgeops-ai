@@ -19,6 +19,10 @@ describe('App', () => {
               roles.some(role =>
                 ['Agent', 'Supervisor', 'KnowledgeAdmin', 'Manager', 'Admin'].includes(role)
               ),
+            canViewChatHistory: () =>
+              roles.some(role =>
+                ['Agent', 'Supervisor', 'KnowledgeAdmin', 'Manager', 'Admin'].includes(role)
+              ),
             canViewAdmin: () => false
           }
         }

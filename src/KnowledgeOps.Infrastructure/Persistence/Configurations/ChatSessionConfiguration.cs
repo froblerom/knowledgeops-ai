@@ -30,6 +30,12 @@ internal sealed class ChatSessionConfiguration : IEntityTypeConfiguration<ChatSe
             .HasColumnName("title")
             .HasMaxLength(500);
 
+        builder.Property(s => s.Status)
+            .HasColumnName("status")
+            .HasMaxLength(50)
+            .HasDefaultValue(ChatSession.StatusActive)
+            .IsRequired();
+
         builder.Property(s => s.CreatedAt)
             .HasColumnName("created_at")
             .HasColumnType("datetime2")
