@@ -1,6 +1,6 @@
 # Open Implementation Risks
 
-Last updated: 2026-05-30 (updated for Sprint 21 Issue #41)
+Last updated: 2026-06-01 (updated for Sprint 23 Issue #43)
 
 | Risk | Severity | Related Area | Mitigation | Status |
 | --- | --- | --- | --- | --- |
@@ -187,6 +187,16 @@ The KnowledgeAdmin ambiguity (flagged in the pre-implementation audit) was resol
 ## Sprint 20 Issue #40 Disposition
 
 The RAG generic-chatbot risk is mitigated for the exposed Sprint 20 chat surface. `POST /api/v1/chat/questions` is authenticated and permission-gated with `Chat.AskQuestion`, delegates to `IRagChatOrchestrationService`, returns real citations for grounded answers, returns safe insufficient-context and provider-failure outcomes, and does not expose provider payloads or raw source content. The Angular `/chat` page presents the assistant as an internal approved-document assistant, renders metadata-only citations, keeps session continuity in component state only, and avoids final-authority language. Future feedback, dashboard, and history surfaces must preserve these same controls.
+
+## Sprint 23 Issue #43 Disposition
+
+Dashboard metrics API and Angular experience are implemented. Four permission-gated endpoints (`GET /api/v1/dashboard/{overview,documents,chat,feedback}`) enforce organization scope from `IUserAccessStateReader` (persisted state — never from caller input). The `EfDashboardRepository` filters by `organizationId` before every aggregation. Cost is `null` / `available=false` when no `estimated_cost` rows exist — zero is never substituted for unavailable cost. Latency averages use only non-null rows; null is returned when all rows are null. `AnswerState.InsufficientContext` and `AnswerState.ProviderFailed` are referenced via typed enum casts (never magic integer literals). The Angular `dashboardVisibilityGuard` is explicitly annotated as UX-only; the backend permission checks are the authoritative access boundary.
+
+No Phase 2 tables (`knowledge_gap_signals`, `dashboard_metric_snapshots`), no new RBAC roles, and no new EF Core migration were introduced. Dashboard data is aggregated in real-time from existing `chat_interactions`, `documents`, and `answer_feedback` tables.
+
+**Residual risks**:
+- Dashboard queries are real-time aggregations with no snapshot caching. For large datasets in production, query performance may require indexes or materialized views (deferred to Phase 2+ optimization).
+- SQL-gated integration tests for `EfDashboardRepository` require `ConnectionStrings__DefaultConnection`; validation against a running SQL Server should occur before merging.
 
 ## Update Rule
 

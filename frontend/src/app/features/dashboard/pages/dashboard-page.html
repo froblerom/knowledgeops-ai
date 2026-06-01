@@ -1,4 +1,235 @@
-<div class="placeholder-page">
+<div class="dashboard-page">
   <h1>Dashboard</h1>
-  <p>Metrics and analytics overview — reserved for Sprint 23.</p>
+
+  <!-- ── Overview Section ──────────────────────────────────────────────────── -->
+  <section class="dashboard-section" aria-labelledby="overview-heading">
+    <h2 id="overview-heading">Overview</h2>
+
+    <app-loading-state *ngIf="overviewLoading"></app-loading-state>
+    <app-error-state
+      *ngIf="overviewError && !overviewLoading"
+      [message]="overviewError.message"
+      [errorId]="overviewError.errorId ?? null">
+    </app-error-state>
+
+    <div *ngIf="!overviewLoading && !overviewError && overviewEmpty" class="empty-state">
+      <p>No overview data available for the selected period.</p>
+    </div>
+
+    <div *ngIf="overview && !overviewLoading && !overviewError && !overviewEmpty" class="metrics-grid">
+      <div class="metric-card">
+        <span class="metric-label">Questions Asked</span>
+        <span class="metric-value">{{ overview.questionsAsked }}</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Active Users</span>
+        <span class="metric-value">{{ overview.activeUsers }}</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Documents Uploaded</span>
+        <span class="metric-value">{{ overview.documentsUploaded }}</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Documents Processed</span>
+        <span class="metric-value">{{ overview.documentsProcessed }}</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Documents Failed</span>
+        <span class="metric-value">{{ overview.documentsFailed }}</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Useful Feedback</span>
+        <span class="metric-value">{{ overview.usefulFeedbackCount }}</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Not Useful Feedback</span>
+        <span class="metric-value">{{ overview.notUsefulFeedbackCount }}</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Insufficient Context</span>
+        <span class="metric-value">{{ overview.insufficientContextCount }}</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Provider Failures</span>
+        <span class="metric-value">{{ overview.providerFailureCount }}</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Avg Response Latency</span>
+        <span class="metric-value">
+          <ng-container *ngIf="overview.averageResponseLatencyMs !== null; else latencyNA">
+            {{ overview.averageResponseLatencyMs }} ms
+          </ng-container>
+          <ng-template #latencyNA>N/A</ng-template>
+        </span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Estimated Cost</span>
+        <span class="metric-value">
+          <ng-container *ngIf="overview.cost.available; else costNotAvailable">
+            ${{ overview.cost.estimatedTotal?.toFixed(4) ?? '0.0000' }}
+          </ng-container>
+          <ng-template #costNotAvailable>Not available</ng-template>
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Documents Section ─────────────────────────────────────────────────── -->
+  <section class="dashboard-section" aria-labelledby="documents-heading">
+    <h2 id="documents-heading">Documents</h2>
+
+    <app-loading-state *ngIf="documentsLoading"></app-loading-state>
+    <app-error-state
+      *ngIf="documentsError && !documentsLoading"
+      [message]="documentsError.message"
+      [errorId]="documentsError.errorId ?? null">
+    </app-error-state>
+
+    <div *ngIf="!documentsLoading && !documentsError && documentsEmpty" class="empty-state">
+      <p>No documents found for this organization.</p>
+    </div>
+
+    <div *ngIf="documents && !documentsLoading && !documentsError && !documentsEmpty" class="metrics-grid">
+      <div class="metric-card">
+        <span class="metric-label">Uploaded</span>
+        <span class="metric-value">{{ documents.uploaded }}</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Processing</span>
+        <span class="metric-value">{{ documents.processing }}</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Processed</span>
+        <span class="metric-value">{{ documents.processed }}</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Failed</span>
+        <span class="metric-value">{{ documents.failed }}</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Retrieval Disabled</span>
+        <span class="metric-value">{{ documents.retrievalDisabled }}</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Chat Section ──────────────────────────────────────────────────────── -->
+  <section class="dashboard-section" aria-labelledby="chat-heading">
+    <h2 id="chat-heading">Chat</h2>
+
+    <app-loading-state *ngIf="chatLoading"></app-loading-state>
+    <app-error-state
+      *ngIf="chatError && !chatLoading"
+      [message]="chatError.message"
+      [errorId]="chatError.errorId ?? null">
+    </app-error-state>
+
+    <div *ngIf="!chatLoading && !chatError && chatEmpty" class="empty-state">
+      <p>No chat activity for the selected period.</p>
+    </div>
+
+    <div *ngIf="chat && !chatLoading && !chatError && !chatEmpty" class="metrics-grid">
+      <div class="metric-card">
+        <span class="metric-label">Questions Asked</span>
+        <span class="metric-value">{{ chat.questionsAsked }}</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Active Users</span>
+        <span class="metric-value">{{ chat.activeUsers }}</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Avg Response Latency</span>
+        <span class="metric-value">
+          <ng-container *ngIf="chat.averageResponseLatencyMs !== null; else chatLatencyNA">
+            {{ chat.averageResponseLatencyMs }} ms
+          </ng-container>
+          <ng-template #chatLatencyNA>N/A</ng-template>
+        </span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Avg Retrieval Latency</span>
+        <span class="metric-value">
+          <ng-container *ngIf="chat.retrievalLatencyMs !== null; else retrievalNA">
+            {{ chat.retrievalLatencyMs }} ms
+          </ng-container>
+          <ng-template #retrievalNA>N/A</ng-template>
+        </span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Avg Generation Latency</span>
+        <span class="metric-value">
+          <ng-container *ngIf="chat.generationLatencyMs !== null; else generationNA">
+            {{ chat.generationLatencyMs }} ms
+          </ng-container>
+          <ng-template #generationNA>N/A</ng-template>
+        </span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Insufficient Context</span>
+        <span class="metric-value">{{ chat.insufficientContextCount }}</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Provider Failures</span>
+        <span class="metric-value">{{ chat.providerFailureCount }}</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Input Tokens</span>
+        <span class="metric-value">
+          <ng-container *ngIf="chat.tokens.input !== null; else tokenInputNA">
+            {{ chat.tokens.input }}
+          </ng-container>
+          <ng-template #tokenInputNA>N/A</ng-template>
+        </span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Output Tokens</span>
+        <span class="metric-value">
+          <ng-container *ngIf="chat.tokens.output !== null; else tokenOutputNA">
+            {{ chat.tokens.output }}
+          </ng-container>
+          <ng-template #tokenOutputNA>N/A</ng-template>
+        </span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Estimated Cost</span>
+        <span class="metric-value">
+          <ng-container *ngIf="chat.cost.available; else chatCostNotAvailable">
+            ${{ chat.cost.estimatedTotal?.toFixed(4) ?? '0.0000' }}
+          </ng-container>
+          <ng-template #chatCostNotAvailable>Not available</ng-template>
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Feedback Section ──────────────────────────────────────────────────── -->
+  <section class="dashboard-section" aria-labelledby="feedback-heading">
+    <h2 id="feedback-heading">Feedback</h2>
+
+    <app-loading-state *ngIf="feedbackLoading"></app-loading-state>
+    <app-error-state
+      *ngIf="feedbackError && !feedbackLoading"
+      [message]="feedbackError.message"
+      [errorId]="feedbackError.errorId ?? null">
+    </app-error-state>
+
+    <div *ngIf="!feedbackLoading && !feedbackError && feedbackEmpty" class="empty-state">
+      <p>No feedback received for the selected period.</p>
+    </div>
+
+    <div *ngIf="feedback && !feedbackLoading && !feedbackError && !feedbackEmpty" class="metrics-grid">
+      <div class="metric-card">
+        <span class="metric-label">Useful</span>
+        <span class="metric-value">{{ feedback.useful }}</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Not Useful</span>
+        <span class="metric-value">{{ feedback.notUseful }}</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Total</span>
+        <span class="metric-value">{{ feedback.total }}</span>
+      </div>
+    </div>
+  </section>
 </div>
