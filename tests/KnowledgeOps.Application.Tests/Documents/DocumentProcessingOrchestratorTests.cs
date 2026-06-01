@@ -289,6 +289,9 @@ public sealed class DocumentProcessingOrchestratorTests
         public Task<ManagedDocument?> FindAsync(Guid documentId, Guid organizationId, CancellationToken ct = default) =>
             Task.FromResult<ManagedDocument?>(null);
 
+        public Task<IReadOnlyList<ManagedDocument>> FindFailedDocumentsAsync(Guid organizationId, int limit, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<ManagedDocument>>([]);
+
         public Task<ManagedDocument> CreateAsync(NewManagedDocument document, CancellationToken ct = default) =>
             throw new NotImplementedException();
 

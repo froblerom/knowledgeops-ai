@@ -1,6 +1,6 @@
 # Open Implementation Risks
 
-Last updated: 2026-06-01 (updated for Sprint 23 Issue #43)
+Last updated: 2026-06-01 (updated for Sprint 24 Issue #44)
 
 | Risk | Severity | Related Area | Mitigation | Status |
 | --- | --- | --- | --- | --- |
@@ -197,6 +197,16 @@ No Phase 2 tables (`knowledge_gap_signals`, `dashboard_metric_snapshots`), no ne
 **Residual risks**:
 - Dashboard queries are real-time aggregations with no snapshot caching. For large datasets in production, query performance may require indexes or materialized views (deferred to Phase 2+ optimization).
 - SQL-gated integration tests for `EfDashboardRepository` require `ConnectionStrings__DefaultConnection`; validation against a running SQL Server should occur before merging.
+
+## Sprint 24 Issue #44 Disposition
+
+Safe observability and supportability endpoints are implemented. `GET /api/v1/admin/processing-failures` is limited to KnowledgeAdmin/Admin via `System.ViewProcessingFailures`, filters failed non-deleted documents by the persisted current user's organization, and returns only safe document failure metadata. `GET /api/v1/admin/audit-log` is Admin-only via `Audit.View`, filters by organization before optional `from`/`to`/`eventType`, applies a safe limit, returns newest-first metadata, and emits a safe `AuditLogViewed` event that does not echo returned audit rows or raw filter values. Angular support pages expose only the same safe fields and use UX-only role visibility helpers.
+
+No EF migration, retry/re-enable operation, raw diagnostic viewer, prompt/chunk/provider payload exposure, cross-organization support view, or RAG behavior change was introduced.
+
+**Residual risks**:
+- SQL-gated integration tests for the EF audit/document support queries require `ConnectionStrings__DefaultConnection` and a running SQL Server; validate before PR merge.
+- The new support endpoints are intentionally read-only and minimal. Advanced audit search, export, SIEM/App Insights production integration, retry workflows, and production alerting remain deferred.
 
 ## Update Rule
 

@@ -535,6 +535,13 @@ public sealed class DocumentsApiTestFactory : WebApplicationFactory<Program>
             Task.FromResult(_documents.SingleOrDefault(
                 d => d.DocumentId == documentId && d.OrganizationId == organizationId));
 
+        public Task<IReadOnlyList<ManagedDocument>> FindFailedDocumentsAsync(Guid organizationId, int limit, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<ManagedDocument>>(
+                _documents
+                    .Where(d => d.OrganizationId == organizationId && d.ProcessingStatus == DocumentProcessingStatus.Failed)
+                    .Take(limit)
+                    .ToArray());
+
         public Task<ManagedDocument> CreateAsync(NewManagedDocument document, CancellationToken ct = default)
         {
             var doc = new ManagedDocument(

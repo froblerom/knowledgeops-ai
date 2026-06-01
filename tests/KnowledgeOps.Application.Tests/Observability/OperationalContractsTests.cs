@@ -18,6 +18,7 @@ public sealed class OperationalContractsTests
             [
                 "AnswerFeedbackSubmitted",
                 "AnswerFeedbackUpdated",
+                "AuditLogViewed",
                 "ChatAnswerGenerationCompleted",
                 "ChatAnswerGenerationFailed",
                 "ChatHistoryDenied",

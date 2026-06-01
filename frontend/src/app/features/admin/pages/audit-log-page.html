@@ -1,0 +1,59 @@
+<section class="admin-page">
+  <header>
+    <div>
+      <h1>Audit Log</h1>
+      <p>Scoped administrative audit records.</p>
+    </div>
+  </header>
+
+  <form [formGroup]="filters" (ngSubmit)="load()" class="filters">
+    <label>
+      From
+      <input type="datetime-local" formControlName="from" />
+    </label>
+    <label>
+      To
+      <input type="datetime-local" formControlName="to" />
+    </label>
+    <label>
+      Event type
+      <input type="text" formControlName="eventType" />
+    </label>
+    <button type="submit">Apply</button>
+  </form>
+
+  @if (loading) {
+    <app-loading-state />
+  } @else if (error) {
+    <app-error-state [message]="error.message" [errorId]="error.errorId" />
+  } @else if (entries.length === 0) {
+    <p class="empty">No audit log entries found.</p>
+  } @else {
+    <table>
+      <thead>
+        <tr>
+          <th>Event</th>
+          <th>Message</th>
+          <th>Severity</th>
+          <th>User</th>
+          <th>Entity</th>
+          <th>Correlation</th>
+          <th>Created</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (entry of entries; track entry.auditLogEntryId) {
+          <tr>
+            <td>{{ entry.eventType }}</td>
+            <td>{{ entry.message }}</td>
+            <td><span class="status">{{ entry.severity }}</span></td>
+            <td>{{ entry.userId ?? 'N/A' }}</td>
+            <td>{{ entry.entityType ?? 'N/A' }} {{ entry.entityId ?? '' }}</td>
+            <td>{{ entry.correlationId ?? 'N/A' }}</td>
+            <td>{{ entry.createdAt }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</section>

@@ -1,5 +1,6 @@
 using KnowledgeOps.Application.Auth.Commands;
 using KnowledgeOps.Application.Auth.Queries;
+using KnowledgeOps.Application.Admin;
 using KnowledgeOps.Application.Authorization;
 using KnowledgeOps.Application.Authorization.Hooks;
 using KnowledgeOps.Application.Chat;
@@ -35,6 +36,7 @@ public static class DependencyInjection
         services.AddScoped<IAnswerFeedbackService, AnswerFeedbackService>();
         services.AddScoped<IChatHistoryService, ChatHistoryService>();
         services.AddScoped<IDashboardService, DashboardService>();
+        services.AddScoped<IAdminSupportService, AdminSupportService>();
 
         services.AddSingleton<IPermissionService, PermissionService>();
         services.AddSingleton<IOrganizationScopeService, OrganizationScopeService>();

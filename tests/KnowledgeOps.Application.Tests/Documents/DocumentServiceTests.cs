@@ -184,6 +184,13 @@ public sealed class DocumentServiceTests
             return Task.FromResult(doc?.OrganizationId == organizationId ? doc : null);
         }
 
+        public Task<IReadOnlyList<ManagedDocument>> FindFailedDocumentsAsync(Guid organizationId, int limit, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<ManagedDocument>>(
+                _documents.Values
+                    .Where(d => d.OrganizationId == organizationId && d.ProcessingStatus == DocumentProcessingStatus.Failed)
+                    .Take(limit)
+                    .ToArray());
+
         public Task<ManagedDocument> CreateAsync(NewManagedDocument document, CancellationToken ct = default) =>
             Task.FromResult(new ManagedDocument(
                 document.DocumentId,
