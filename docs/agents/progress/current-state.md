@@ -4,94 +4,97 @@ Last updated: 2026-06-01
 
 ## Current Phase
 
-Sprint 25 Security Hardening / Issue #45 complete: defense-in-depth fix for `EfChatInteractionRepository.FindByIdAsync` + cross-org API-layer tests G-2 through G-7.
+Sprint 26 Integration, API, Frontend, And E2E Test Completion / Issue #46 implementation complete
 
 ## Active Issue Execution Entry
 
 ### Issue Summary
 
-- Issue ID/title: Issue #45 - `[Sprint 25] Security hardening: cross-org API isolation tests and defense-in-depth fix`
-- Related roadmap sprint: Sprint 24 - Observability And Supportability Completion
-- Related milestone, if applicable: MVP supportability completion
-- Objective: Add safe organization-scoped administrative support endpoints and minimal Angular support views for processing failures and audit log review.
-- Expected outcome: Authorized support roles can inspect failed document processing and Admin users can query scoped audit logs without exposing protected content, secrets, prompts, chunks, provider payloads, raw exceptions, or cross-organization data.
+- Issue ID/title: Issue #46 - `[Sprint 26] Complete MVP automated and E2E smoke test coverage`
+- Related roadmap sprint: Sprint 26 - Integration, API, Frontend, And E2E Test Completion
+- Related milestone, if applicable: MVP automated coverage and smoke validation completion
+- Objective: Complete deterministic automated coverage and in-process E2E smoke validation for implemented MVP workflows.
+- Expected outcome: MVP success paths and security-failure paths are covered across domain, integration/SQL-gated, API/E2E smoke, and Angular specs without adding product scope, live AI dependencies, browser E2E frameworks, CI workflows, real data, or production credentials.
 
 ### Classification
 
-- Task type: Implementation
+- Task type: MVP test completion / E2E smoke validation / coverage-gap closure
 - Prompt level: Level 3
-- Primary affected area: Safe observability, audit log querying, admin supportability endpoints, processing failure support, Angular admin/support views, permission enforcement, organization-scoped supportability data, supportability tests
-- Security/organization-scope impact: High; endpoints expose operational/audit data and must be strictly permission- and organization-scoped
-- AI/RAG impact: Low-Medium; event catalog and safe operational contracts may be touched, but retrieval, prompt construction, citations, and AI generation behavior must not change
-- Data/migration impact: Low; audit_log_entries storage and indexes already exist, and no EF Core migration is expected
-- Recommended subagent(s), if any: None for implementation in this run; verification is handled through focused tests and validation commands
+- Primary affected area: domain tests, integration/SQL-gated tests, WebApplicationFactory E2E smoke tests, frontend specs, fake-provider validation, coverage-gap artifact, progress records
+- Security/organization-scope impact: High; final smoke and coverage pass must validate RBAC, organization-scope denial, safe errors, support/admin protection, and cross-scope data isolation
+- AI/RAG impact: High; tests must validate deterministic fake-provider RAG flow, retrieval-before-generation, authorized prompt context, citations, insufficient context, and provider-failure behavior without live AI calls
+- Data/migration impact: Low-Medium; no schema migration expected, but SQL-gated tests validate relational persistence and query behavior
+- Recommended subagent(s), if any: None for this run; implementation and verification are handled directly with focused repository inspection and validation commands
 
 ### Required Context
 
-- Related documentation and context: Sprint 24 roadmap entry; observability/support, API, security, database, testing, and guardrails contracts
-- Agent context files read: `docs/agents/00-agent-operating-protocol.md`, `01-project-context.md`, `02-architecture-context.md`, `03-domain-context.md`, `04-business-rules-context.md`, `05-testing-and-validation-context.md`, `06-frontend-context.md`, `07-backend-context.md`, `08-devops-context.md`, `09-observability-context.md`, `10-issue-execution-template.md`, `12-prompt-levels.md`, `13-prompt-classifier.md`
+- Related documentation and context: Sprint 26 roadmap entry; testing, security, RAG, database, API, frontend, DevOps, observability, and guardrails contracts
+- Agent context files read: `docs/agents/00-agent-operating-protocol.md`, `01-project-context.md`, `02-architecture-context.md`, `03-domain-context.md`, `04-business-rules-context.md`, `05-testing-and-validation-context.md`, `06-frontend-context.md`, `07-backend-context.md`, `08-devops-context.md`, `09-observability-context.md`, `10-issue-execution-template.md`, `12-prompt-levels.md`, `13-prompt-classifier.md`. Prompt-requested filenames `06-backend-implementation-context.md`, `07-frontend-implementation-context.md`, `08-rag-implementation-context.md`, and `09-verification-context.md` are not present; mapped to current backend/frontend/testing/DevOps/observability contexts plus canonical RAG/security docs and ADRs.
 - Canonical documents read for exact contracts: `docs/06-requirements.md`, `docs/07-use-cases.md`, `docs/08-business-process-flows.md`, `docs/09-business-rules.md`, `docs/10-domain-model.md`, `docs/14-database-design.md`, `docs/15-api-design.md`, `docs/16-security-and-permissions.md`, `docs/17-testing-strategy.md`, `docs/18-deployment-and-devops.md`, `docs/19-observability-and-support.md`, `docs/20-risk-register.md`, `docs/21-implementation-roadmap.md`, `docs/22-implementation-guardrails.md`
 - Progress files read: `current-state.md`, `decisions-log.md`, `open-risks.md`, `completed-issues.md`
-- Existing source/config/tests to inspect: Application observability/audit/authorization/documents and DI; Domain; Infrastructure observability/audit/persistence/repositories and DI; API controllers/middleware; backend tests; Angular app routes/shell/core/admin feature files
+- Existing source/config/tests to inspect: backend projects, test projects, frontend app/features/core, Docker/local config, appsettings, `.github`, domain/application/infrastructure/API/Angular tests, E2E absence/patterns
 
 ### Scope
 
-- In scope: `GET /api/v1/admin/processing-failures`, `GET /api/v1/admin/audit-log`, `AuditLogViewed`, backend application/infrastructure query support, minimal Angular admin pages, role visibility helpers, tests, and progress updates
-- Behavioral/contracts affected: Admin support endpoints, audit event catalog, safe operational query responses, Angular navigation/route access UX
-- Architecture boundaries affected: API remains thin, Application coordinates use cases, Infrastructure owns EF queries, Angular remains UX-only for authorization visibility
-- Security or data risks: audit and failure data must be filtered to current persisted user organization and must not expose unsafe fields or cross-organization records
-- Files or areas expected to change: `src/KnowledgeOps.Application/Admin`, document/audit repository contracts, Infrastructure admin/document repositories, API admin controller/DTOs, Angular admin feature files, tests, and progress records
+- In scope: Issue #42 completed-baseline correction, domain entity tests, SQL-gated integration tests, xUnit WebApplicationFactory E2E smoke project, focused Angular spec gaps, coverage-gap review artifact, progress updates
+- Behavioral/contracts affected: Test coverage and smoke validation only; production behavior may change only if MVP-scoped tests expose a real defect
+- Architecture boundaries affected: Tests may reference API/Infrastructure as appropriate; production Clean Architecture boundaries remain unchanged
+- Security or data risks: Tests must prove RBAC, organization scope, safe errors, support/admin protection, and no live AI or real data dependency
+- Files or areas expected to change: test projects, frontend specs, `KnowledgeOpsAI.sln`, progress docs, coverage-gap artifact
 
 ### Out Of Scope
 
-- Deferred phase behavior excluded: advanced audit search, export, raw diagnostic viewers, retry/re-enable operations, SIEM/App Insights production deployment, knowledge-gap workflow, production alerting
-- Explicit deferred functionality, if applicable: cross-organization super-admin observability, raw prompt/chunk/provider payload viewers, Phase 2 analytics/workflow tables
-- Architecture/contracts not being changed: authentication model, RBAC role model, RAG retrieval/prompt/citation/generation behavior, health endpoints except test-preserving adjustments if needed
-- Prohibited expansion: no new EF migration unless a compile/runtime blocker proves absolutely necessary
+- Deferred phase behavior excluded: performance/load testing, live-provider acceptance gate, Enterprise SSO, Phase 2 knowledge-gap workflow, production Azure deployment tests, CI workflow, Playwright/Cypress/browser E2E
+- Explicit deferred functionality, if applicable: Phase 2/3 product behavior, new dashboard/support features, new RAG strategy, new AI provider behavior, new auth model, new RBAC roles
+- Architecture/contracts not being changed: production authentication, authorization, RAG, retrieval, citation, feedback, dashboard, supportability, processing, and CI contracts unless a test exposes a real MVP defect
+- Prohibited expansion: no new product feature, no new migration unless an existing persistence defect requires it, no live AI dependency, no real customer/employee/internal data
 
 ### Files To Inspect
 
-- Existing implementation files: Application `Observability`, `Audit`, `Authorization`, `Documents`, `Dashboard`; Infrastructure `Audit`, `Persistence`, repositories, `Dashboard`; API controllers and middleware; Angular `core` and `features/admin`
-- Existing tests: Application observability/document/dashboard tests, API health/authorization/dashboard tests, integration persistence model tests, Angular admin/dashboard/role-visibility tests
-- Relevant configuration/documentation: DI composition roots, frontend routes and shell, progress records
+- Existing implementation files: Domain chat/document/feedback/citation entities; Application RAG/chat/feedback/dashboard/admin services; Infrastructure EF repositories; API controllers; Angular auth/documents/chat/dashboard/admin/core
+- Existing tests: Domain/Application/API/Integration/Angular tests and factories; SQL-gated skip conventions; API WebApplicationFactory patterns
+- Relevant configuration/documentation: `KnowledgeOpsAI.sln`, project files, `docker-compose.yml`, appsettings, `.env.example`, `.github`, progress records
 
 ### Implementation Plan
 
-1. Inspect current conventions and implementation state.
-2. Confirm contract and boundary assumptions.
-3. Make the smallest issue-scoped change.
-4. Add or update validation coverage appropriate to risk.
-5. Update documentation/progress records when required.
+1. Correct the Issue #42 completed baseline row.
+2. Add domain entity tests for `ChatInteraction`, `AnswerFeedback`, and `Citation`.
+3. Add SQL-gated integration tests for feedback, chat/citations, dashboard, audit/admin support, and document processing lifecycle.
+4. Create xUnit WebApplicationFactory-based E2E smoke project with seven scenarios.
+5. Add focused Angular specs for failure reason, feedback update/error, and admin user detail.
+6. Create `coverage-gap-review-issue-46.md`, update progress files, then validate.
 
 ### Acceptance Criteria
 
-- [x] Processing failure endpoint is permission-gated, organization-scoped, and returns only safe fields.
-- [x] Audit log endpoint is Admin-only, organization-scoped, supports `from`/`to`/`eventType`, and emits safe `AuditLogViewed`.
-- [x] Minimal Angular pages and role-aware visibility helpers exist for processing failures and audit log.
-- [x] Backend and frontend tests cover permissions, organization scope, safe responses, event catalog, and UI states.
+- [x] Issue #42 completed baseline row is added.
+- [x] Domain tests cover `ChatInteraction`, `AnswerFeedback`, and `Citation` invariants.
+- [x] SQL-gated tests are added for feedback, chat/citations, dashboard, audit/admin support, and deterministic document processing.
+- [x] xUnit WebApplicationFactory E2E smoke project includes seven MVP scenarios.
+- [x] Angular spec gaps are covered without adding UI behavior.
+- [x] Coverage-gap review artifact is created.
 - [x] Scope boundaries remain intact.
 - [x] Security, organization scope and AI/RAG safeguards are preserved where applicable.
 
 ### Validation Plan
 
-- Commands/checks to run: `dotnet msbuild KnowledgeOpsAI.sln -t:Build -p:Configuration=Release`; `dotnet test KnowledgeOpsAI.sln --no-build -c Release --filter "FullyQualifiedName!~IntegrationTests"`; from `frontend/`, `npm run build`; `npm test -- --watch=false`
-- Testing expectations by affected area: Application service tests, API authorization/scope/sanitization tests, operational contract snapshot update, Angular service/component/role-visibility tests
-- Negative/security/cross-scope cases: denied roles, unauthenticated access, Org A excluding Org B audit/doc failure records, prohibited content absence
-- Expected limitations or commands unavailable: SQL-gated integration tests may be skipped when `ConnectionStrings__DefaultConnection` and SQL Server are unavailable
+- Commands/checks to run: `dotnet msbuild KnowledgeOpsAI.sln -t:Build -p:Configuration=Release`; `dotnet test KnowledgeOpsAI.sln --no-build -c Release --filter "FullyQualifiedName!~IntegrationTests"`; `dotnet test tests/KnowledgeOps.E2ETests/KnowledgeOps.E2ETests.csproj -c Release`; from `frontend/`, `npm run build`; `npm test -- --watch=false`; `git diff --check`; SQL-gated tests when SQL Server is available
+- Testing expectations by affected area: domain invariants, SQL-gated persistence/query contracts, API/E2E smoke success and denial paths, Angular UI states, fake-provider deterministic RAG behavior
+- Negative/security/cross-scope cases: RBAC denial, cross-org document/chat/citation/feedback/dashboard/support filtering or denial, safe insufficient context, provider failure, safe errors, no unsafe metadata
+- Expected limitations or commands unavailable: SQL-gated tests may be environment-blocked without `ConnectionStrings__DefaultConnection` and running SQL Server; if so, document in `open-risks.md` and coverage artifact
 
 ### Documentation Updates
 
-- Canonical docs affected, if any: none expected unless implementation discovers a contract mismatch
-- Progress files to update on completion: `current-state.md`, `decisions-log.md`, `open-risks.md`, `completed-issues.md`
-- ADR review required: no; implementation follows accepted Clean Architecture, RBAC, EF Core, provider isolation, async processing, RAG safety, and organization-scope decisions
+- Canonical docs affected, if any: none expected; add coverage artifact under progress docs
+- Progress files to update on completion: `current-state.md`, `decisions-log.md`, `open-risks.md`, `completed-issues.md`, `coverage-gap-review-issue-46.md`
+- ADR review required: no; implementation follows accepted Angular, Clean Architecture, RBAC, EF Core, provider isolation, async processing, RAG safety, and organization-scope decisions
 
 ## Delivery Status
 
 | Item | Status |
 | --- | --- |
-| Current sprint | Sprint 25 completed through Issue #45 |
-| Last completed sprint | Sprint 25: Security Hardening / Issue #45 (implementation complete; PR pending) |
-| Active implementation issue | None; Issue #45 is implemented. Open PR after validation. |
+| Current sprint | Sprint 26 completed through Issue #46 |
+| Last completed sprint | Sprint 26: Integration, API, Frontend, And E2E Test Completion / Issue #46 (implementation complete; PR pending) |
+| Active implementation issue | None; Issue #46 is implemented. Open PR after validation. |
 | Current architecture status | Buildable .NET 10 backend + Angular 21 frontend + local SQL Server container + EF Core persistence foundation + `SeedFictionalOrganizationsAndPersonas` migration + JWT Bearer authentication + ICurrentUser abstraction + working login page with authGuard and apiInterceptor + **RBAC permission catalog** + **RolePermissionMatrix** (5 MVP roles, 30 permissions) + **IPermissionService / PermissionService** + **IOrganizationScopeService / OrganizationScopeService** + **[RequirePermission] attribute + PermissionPolicyProvider + PermissionAuthorizationHandler** + **persisted-current-state authorization via IUserAccessStateReader / EfUserAccessStateReader** + **correlation ID and global safe-error middleware** + **application observability contracts with Infrastructure EF audit/database-health adapters** + **public basic and Admin-only sanitized health endpoints** + **frontend generic Error ID UX** + **frontend RoleVisibilityService (UX-only)** + **future RAG/retrieval authorization hook interfaces** + **Admin-only same-organization user management API (GET/POST/PUT /api/v1/users, GET/POST/DELETE /api/v1/users/{id}/roles)** + **UserManagementService with initialPassword hashing, email normalization, self-lockout protection, final-active-Admin protection, persisted-disable permission check** + **safe audit events (UserCreated, UserUpdated, UserStatusChanged, UserRoleAssigned, UserRoleRemoved, UserManagementDenied, DocumentRetrievalDisabled, DocumentUploadAccepted, DocumentUploadRejected, DocumentUploadFailed, DocumentProcessingStarted, DocumentProcessingSucceeded, DocumentProcessingFailed, EmbeddingGenerationSucceeded, EmbeddingGenerationFailed)** + **minimal Angular Admin UI (user list, user detail/edit, user create, role assignment/removal)** + **canonical Document metadata and behavior-protected lifecycle (StartProcessing, MarkProcessed, MarkFailed, DisableRetrieval, IsEligibleForRetrieval)** + **DocumentProcessingStatus enum (Uploaded, Processing, Processed, Failed)** + **transition-aware DocumentService + IDocumentRepository** + **EfDocumentRepository** + **DocumentConfiguration with status check constraint + DocumentMetadataFoundation migration** + **5 document API endpoints (POST /api/v1/documents, GET /api/v1/documents, GET /{id}, GET /{id}/processing-status, POST /{id}/disable)** + **IDocumentStorage abstraction (Application, now includes OpenReadAsync) + LocalDocumentStorage (Infrastructure, local:// URI scheme, path-containment-safe OpenReadAsync)** + **UploadDocumentCommand with atomic validate→store→persist flow; best-effort cleanup on persistence failure** + **Angular documents list, detail/status/action (with 5 s status polling), and upload pages** + **DocumentService Angular service (list/get/getProcessingStatus/disableRetrieval/upload)** + **canUploadDocuments() / canDisableDocumentRetrieval() UX helpers** + **IDocumentProcessingOrchestrator / DocumentProcessingOrchestrator (atomic claim, ordered multi-step pipeline, transaction-wrapped steps + MarkProcessed, safe failure reason, processing audit events)** + **IDocumentProcessingStep / ExtractAndChunkDocumentProcessingStep + GenerateChunkEmbeddingsProcessingStep** + **IDocumentProcessingTransactionFactory / EfDocumentProcessingTransactionFactory (transaction wraps all steps + MarkProcessed atomically)** + **IDocumentTextExtractor / TxtMarkdownTextExtractor (text/plain, text/markdown, parameterized forms; normalizes line endings)** + **IDocumentChunker / DocumentChunker (sliding window, MaxChunkCharacters=1200, OverlapCharacters=150, token_estimate=ceil(len/4.0))** + **IDocumentChunkRepository / EfDocumentChunkRepository (includes GetChunksForDocumentAsync)** + **DocumentChunk domain entity + DocumentChunkConfiguration + DocumentChunksFoundation migration (11 columns, 4 indexes including UX on document_id+chunk_index)** + **DocumentExtractionException + DocumentChunkingException + DocumentEmbeddingException (controlled safe-message exceptions)** + **IEmbeddingProvider / FakeEmbeddingProvider (Infrastructure, SHA-256 deterministic, network-free, no SDK required)** + **FakeEmbeddingProviderSettings bound from Embeddings:Fake config** + **EmbeddingStatus enum (Ready, Failed)** + **ChunkEmbedding domain entity + ChunkEmbeddingConfiguration + ChunkEmbeddingsFoundation migration (12 columns, 4 indexes, UX_chunk_embeddings_chunk_id unique)** + **IChunkEmbeddingRepository / EfChunkEmbeddingRepository** + **ManagedDocument includes StorageLocation (never serialized to API/Angular)** + **IDocumentProcessingOrchestrator DI registration in Application** + **4 processing lifecycle repository methods (FindPendingForProcessingAsync, ClaimForProcessingAsync, MarkProcessedAsync, MarkFailedAsync) on IDocumentRepository + EfDocumentRepository** + **DocumentProcessingWorker BackgroundService (PeriodicTimer, scoped orchestrator per cycle, safe error logging)** + **WorkerCorrelationContext (per-scope, non-HTTP ICorrelationContext)** + **WorkerSettings (PollingIntervalSeconds with safe default 10)** + **AddJwtInfrastructure() split from AddInfrastructure() (Worker does not need JWT ValidateOnStart)**. |
 
 Issue #28 adds Application-owned retrieval contracts, a local SQL-backed `LocalVectorStore`, QueryVector-only cosine search, Ready + Indexed retrieval eligibility, `AddChunkEmbeddingIndexMetadata`, safe retrieval settings, sanitized retrieval health, and provider-SDK boundary tests. No retrieval API endpoint, RAG answer generation, prompt construction, chat API, citation mapping, frontend retrieval work, external vector service, Azure AI Search, OpenAI/Azure OpenAI SDK, Semantic Kernel, or vector database SDK was added.
