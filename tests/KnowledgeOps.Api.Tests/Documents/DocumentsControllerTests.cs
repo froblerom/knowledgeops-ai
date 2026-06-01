@@ -213,6 +213,32 @@ public sealed class DocumentsControllerTests : IClassFixture<DocumentsApiTestFac
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    // ── G-7: Document disable cross-org ──────────────────────────────────────
+
+    [Theory]
+    [InlineData(DocumentsApiTestFactory.KnowledgeAdminEmail)]
+    [InlineData(DocumentsApiTestFactory.AdminEmail)]
+    public async Task DisableDocument_CrossOrganization_ReturnsSafe404(string email)
+    {
+        // KnowledgeAdmin and Admin from OrgA must not be able to disable an OrgB document.
+        // The repository's DisableRetrievalAsync filters by both documentId AND organizationId.
+        // When the document belongs to OrgB, the org filter returns null, and the controller returns 404.
+        _factory.DocumentRepository.AddDocument(
+            MakeDocument(DocumentsApiTestFactory.DocId, DocumentsApiTestFactory.OtherOrgId, isRetrievalEnabled: true));
+
+        var response = await (await AuthenticateAsync(email)).PostAsJsonAsync(
+            $"/api/v1/documents/{DocumentsApiTestFactory.DocId}/disable",
+            new { });
+        var raw = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+
+        // Response must not reveal document existence, organization membership, or storage details
+        Assert.DoesNotContain("storageLocation", raw, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(DocumentsApiTestFactory.OtherOrgId.ToString(), raw, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("isRetrievalEnabled", raw, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public async Task ResponseDoesNotExposeStorageLocationOrInternalFields()
     {

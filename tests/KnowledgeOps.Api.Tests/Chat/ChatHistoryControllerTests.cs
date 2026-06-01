@@ -289,6 +289,78 @@ public sealed class ChatHistoryControllerTests : IClassFixture<ChatHistoryApiTes
         Assert.DoesNotContain("text", raw, StringComparison.OrdinalIgnoreCase); // no raw text field
     }
 
+    // ── G-5: Chat sessions cross-org ─────────────────────────────────────────
+
+    [Fact]
+    public async Task ChatSessions_OrgA_DoesNotIncludeOrgBSessions()
+    {
+        // OrgA user's own sessions are set; OrgB user's sessions are NOT included.
+        // The service enforces org scope internally; OrgA sessions list must not include OrgB sessions.
+        var orgASession = new ChatSessionSummaryDto(
+            Guid.Parse("a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1"),
+            "OrgA Session",
+            ChatSession.StatusActive,
+            DateTimeOffset.UtcNow,
+            DateTimeOffset.UtcNow,
+            null,
+            1);
+        _factory.HistoryService.OwnSessions = [orgASession];
+
+        var client = await AuthenticateAsync(ChatHistoryApiTestFactory.AgentEmail);
+        var response = await client.GetAsync("/api/v1/chat/sessions");
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(1, body.GetArrayLength());
+        Assert.Equal(orgASession.ChatSessionId, body[0].GetProperty("chatSessionId").GetGuid());
+
+        // Verify the raw response does not contain any OrgB org ID
+        var raw = await response.Content.ReadAsStringAsync();
+        Assert.DoesNotContain(ChatHistoryApiTestFactory.OrgBId.ToString(), raw, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // ── G-6: Chat interaction detail and citations cross-org ─────────────────
+
+    [Fact]
+    public async Task GetInteraction_CrossOrg_Returns404()
+    {
+        // Simulates: interaction belongs to OrgB, OrgA user cannot see it.
+        // The service returns null for cross-org interactions; controller maps null to 404.
+        _factory.HistoryService.NextInteraction = null; // service enforces org scope and returns null
+
+        var orgBInteractionId = Guid.Parse("b2b2b2b2-b2b2-4b2b-8b2b-b2b2b2b2b2b2");
+        var client = await AuthenticateAsync(ChatHistoryApiTestFactory.AgentEmail);
+        var response = await client.GetAsync($"/api/v1/chat/interactions/{orgBInteractionId}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+
+        var raw = await response.Content.ReadAsStringAsync();
+        // Must not expose OrgB interaction details
+        Assert.DoesNotContain(orgBInteractionId.ToString(), raw, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("questionText", raw, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("answerText", raw, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task GetInteractionCitations_CrossOrg_Returns404()
+    {
+        // Simulates: interaction belongs to OrgB, OrgA user cannot see citations for it.
+        // The service returns null for cross-org interactions; controller maps null to 404.
+        _factory.HistoryService.NextCitations = null; // service enforces org scope and returns null
+
+        var orgBInteractionId = Guid.Parse("c3c3c3c3-c3c3-4c3c-8c3c-c3c3c3c3c3c3");
+        var client = await AuthenticateAsync(ChatHistoryApiTestFactory.AgentEmail);
+        var response = await client.GetAsync($"/api/v1/chat/interactions/{orgBInteractionId}/citations");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+
+        var raw = await response.Content.ReadAsStringAsync();
+        // Must not expose any OrgB citation data
+        Assert.DoesNotContain(orgBInteractionId.ToString(), raw, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("documentId", raw, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("chunkId", raw, StringComparison.OrdinalIgnoreCase);
+    }
+
     private async Task<HttpClient> AuthenticateAsync(string email)
     {
         var client = _factory.CreateClient();
@@ -309,6 +381,8 @@ public sealed class ChatHistoryApiTestFactory : WebApplicationFactory<Program>
     public const string AgentEmail = "agent.history@example.test";
     public const string Password = "test-password";
     public static readonly Guid OrgId = Guid.Parse("aaaa1111-aaaa-aaaa-aaaa-aaaa11111111");
+    // OrgB is a separate organization used to verify cross-org isolation in tests.
+    public static readonly Guid OrgBId = Guid.Parse("bbbb2222-bbbb-bbbb-bbbb-bbbb22222222");
 
     public FakeChatHistoryService HistoryService { get; } = new();
 

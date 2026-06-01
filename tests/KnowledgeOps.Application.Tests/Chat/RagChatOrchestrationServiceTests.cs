@@ -673,8 +673,8 @@ public sealed class RagChatOrchestrationServiceTests
         private readonly List<ChatInteraction> _interactions = [];
         public IReadOnlyList<ChatInteraction> StoredInteractions => _interactions;
 
-        public Task<ChatInteraction?> FindByIdAsync(Guid id, CancellationToken ct = default) =>
-            Task.FromResult(_interactions.FirstOrDefault(i => i.Id == id));
+        public Task<ChatInteraction?> FindByIdAsync(Guid id, Guid organizationId, CancellationToken ct = default) =>
+            Task.FromResult(_interactions.FirstOrDefault(i => i.Id == id && i.OrganizationId == organizationId));
 
         public Task<IReadOnlyList<ChatInteraction>> GetBySessionIdAsync(Guid sessionId, Guid organizationId, CancellationToken ct = default) =>
             Task.FromResult<IReadOnlyList<ChatInteraction>>(_interactions.Where(i => i.ChatSessionId == sessionId && i.OrganizationId == organizationId).ToList());

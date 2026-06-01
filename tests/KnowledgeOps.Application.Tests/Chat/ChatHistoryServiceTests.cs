@@ -453,8 +453,8 @@ public sealed class ChatHistoryServiceTests
 
     private sealed class FakeInteractionRepository(List<ChatInteraction> interactions) : IChatInteractionRepository
     {
-        public Task<ChatInteraction?> FindByIdAsync(Guid id, CancellationToken ct = default) =>
-            Task.FromResult(interactions.FirstOrDefault(i => i.Id == id));
+        public Task<ChatInteraction?> FindByIdAsync(Guid id, Guid organizationId, CancellationToken ct = default) =>
+            Task.FromResult(interactions.FirstOrDefault(i => i.Id == id && i.OrganizationId == organizationId));
 
         public Task<IReadOnlyList<ChatInteraction>> GetBySessionIdAsync(
             Guid sessionId, Guid orgId, CancellationToken ct = default) =>
