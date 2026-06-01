@@ -6,6 +6,7 @@ public static class AuditEventTypes
     public const string UserLoginFailure = "UserLoginFailure";
     public const string PermissionDenied = "PermissionDenied";
     public const string HealthDetailsViewed = "HealthDetailsViewed";
+    public const string AuditLogViewed = "AuditLogViewed";
     public const string UserCreated = "UserCreated";
     public const string UserUpdated = "UserUpdated";
     public const string UserStatusChanged = "UserStatusChanged";

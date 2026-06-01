@@ -23,6 +23,8 @@ describe('App', () => {
               roles.some(role =>
                 ['Agent', 'Supervisor', 'KnowledgeAdmin', 'Manager', 'Admin'].includes(role)
               ),
+            canViewProcessingFailures: () => roles.some(role => ['KnowledgeAdmin', 'Admin'].includes(role)),
+            canViewAuditLog: () => roles.includes('Admin'),
             canViewAdmin: () => false
           }
         }
@@ -47,11 +49,15 @@ describe('App', () => {
     for (const role of ['Agent', 'Supervisor', 'KnowledgeAdmin', 'Manager', 'Admin']) {
       roles = [role];
       const fixture = TestBed.createComponent(App);
-      fixture.detectChanges();
+      try {
+        fixture.detectChanges();
 
-      const compiled = fixture.nativeElement as HTMLElement;
-      const links = Array.from(compiled.querySelectorAll('a')).map(link => link.textContent?.trim());
-      expect(links).toContain('Chat');
+        const compiled = fixture.nativeElement as HTMLElement;
+        const links = Array.from(compiled.querySelectorAll('a')).map(link => link.textContent?.trim());
+        expect(links).toContain('Chat');
+      } finally {
+        fixture.destroy();
+      }
     }
   });
 });

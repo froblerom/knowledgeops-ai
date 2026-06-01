@@ -6,6 +6,8 @@
     <a routerLink="/chat" routerLinkActive="active" [hidden]="!visibility.canAskChat()">Chat</a>
     <a routerLink="/chat/history" routerLinkActive="active" [hidden]="!visibility.canViewChatHistory()">History</a>
     <a routerLink="/dashboard" routerLinkActive="active">Dashboard</a>
+    <a routerLink="/admin/processing-failures" routerLinkActive="active" [hidden]="!visibility.canViewProcessingFailures()">Failures</a>
+    <a routerLink="/admin/audit-log" routerLinkActive="active" [hidden]="!visibility.canViewAuditLog()">Audit</a>
     @if (visibility.canViewAdmin()) {
       <a routerLink="/admin/users" routerLinkActive="active">Admin</a>
     }

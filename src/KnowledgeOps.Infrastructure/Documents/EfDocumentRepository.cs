@@ -37,6 +37,25 @@ internal sealed class EfDocumentRepository(KnowledgeOpsDbContext dbContext) : ID
         return document is null ? null : Map(document);
     }
 
+    public async Task<IReadOnlyList<ManagedDocument>> FindFailedDocumentsAsync(
+        Guid organizationId,
+        int limit,
+        CancellationToken ct = default)
+    {
+        var documents = await dbContext.Documents
+            .AsNoTracking()
+            .Where(doc =>
+                doc.OrganizationId == organizationId
+                && doc.ProcessingStatus == DocumentProcessingStatus.Failed
+                && doc.DeletedAt == null)
+            .OrderByDescending(doc => doc.UpdatedAt)
+            .ThenBy(doc => doc.Title)
+            .Take(limit)
+            .ToListAsync(ct);
+
+        return documents.Select(Map).ToArray();
+    }
+
     public async Task<ManagedDocument> CreateAsync(NewManagedDocument newDocument, CancellationToken ct = default)
     {
         // ProcessingStatus defaults to DocumentProcessingStatus.Uploaded (enum 0, first member).

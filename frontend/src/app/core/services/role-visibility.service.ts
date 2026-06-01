@@ -65,6 +65,16 @@ export class RoleVisibilityService {
     return this.hasRole('Admin');
   }
 
+  // System.ViewProcessingFailures: KnowledgeAdmin, Admin.
+  canViewProcessingFailures(): boolean {
+    return this.hasAnyRole('KnowledgeAdmin', 'Admin');
+  }
+
+  // Audit.View: Admin only.
+  canViewAuditLog(): boolean {
+    return this.hasRole('Admin');
+  }
+
   // System.ViewBasicHealth: all authenticated MVP roles.
   canViewSystemHealth(): boolean {
     return this.session.isAuthenticated();

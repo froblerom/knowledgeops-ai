@@ -1,4 +1,5 @@
 using KnowledgeOps.Application.Auth.Abstractions;
+using KnowledgeOps.Application.Admin;
 using KnowledgeOps.Application.Chat;
 using KnowledgeOps.Application.Chat.Citations;
 using KnowledgeOps.Application.Chat.Feedback;
@@ -10,6 +11,7 @@ using KnowledgeOps.Application.Retrieval;
 using KnowledgeOps.Application.Authorization;
 using KnowledgeOps.Application.Users;
 using KnowledgeOps.Infrastructure.Auth;
+using KnowledgeOps.Infrastructure.Admin;
 using KnowledgeOps.Infrastructure.Authorization;
 using KnowledgeOps.Infrastructure.Chat;
 using KnowledgeOps.Infrastructure.Dashboard;
@@ -77,6 +79,7 @@ public static class DependencyInjection
         services.AddScoped<IAiAnswerGenerator, FakeAnswerGenerator>();
         services.AddOptions<FakeAnswerGeneratorSettings>().BindConfiguration("FakeAnswerGenerator");
         services.AddScoped<IDashboardRepository, EfDashboardRepository>();
+        services.AddScoped<IAuditLogRepository, EfAuditLogRepository>();
         services.AddScoped<IAuditEventWriter, EfAuditEventWriter>();
         services.AddScoped<IDatabaseHealthCheck, EfDatabaseHealthCheck>();
         services.AddScoped<IRetrievalStorageHealthCheck, LocalRetrievalStorageHealthCheck>();

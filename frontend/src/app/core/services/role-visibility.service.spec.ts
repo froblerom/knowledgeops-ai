@@ -148,6 +148,32 @@ describe('RoleVisibilityService', () => {
     }
   });
 
+  it('canViewProcessingFailures allows KnowledgeAdmin and Admin', () => {
+    for (const role of ['KnowledgeAdmin', 'Admin']) {
+      sessionService.saveSession(makeSession([role]));
+      expect(service.canViewProcessingFailures()).toBe(true);
+    }
+  });
+
+  it('canViewProcessingFailures denies Agent, Supervisor, and Manager', () => {
+    for (const role of ['Agent', 'Supervisor', 'Manager']) {
+      sessionService.saveSession(makeSession([role]));
+      expect(service.canViewProcessingFailures()).toBe(false);
+    }
+  });
+
+  it('canViewAuditLog allows Admin only', () => {
+    sessionService.saveSession(makeSession(['Admin']));
+    expect(service.canViewAuditLog()).toBe(true);
+  });
+
+  it('canViewAuditLog denies non-Admin roles', () => {
+    for (const role of ['Agent', 'Supervisor', 'KnowledgeAdmin', 'Manager']) {
+      sessionService.saveSession(makeSession([role]));
+      expect(service.canViewAuditLog()).toBe(false);
+    }
+  });
+
   // ── canViewSystemHealth ──────────────────────────────────────────────────────
 
   it('canViewSystemHealth returns true for all authenticated MVP roles', () => {
@@ -186,6 +212,8 @@ describe('RoleVisibilityService', () => {
     expect(service.canViewDashboard()).toBe(false);
     expect(service.canViewFeedbackReview()).toBe(false);
     expect(service.canViewAdmin()).toBe(false);
+    expect(service.canViewProcessingFailures()).toBe(false);
+    expect(service.canViewAuditLog()).toBe(false);
   });
 
   it('empty roles returns false for restricted visibility helpers', () => {
@@ -197,6 +225,8 @@ describe('RoleVisibilityService', () => {
     expect(service.canViewDashboard()).toBe(false);
     expect(service.canViewFeedbackReview()).toBe(false);
     expect(service.canViewAdmin()).toBe(false);
+    expect(service.canViewProcessingFailures()).toBe(false);
+    expect(service.canViewAuditLog()).toBe(false);
   });
 
   it('no session returns false for all visibility helpers', () => {
@@ -208,6 +238,8 @@ describe('RoleVisibilityService', () => {
     expect(service.canViewDashboard()).toBe(false);
     expect(service.canViewFeedbackReview()).toBe(false);
     expect(service.canViewAdmin()).toBe(false);
+    expect(service.canViewProcessingFailures()).toBe(false);
+    expect(service.canViewAuditLog()).toBe(false);
     expect(service.canViewSystemHealth()).toBe(false);
   });
 
