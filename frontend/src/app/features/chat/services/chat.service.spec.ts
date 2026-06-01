@@ -7,7 +7,8 @@ import { ChatService } from './chat.service';
 describe('ChatService', () => {
   let service: ChatService;
   let http: HttpTestingController;
-  const endpoint = `${environment.apiBaseUrl}/chat/questions`;
+  const questionsEndpoint = `${environment.apiBaseUrl}/chat/questions`;
+  const sessionsEndpoint = `${environment.apiBaseUrl}/chat/sessions`;
   const feedbackEndpoint = `${environment.apiBaseUrl}/feedback`;
   const interactionFeedbackEndpoint = `${environment.apiBaseUrl}/chat/interactions/interaction-1/feedback`;
 
@@ -24,7 +25,7 @@ describe('ChatService', () => {
   it('posts a question without organization, provider, model, or debug fields', () => {
     service.askQuestion('How do I resolve a billing case?').subscribe();
 
-    const req = http.expectOne(endpoint);
+    const req = http.expectOne(questionsEndpoint);
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({
       questionText: 'How do I resolve a billing case?'
@@ -48,7 +49,7 @@ describe('ChatService', () => {
   it('includes only chatSessionId when continuing the in-memory session', () => {
     service.askQuestion('What next?', 'session-1').subscribe();
 
-    const req = http.expectOne(endpoint);
+    const req = http.expectOne(questionsEndpoint);
     expect(req.request.body).toEqual({
       questionText: 'What next?',
       chatSessionId: 'session-1'
@@ -76,7 +77,7 @@ describe('ChatService', () => {
       cost = response.metadata.estimatedCost;
     });
 
-    http.expectOne(endpoint).flush({
+    http.expectOne(questionsEndpoint).flush({
       chatSessionId: 'session-1',
       chatInteractionId: 'interaction-1',
       answerState: 'GroundedAnswer',
@@ -112,7 +113,7 @@ describe('ChatService', () => {
       expect(response.citations).toEqual([]);
     });
 
-    http.expectOne(endpoint).flush({
+    http.expectOne(questionsEndpoint).flush({
       chatSessionId: 'session-1',
       chatInteractionId: 'interaction-1',
       answerState: 'InsufficientContext',
@@ -135,7 +136,7 @@ describe('ChatService', () => {
       expect(response.citations).toEqual([]);
     });
 
-    http.expectOne(endpoint).flush({
+    http.expectOne(questionsEndpoint).flush({
       chatSessionId: 'session-1',
       chatInteractionId: 'interaction-1',
       answerState: 'ProviderFailure',
@@ -217,5 +218,73 @@ describe('ChatService', () => {
         }
       ]
     });
+  });
+
+  it('getSessions calls GET /chat/sessions without scoped flag by default', () => {
+    service.getSessions().subscribe();
+
+    const req = http.expectOne(sessionsEndpoint);
+    expect(req.request.method).toBe('GET');
+    req.flush([]);
+  });
+
+  it('getSessions calls GET /chat/sessions?scoped=true when scoped flag is true', () => {
+    service.getSessions(true).subscribe();
+
+    const req = http.expectOne(`${sessionsEndpoint}?scoped=true`);
+    expect(req.request.method).toBe('GET');
+    req.flush([]);
+  });
+
+  it('createSession posts to /chat/sessions with title', () => {
+    service.createSession('My Session').subscribe();
+
+    const req = http.expectOne(sessionsEndpoint);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ title: 'My Session' });
+    req.flush({ chatSessionId: 'new-session-id' });
+  });
+
+  it('createSession posts empty body without title', () => {
+    service.createSession().subscribe();
+
+    const req = http.expectOne(sessionsEndpoint);
+    expect(req.request.body).toEqual({});
+    req.flush({ chatSessionId: 'new-session-id' });
+  });
+
+  it('getSession calls GET /chat/sessions/{id}', () => {
+    const sessionId = 'session-abc';
+    service.getSession(sessionId).subscribe();
+
+    const req = http.expectOne(`${sessionsEndpoint}/${sessionId}`);
+    expect(req.request.method).toBe('GET');
+    req.flush({
+      chatSessionId: sessionId,
+      title: null,
+      status: 'Active',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      lastInteractionAt: null,
+      interactions: []
+    });
+  });
+
+  it('getInteraction calls GET /chat/interactions/{id}', () => {
+    const interactionId = 'interaction-xyz';
+    service.getInteraction(interactionId).subscribe();
+
+    const req = http.expectOne(`${environment.apiBaseUrl}/chat/interactions/${interactionId}`);
+    expect(req.request.method).toBe('GET');
+    req.flush({});
+  });
+
+  it('getInteractionCitations calls GET /chat/interactions/{id}/citations', () => {
+    const interactionId = 'interaction-xyz';
+    service.getInteractionCitations(interactionId).subscribe();
+
+    const req = http.expectOne(`${environment.apiBaseUrl}/chat/interactions/${interactionId}/citations`);
+    expect(req.request.method).toBe('GET');
+    req.flush([]);
   });
 });

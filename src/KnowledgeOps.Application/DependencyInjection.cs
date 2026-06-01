@@ -32,6 +32,7 @@ public static class DependencyInjection
         services.AddScoped<ICitationMapper, CitationMapper>();
         services.AddScoped<IRagChatOrchestrationService, RagChatOrchestrationService>();
         services.AddScoped<IAnswerFeedbackService, AnswerFeedbackService>();
+        services.AddScoped<IChatHistoryService, ChatHistoryService>();
 
         services.AddSingleton<IPermissionService, PermissionService>();
         services.AddSingleton<IOrganizationScopeService, OrganizationScopeService>();

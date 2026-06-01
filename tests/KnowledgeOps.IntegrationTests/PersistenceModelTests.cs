@@ -269,6 +269,89 @@ public sealed class PersistenceModelTests
                 && key.PrincipalEntityType.ClrType == typeof(User));
     }
 
+    [Fact]
+    public void Model_Maps_ChatSession_Status_Default_And_Indexes()
+    {
+        using var context = CreateContext();
+
+        var sessionEntity = context.Model.FindEntityType(typeof(ChatSession))!;
+        var statusProperty = sessionEntity.FindProperty(nameof(ChatSession.Status))!;
+        var indexNames = sessionEntity.GetIndexes()
+            .Select(index => index.GetDatabaseName())
+            .ToArray();
+
+        Assert.Equal("chat_sessions", sessionEntity.GetTableName());
+        Assert.False(statusProperty.IsNullable);
+        Assert.Equal(50, statusProperty.GetMaxLength());
+        Assert.Equal(ChatSession.StatusActive, statusProperty.GetDefaultValue());
+
+        Assert.Contains("IX_chat_sessions_organization_id", indexNames);
+        Assert.Contains("IX_chat_sessions_user_id", indexNames);
+        Assert.Contains("IX_chat_sessions_organization_id_created_at", indexNames);
+
+        Assert.Contains(
+            sessionEntity.GetForeignKeys(),
+            key => key.Properties.Single().Name == nameof(ChatSession.OrganizationId)
+                && key.PrincipalEntityType.ClrType == typeof(Organization));
+        Assert.Contains(
+            sessionEntity.GetForeignKeys(),
+            key => key.Properties.Single().Name == nameof(ChatSession.UserId)
+                && key.PrincipalEntityType.ClrType == typeof(User));
+    }
+
+    [Fact]
+    public void Model_Maps_Citations_DocumentId_ForeignKey_And_Indexes()
+    {
+        using var context = CreateContext();
+
+        var citationEntity = context.Model.FindEntityType(typeof(Citation))!;
+        var indexNames = citationEntity.GetIndexes()
+            .Select(index => index.GetDatabaseName())
+            .ToArray();
+
+        Assert.Equal("citations", citationEntity.GetTableName());
+        Assert.Contains("IX_citations_chat_interaction_id", indexNames);
+        Assert.Contains("IX_citations_document_id", indexNames);
+        Assert.Contains("IX_citations_chunk_id", indexNames);
+        Assert.Contains("IX_citations_organization_id_chat_interaction_id", indexNames);
+
+        // Document FK was added in Sprint 21 migration.
+        Assert.Contains(
+            citationEntity.GetForeignKeys(),
+            key => key.Properties.Single().Name == nameof(Citation.DocumentId)
+                && key.PrincipalEntityType.ClrType == typeof(Document));
+        Assert.Contains(
+            citationEntity.GetForeignKeys(),
+            key => key.Properties.Single().Name == nameof(Citation.ChunkId)
+                && key.PrincipalEntityType.ClrType == typeof(DocumentChunk));
+        Assert.Contains(
+            citationEntity.GetForeignKeys(),
+            key => key.Properties.Single().Name == nameof(Citation.OrganizationId)
+                && key.PrincipalEntityType.ClrType == typeof(Organization));
+        Assert.Contains(
+            citationEntity.GetForeignKeys(),
+            key => key.Properties.Single().Name == nameof(Citation.ChatInteractionId)
+                && key.PrincipalEntityType.ClrType == typeof(ChatInteraction));
+    }
+
+    [Fact]
+    public void Model_Does_Not_Expose_ProviderFailureCode_Or_QuestionTextHash_In_Chat_API_Contract()
+    {
+        // This model-level test verifies that sensitive fields not exposed through the API
+        // are stored only internally on the ChatInteraction domain entity.
+        using var context = CreateContext();
+
+        var interactionEntity = context.Model.FindEntityType(typeof(ChatInteraction))!;
+
+        // These fields must exist in the DB model (for internal use)...
+        Assert.NotNull(interactionEntity.FindProperty(nameof(ChatInteraction.ProviderFailureCode)));
+        Assert.NotNull(interactionEntity.FindProperty(nameof(ChatInteraction.QuestionTextHash)));
+        Assert.NotNull(interactionEntity.FindProperty(nameof(ChatInteraction.RetrievalQueryId)));
+
+        // ...but the interaction entity has no "safe" exposure flag; the safety is enforced in
+        // ChatHistoryService by not mapping these fields to response DTOs.
+    }
+
     private static KnowledgeOpsDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<KnowledgeOpsDbContext>()

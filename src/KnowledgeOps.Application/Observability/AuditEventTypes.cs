@@ -41,4 +41,7 @@ public static class AuditEventTypes
     public const string CitationMappingFailed = "CitationMappingFailed";
     public const string AnswerFeedbackSubmitted = "AnswerFeedbackSubmitted";
     public const string AnswerFeedbackUpdated = "AnswerFeedbackUpdated";
+    public const string ChatHistoryViewed = "ChatHistoryViewed";
+    public const string ChatInteractionViewed = "ChatInteractionViewed";
+    public const string ChatHistoryDenied = "ChatHistoryDenied";
 }

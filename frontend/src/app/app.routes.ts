@@ -36,9 +36,29 @@ export const routes: Routes = [
   },
   {
     path: 'chat',
-    loadComponent: () =>
-      import('./features/chat/pages/chat-page').then(m => m.ChatPage),
-    canActivate: [authGuard]
+    canActivate: [authGuard],
+    children: [
+      {
+        path: '',
+        loadComponent: () =>
+          import('./features/chat/pages/chat-page').then(m => m.ChatPage)
+      },
+      {
+        path: 'history',
+        loadComponent: () =>
+          import('./features/chat/pages/chat-history-page').then(m => m.ChatHistoryPage)
+      },
+      {
+        path: 'history/:chatSessionId',
+        loadComponent: () =>
+          import('./features/chat/pages/chat-session-detail-page').then(m => m.ChatSessionDetailPage)
+      },
+      {
+        path: 'interactions/:chatInteractionId',
+        loadComponent: () =>
+          import('./features/chat/pages/chat-interaction-detail-page').then(m => m.ChatInteractionDetailPage)
+      }
+    ]
   },
   {
     path: 'dashboard',

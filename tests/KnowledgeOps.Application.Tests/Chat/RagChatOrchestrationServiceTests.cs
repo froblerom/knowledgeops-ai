@@ -647,6 +647,18 @@ public sealed class RagChatOrchestrationServiceTests
         public Task<ChatSession?> FindByIdAsync(Guid id, CancellationToken ct = default) =>
             Task.FromResult(_sessions.FirstOrDefault(s => s.Id == id));
 
+        public Task<ChatSession?> FindByIdAndOrganizationAsync(Guid id, Guid organizationId, CancellationToken ct = default) =>
+            Task.FromResult(_sessions.FirstOrDefault(s => s.Id == id && s.OrganizationId == organizationId));
+
+        public Task<IReadOnlyList<ChatSession>> GetRecentByUserAsync(Guid userId, Guid organizationId, int limit, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<ChatSession>>(_sessions.Where(s => s.UserId == userId && s.OrganizationId == organizationId).Take(limit).ToList());
+
+        public Task<IReadOnlyList<ChatSession>> GetRecentByOrganizationAsync(Guid organizationId, int limit, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<ChatSession>>(_sessions.Where(s => s.OrganizationId == organizationId).Take(limit).ToList());
+
+        public Task<int> CountInteractionsBySessionAsync(Guid sessionId, CancellationToken ct = default) =>
+            Task.FromResult(0);
+
         public Task AddAsync(ChatSession session, CancellationToken ct = default)
         {
             _sessions.Add(session);
@@ -660,6 +672,12 @@ public sealed class RagChatOrchestrationServiceTests
     {
         private readonly List<ChatInteraction> _interactions = [];
         public IReadOnlyList<ChatInteraction> StoredInteractions => _interactions;
+
+        public Task<ChatInteraction?> FindByIdAsync(Guid id, CancellationToken ct = default) =>
+            Task.FromResult(_interactions.FirstOrDefault(i => i.Id == id));
+
+        public Task<IReadOnlyList<ChatInteraction>> GetBySessionIdAsync(Guid sessionId, Guid organizationId, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<ChatInteraction>>(_interactions.Where(i => i.ChatSessionId == sessionId && i.OrganizationId == organizationId).ToList());
 
         public Task AddAsync(ChatInteraction interaction, CancellationToken ct = default)
         {
@@ -723,6 +741,9 @@ public sealed class RagChatOrchestrationServiceTests
         public IReadOnlyList<Citation> StoredCitations => _citations;
         public bool SaveChangesWasCalled { get; private set; }
 
+        public Task<IReadOnlyList<Citation>> GetByInteractionIdAsync(Guid interactionId, Guid organizationId, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<Citation>>(_citations.Where(c => c.ChatInteractionId == interactionId && c.OrganizationId == organizationId).ToList());
+
         public Task AddRangeAsync(IReadOnlyList<Citation> citations, CancellationToken ct = default)
         {
             _citations.AddRange(citations);
@@ -758,6 +779,9 @@ public sealed class RagChatOrchestrationServiceTests
 
     private sealed class ThrowingCitationRepository : ICitationRepository
     {
+        public Task<IReadOnlyList<Citation>> GetByInteractionIdAsync(Guid interactionId, Guid organizationId, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<Citation>>([]);
+
         public Task AddRangeAsync(IReadOnlyList<Citation> citations, CancellationToken ct = default) =>
             throw new InvalidOperationException("Simulated citation tracking failure.");
 

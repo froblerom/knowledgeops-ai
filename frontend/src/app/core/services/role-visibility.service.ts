@@ -69,4 +69,16 @@ export class RoleVisibilityService {
   canViewSystemHealth(): boolean {
     return this.session.isAuthenticated();
   }
+
+  // Chat.ViewOwnHistory: all authenticated MVP roles.
+  canViewChatHistory(): boolean {
+    return this.session.isAuthenticated()
+      && this.hasAnyRole('Agent', 'Supervisor', 'KnowledgeAdmin', 'Manager', 'Admin');
+  }
+
+  // Chat.ViewScopedHistory: Supervisor, Manager, Admin only.
+  // KnowledgeAdmin is own-only for Sprint 21.
+  canViewScopedChatHistory(): boolean {
+    return this.hasAnyRole('Supervisor', 'Manager', 'Admin');
+  }
 }

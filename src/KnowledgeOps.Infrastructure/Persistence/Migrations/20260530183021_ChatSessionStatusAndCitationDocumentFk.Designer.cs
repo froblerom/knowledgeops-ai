@@ -4,6 +4,7 @@ using KnowledgeOps.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace KnowledgeOps.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(KnowledgeOpsDbContext))]
-    partial class KnowledgeOpsDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260530183021_ChatSessionStatusAndCitationDocumentFk")]
+    partial class ChatSessionStatusAndCitationDocumentFk
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -94,64 +97,6 @@ namespace KnowledgeOps.Infrastructure.Persistence.Migrations
                     b.ToTable("audit_log_entries", null, t =>
                         {
                             t.HasCheckConstraint("CK_audit_log_entries_severity", "[severity] IN (N'Info', N'Warning', N'Error', N'Critical')");
-                        });
-                });
-
-            modelBuilder.Entity("KnowledgeOps.Domain.Chat.AnswerFeedback", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
-                        .HasColumnName("answer_feedback_id");
-
-                    b.Property<Guid>("ChatInteractionId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasColumnName("chat_interaction_id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2")
-                        .HasColumnName("created_at");
-
-                    b.Property<Guid>("OrganizationId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasColumnName("organization_id");
-
-                    b.Property<string>("Rating")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasColumnName("rating");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime2")
-                        .HasColumnName("updated_at");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasColumnName("user_id");
-
-                    b.HasKey("Id")
-                        .HasName("PK_answer_feedback");
-
-                    b.HasIndex("ChatInteractionId")
-                        .HasDatabaseName("IX_answer_feedback_chat_interaction_id");
-
-                    b.HasIndex("OrganizationId")
-                        .HasDatabaseName("IX_answer_feedback_organization_id");
-
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("IX_answer_feedback_user_id");
-
-                    b.HasIndex("ChatInteractionId", "UserId")
-                        .IsUnique()
-                        .HasDatabaseName("UX_answer_feedback_chat_interaction_id_user_id");
-
-                    b.HasIndex("OrganizationId", "Rating")
-                        .HasDatabaseName("IX_answer_feedback_organization_id_rating");
-
-                    b.ToTable("answer_feedback", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_answer_feedback_rating", "[rating] IN (N'Useful', N'NotUseful')");
                         });
                 });
 
@@ -989,30 +934,6 @@ namespace KnowledgeOps.Infrastructure.Persistence.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .HasConstraintName("FK_audit_log_entries_users_user_id");
-                });
-
-            modelBuilder.Entity("KnowledgeOps.Domain.Chat.AnswerFeedback", b =>
-                {
-                    b.HasOne("KnowledgeOps.Domain.Chat.ChatInteraction", null)
-                        .WithMany()
-                        .HasForeignKey("ChatInteractionId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("FK_answer_feedback_chat_interactions_chat_interaction_id");
-
-                    b.HasOne("KnowledgeOps.Domain.Organizations.Organization", null)
-                        .WithMany()
-                        .HasForeignKey("OrganizationId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("FK_answer_feedback_organizations_organization_id");
-
-                    b.HasOne("KnowledgeOps.Domain.Users.User", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("FK_answer_feedback_users_user_id");
                 });
 
             modelBuilder.Entity("KnowledgeOps.Domain.Chat.ChatInteraction", b =>
