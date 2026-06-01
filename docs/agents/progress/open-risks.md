@@ -225,6 +225,19 @@ No EF migration, retry/re-enable operation, raw diagnostic viewer, prompt/chunk/
 - SQL-gated integration tests for the EF audit/document support queries require `ConnectionStrings__DefaultConnection` and a running SQL Server; validate before PR merge.
 - The new support endpoints are intentionally read-only and minimal. Advanced audit search, export, SIEM/App Insights production integration, retry workflows, and production alerting remain deferred.
 
+## Sprint 27 Issue #47 Disposition
+
+CI workflows and Dockerfiles are created and locally validated. `.github/workflows/ci.yml` covers backend build+test, Angular build+test, and Docker build validation. `.github/workflows/integration-tests.yml` covers SQL-gated integration tests via `workflow_dispatch`. Multi-stage Dockerfiles created for API, Worker, and Frontend. `*.local.json` added to `.gitignore`.
+
+Local validation passed: `.NET Release build (0 errors, 0 warnings); non-integration + E2E tests (659 total: 49 Domain + 389 Application + 7 E2E + 214 API); Angular build (output at dist/frontend/browser/); Angular tests (196 passed, 30 files).
+
+**Residual risks**:
+- GitHub Actions workflow execution cannot be verified locally; actual CI run requires a push or PR to GitHub. Docker build validation in the CI workflow requires the GitHub Actions `ubuntu-latest` runner environment.
+- `SQL_SA_PASSWORD` secret must be configured in GitHub repository Settings > Secrets and variables > Actions before `integration-tests.yml` will pass.
+- SQL-gated integration tests (KnowledgeOps.IntegrationTests) were not executed in this implementation session because `ConnectionStrings__DefaultConnection` is not set and Docker is not available locally. The tests skip gracefully without a connection string.
+- Docker image builds were not validated locally because Docker daemon is not available in this session. Docker build validation is delegated to the GitHub Actions `docker` job in `ci.yml`.
+- The `--health-cmd` for SQL Server 2022 in `integration-tests.yml` uses `/opt/mssql-tools18/bin/sqlcmd`; the actual path on `ubuntu-latest` may vary across GitHub Actions runner image updates. If the health check fails, the path may need adjustment to `/opt/mssql-tools/bin/sqlcmd` or a TCP connectivity probe.
+
 ## Update Rule
 
 Read this file for Level 3 work and release review. Update risk status, mitigation or new issue references when implementation evidence changes the risk.

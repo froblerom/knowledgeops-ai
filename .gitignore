@@ -438,3 +438,5 @@ FodyWeavers.xsd
 .local/
 # Local Docker bind-mount data directories (if used in future sprints)
 docker-data/
+# IDE-local and machine-local JSON configuration (e.g. settings.local.json, appsettings.Local.json)
+*.local.json
