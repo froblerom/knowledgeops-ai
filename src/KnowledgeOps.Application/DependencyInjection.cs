@@ -6,6 +6,7 @@ using KnowledgeOps.Application.Chat;
 using KnowledgeOps.Application.Chat.Citations;
 using KnowledgeOps.Application.Chat.Feedback;
 using KnowledgeOps.Application.Chat.Prompting;
+using KnowledgeOps.Application.Dashboard;
 using KnowledgeOps.Application.Documents;
 using KnowledgeOps.Application.Retrieval;
 using KnowledgeOps.Application.Users;
@@ -33,6 +34,7 @@ public static class DependencyInjection
         services.AddScoped<IRagChatOrchestrationService, RagChatOrchestrationService>();
         services.AddScoped<IAnswerFeedbackService, AnswerFeedbackService>();
         services.AddScoped<IChatHistoryService, ChatHistoryService>();
+        services.AddScoped<IDashboardService, DashboardService>();
 
         services.AddSingleton<IPermissionService, PermissionService>();
         services.AddSingleton<IOrganizationScopeService, OrganizationScopeService>();

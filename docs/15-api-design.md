@@ -851,41 +851,96 @@ This response uses the same shape as `AskQuestionResponse`, but with insufficien
 
 ---
 
-## 7.14 DashboardOverviewResponse
+## 7.14 Dashboard Responses
+
+Dashboard responses use a flat MVP shape. Cost and token fields are nullable and must never
+be shown as zero when unavailable. Latency averages are null when no data exists for the period.
+
+> **Implementation note (Sprint 23):** The implemented flat field layout was chosen over the
+> earlier nested draft (questions.total, users.active, documents.*, etc.) for MVP frontend
+> simplicity. The cost object remains a nested availability-aware shape to distinguish
+> "unavailable" from "actual zero cost."
+
+### GET /api/v1/dashboard/overview
 
 ```json
 {
   "period": {
     "from": "2026-05-01T00:00:00Z",
-    "to": "2026-05-20T23:59:59Z"
+    "to": "2026-05-31T00:00:00Z"
   },
-  "questions": {
-    "total": 128,
-    "insufficientContext": 14
+  "questionsAsked": 128,
+  "activeUsers": 12,
+  "documentsUploaded": 24,
+  "documentsProcessed": 20,
+  "documentsFailed": 3,
+  "averageResponseLatencyMs": 1450,
+  "insufficientContextCount": 14,
+  "providerFailureCount": 2,
+  "usefulFeedbackCount": 88,
+  "notUsefulFeedbackCount": 11,
+  "cost": {
+    "available": true,
+    "estimatedTotal": 0.3825
+  }
+}
+```
+
+### GET /api/v1/dashboard/documents
+
+```json
+{
+  "period": {
+    "from": "2026-05-01T00:00:00Z",
+    "to": "2026-05-31T00:00:00Z"
   },
-  "users": {
-    "active": 12
+  "uploaded": 24,
+  "processing": 1,
+  "processed": 20,
+  "failed": 3,
+  "retrievalDisabled": 2
+}
+```
+
+### GET /api/v1/dashboard/chat
+
+```json
+{
+  "period": {
+    "from": "2026-05-01T00:00:00Z",
+    "to": "2026-05-31T00:00:00Z"
   },
-  "documents": {
-    "uploaded": 24,
-    "processed": 20,
-    "failed": 3,
-    "retrievalDisabled": 1
-  },
-  "feedback": {
-    "useful": 88,
-    "notUseful": 11
-  },
-  "performance": {
-    "averageResponseLatencyMs": 1450,
-    "averageRetrievalLatencyMs": 240,
-    "averageGenerationLatencyMs": 980
+  "questionsAsked": 128,
+  "activeUsers": 12,
+  "averageResponseLatencyMs": 1450,
+  "retrievalLatencyMs": 240,
+  "generationLatencyMs": 980,
+  "totalRagLatencyMs": 1450,
+  "insufficientContextCount": 14,
+  "providerFailureCount": 2,
+  "tokens": {
+    "input": 45000,
+    "output": 12000,
+    "total": 57000
   },
   "cost": {
-    "estimatedTotal": 0.3825,
-    "currency": "USD",
-    "available": true
+    "available": true,
+    "estimatedTotal": 0.3825
   }
+}
+```
+
+### GET /api/v1/dashboard/feedback
+
+```json
+{
+  "period": {
+    "from": "2026-05-01T00:00:00Z",
+    "to": "2026-05-31T00:00:00Z"
+  },
+  "useful": 88,
+  "notUseful": 11,
+  "total": 99
 }
 ```
 

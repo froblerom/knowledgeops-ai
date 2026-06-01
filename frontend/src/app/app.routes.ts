@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { adminVisibilityGuard } from './core/guards/admin-visibility.guard';
+import { dashboardVisibilityGuard } from './core/guards/dashboard-visibility.guard';
 
 export const routes: Routes = [
   {
@@ -64,7 +65,7 @@ export const routes: Routes = [
     path: 'dashboard',
     loadComponent: () =>
       import('./features/dashboard/pages/dashboard-page').then(m => m.DashboardPage),
-    canActivate: [authGuard]
+    canActivate: [authGuard, dashboardVisibilityGuard]
   },
   {
     path: 'admin',
