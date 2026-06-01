@@ -29,6 +29,12 @@ export class RoleVisibilityService {
       && this.hasAnyRole('Agent', 'Supervisor', 'KnowledgeAdmin', 'Manager', 'Admin');
   }
 
+  // Feedback.Submit / Feedback.UpdateOwn: all authenticated MVP roles.
+  canSubmitFeedback(): boolean {
+    return this.session.isAuthenticated()
+      && this.hasAnyRole('Agent', 'Supervisor', 'KnowledgeAdmin', 'Manager', 'Admin');
+  }
+
   // Documents.View: KnowledgeAdmin, Manager, Admin.
   canViewDocuments(): boolean {
     return this.hasAnyRole('KnowledgeAdmin', 'Manager', 'Admin');

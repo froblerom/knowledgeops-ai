@@ -1,4 +1,3 @@
-using System.Linq.Expressions;
 using KnowledgeOps.Application.Retrieval;
 using KnowledgeOps.Domain.Documents;
 using KnowledgeOps.Infrastructure.Persistence;
@@ -17,9 +16,20 @@ internal sealed class EfRetrievalEligibilityRepository(KnowledgeOpsDbContext dbC
         if (organizationId == Guid.Empty || candidates.Count == 0)
             return [];
 
-        var identityPredicate = BuildIdentityPredicate(organizationId, candidates);
+        var candidateKeys = candidates
+            .Where(candidate => candidate.OrganizationId == organizationId)
+            .Distinct()
+            .Select(candidate => (
+                candidate.OrganizationId,
+                candidate.DocumentId,
+                candidate.ChunkId,
+                candidate.ChunkEmbeddingId))
+            .ToHashSet();
 
-        return await (
+        if (candidateKeys.Count == 0)
+            return [];
+
+        var eligibleRows = await (
             from embedding in dbContext.ChunkEmbeddings.AsNoTracking()
             join chunk in dbContext.DocumentChunks.AsNoTracking() on embedding.ChunkId equals chunk.Id
             join document in dbContext.Documents.AsNoTracking() on chunk.DocumentId equals document.Id
@@ -37,46 +47,14 @@ internal sealed class EfRetrievalEligibilityRepository(KnowledgeOpsDbContext dbC
                 document.Id,
                 chunk.Id,
                 embedding.Id))
-            .Where(identityPredicate)
             .ToListAsync(cancellationToken);
-    }
 
-    private static Expression<Func<RetrievalEligibleCandidateIdentity, bool>> BuildIdentityPredicate(
-        Guid organizationId,
-        IReadOnlyList<RetrievalCandidateIdentity> candidates)
-    {
-        var row = Expression.Parameter(typeof(RetrievalEligibleCandidateIdentity), "row");
-        Expression? body = null;
-
-        foreach (var candidate in candidates.Distinct())
-        {
-            if (candidate.OrganizationId != organizationId)
-                continue;
-
-            var organizationMatches = Expression.Equal(
-                Expression.Property(row, nameof(RetrievalEligibleCandidateIdentity.OrganizationId)),
-                Expression.Constant(candidate.OrganizationId));
-            var documentMatches = Expression.Equal(
-                Expression.Property(row, nameof(RetrievalEligibleCandidateIdentity.DocumentId)),
-                Expression.Constant(candidate.DocumentId));
-            var chunkMatches = Expression.Equal(
-                Expression.Property(row, nameof(RetrievalEligibleCandidateIdentity.ChunkId)),
-                Expression.Constant(candidate.ChunkId));
-            var embeddingMatches = Expression.Equal(
-                Expression.Property(row, nameof(RetrievalEligibleCandidateIdentity.ChunkEmbeddingId)),
-                Expression.Constant(candidate.ChunkEmbeddingId));
-
-            var identityMatches = Expression.AndAlso(
-                organizationMatches,
-                Expression.AndAlso(
-                    Expression.AndAlso(documentMatches, chunkMatches),
-                    embeddingMatches));
-
-            body = body is null ? identityMatches : Expression.OrElse(body, identityMatches);
-        }
-
-        return Expression.Lambda<Func<RetrievalEligibleCandidateIdentity, bool>>(
-            body ?? Expression.Constant(false),
-            row);
+        return eligibleRows
+            .Where(row => candidateKeys.Contains((
+                row.OrganizationId,
+                row.DocumentId,
+                row.ChunkId,
+                row.ChunkEmbeddingId)))
+            .ToArray();
     }
 }

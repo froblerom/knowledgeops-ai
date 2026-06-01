@@ -23,7 +23,7 @@ public sealed class PersistenceModelTests
             .ToArray();
 
         Assert.Equal(
-            ["audit_log_entries", "chat_interactions", "chat_sessions", "chunk_embeddings", "citations", "document_chunks", "documents", "organizations", "user_roles", "users"],
+            ["answer_feedback", "audit_log_entries", "chat_interactions", "chat_sessions", "chunk_embeddings", "citations", "document_chunks", "documents", "organizations", "user_roles", "users"],
             tableNames);
     }
 
@@ -227,6 +227,49 @@ public sealed class PersistenceModelTests
     }
 
     [Fact]
+    public void Model_Maps_AnswerFeedback_Scope_Rating_Uniqueness_And_ForeignKeys()
+    {
+        using var context = CreateContext();
+
+        var feedbackEntity = context.Model.FindEntityType(typeof(AnswerFeedback))!;
+        var designEntity = context.GetService<IDesignTimeModel>().Model.FindEntityType(typeof(AnswerFeedback))!;
+        var constraint = designEntity.GetCheckConstraints()
+            .Single(checkConstraint => checkConstraint.Name == "CK_answer_feedback_rating");
+        var indexNames = feedbackEntity.GetIndexes()
+            .Select(index => index.GetDatabaseName())
+            .ToArray();
+
+        Assert.Equal("answer_feedback", feedbackEntity.GetTableName());
+        Assert.Equal("answer_feedback_id", feedbackEntity.FindProperty(nameof(AnswerFeedback.Id))!.GetColumnName());
+        Assert.Equal("organization_id", feedbackEntity.FindProperty(nameof(AnswerFeedback.OrganizationId))!.GetColumnName());
+        Assert.Equal("user_id", feedbackEntity.FindProperty(nameof(AnswerFeedback.UserId))!.GetColumnName());
+        Assert.Equal("chat_interaction_id", feedbackEntity.FindProperty(nameof(AnswerFeedback.ChatInteractionId))!.GetColumnName());
+        Assert.Equal("rating", feedbackEntity.FindProperty(nameof(AnswerFeedback.Rating))!.GetColumnName());
+        Assert.Equal(20, feedbackEntity.FindProperty(nameof(AnswerFeedback.Rating))!.GetMaxLength());
+        Assert.Contains("N'Useful'", constraint.Sql, StringComparison.Ordinal);
+        Assert.Contains("N'NotUseful'", constraint.Sql, StringComparison.Ordinal);
+
+        Assert.Contains("IX_answer_feedback_organization_id", indexNames);
+        Assert.Contains("IX_answer_feedback_organization_id_rating", indexNames);
+        Assert.Contains(
+            feedbackEntity.GetIndexes(),
+            idx => idx.GetDatabaseName() == "UX_answer_feedback_chat_interaction_id_user_id" && idx.IsUnique);
+
+        Assert.Contains(
+            feedbackEntity.GetForeignKeys(),
+            key => key.Properties.Single().Name == nameof(AnswerFeedback.ChatInteractionId)
+                && key.PrincipalEntityType.ClrType == typeof(ChatInteraction));
+        Assert.Contains(
+            feedbackEntity.GetForeignKeys(),
+            key => key.Properties.Single().Name == nameof(AnswerFeedback.OrganizationId)
+                && key.PrincipalEntityType.ClrType == typeof(Organization));
+        Assert.Contains(
+            feedbackEntity.GetForeignKeys(),
+            key => key.Properties.Single().Name == nameof(AnswerFeedback.UserId)
+                && key.PrincipalEntityType.ClrType == typeof(User));
+    }
+
+    [Fact]
     public void Model_Maps_ChatSession_Status_Default_And_Indexes()
     {
         using var context = CreateContext();
@@ -305,7 +348,7 @@ public sealed class PersistenceModelTests
         Assert.NotNull(interactionEntity.FindProperty(nameof(ChatInteraction.QuestionTextHash)));
         Assert.NotNull(interactionEntity.FindProperty(nameof(ChatInteraction.RetrievalQueryId)));
 
-        // ...but the interaction entity has no "safe" exposure flag — the safety is enforced in
+        // ...but the interaction entity has no "safe" exposure flag; the safety is enforced in
         // ChatHistoryService by not mapping these fields to response DTOs.
     }
 

@@ -7,6 +7,7 @@ import { RoleVisibilityService } from '../../../core/services/role-visibility.se
 import { ErrorState } from '../../../shared/components/error-state/error-state';
 import { LoadingState } from '../../../shared/components/loading-state/loading-state';
 import {
+  AnswerFeedbackRating,
   AskChatQuestionResponse,
   ChatAnswerState,
   ChatCitation
@@ -20,6 +21,10 @@ interface ChatTranscriptItem {
   answer: string | null;
   insufficientContext: boolean;
   citations: ChatCitation[];
+  feedbackRating: AnswerFeedbackRating | null;
+  feedbackSubmitting: boolean;
+  feedbackMessage: string | null;
+  feedbackError: string | null;
 }
 
 @Component({
@@ -65,7 +70,11 @@ export class ChatPage {
         answerState: 'Pending',
         answer: null,
         insufficientContext: false,
-        citations: []
+        citations: [],
+        feedbackRating: null,
+        feedbackSubmitting: false,
+        feedbackMessage: null,
+        feedbackError: null
       }
     ];
     this.questionText = '';
@@ -97,7 +106,11 @@ export class ChatPage {
       answerState: response.answerState,
       answer: response.answer,
       insufficientContext: response.insufficientContext,
-      citations: response.citations ?? []
+      citations: response.citations ?? [],
+      feedbackRating: null,
+      feedbackSubmitting: false,
+      feedbackMessage: null,
+      feedbackError: null
     };
 
     this.transcript = this.transcript.map(item =>
@@ -107,6 +120,50 @@ export class ChatPage {
 
   private removePendingItem(pendingId: string): void {
     this.transcript = this.transcript.filter(item => item.id !== pendingId);
+  }
+
+  canShowFeedback(item: ChatTranscriptItem): boolean {
+    return item.answerState !== 'Pending' && this.roleVisibility.canSubmitFeedback();
+  }
+
+  submitFeedback(item: ChatTranscriptItem, rating: AnswerFeedbackRating): void {
+    if (!this.canShowFeedback(item) || item.feedbackSubmitting) return;
+
+    this.patchTranscriptItem(item.id, {
+      feedbackSubmitting: true,
+      feedbackMessage: null,
+      feedbackError: null
+    });
+
+    const isUpdate = item.feedbackRating !== null;
+    const request = isUpdate
+      ? this.chat.updateFeedback(item.id, rating)
+      : this.chat.submitFeedback(item.id, rating);
+
+    request.subscribe({
+      next: response => {
+        this.patchTranscriptItem(item.id, {
+          feedbackRating: response.rating,
+          feedbackSubmitting: false,
+          feedbackMessage: isUpdate ? 'Updated' : 'Submitted',
+          feedbackError: null
+        });
+      },
+      error: response => {
+        const error = this.toApiRequestError(response);
+        this.patchTranscriptItem(item.id, {
+          feedbackSubmitting: false,
+          feedbackMessage: null,
+          feedbackError: error.errorId ? `${error.message} Error ID: ${error.errorId}` : error.message
+        });
+      }
+    });
+  }
+
+  private patchTranscriptItem(id: string, patch: Partial<ChatTranscriptItem>): void {
+    this.transcript = this.transcript.map(item =>
+      item.id === id ? { ...item, ...patch } : item
+    );
   }
 
   private toApiRequestError(response: ApiRequestError | HttpErrorResponse): ApiRequestError {

@@ -3,10 +3,13 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import {
+  AnswerFeedbackRating,
+  AnswerFeedbackResponse,
+  AnswerFeedbackReviewResponse,
   AskChatQuestionRequest,
   AskChatQuestionResponse,
-  ChatInteractionDetail,
   ChatCitationHistory,
+  ChatInteractionDetail,
   ChatSessionDetail,
   ChatSessionSummary,
   CreateChatSessionRequest,
@@ -17,6 +20,7 @@ import {
 export class ChatService {
   private readonly http = inject(HttpClient);
   private readonly chatBaseUrl = `${environment.apiBaseUrl}/chat`;
+  private readonly feedbackUrl = `${environment.apiBaseUrl}/feedback`;
 
   askQuestion(questionText: string, chatSessionId?: string | null): Observable<AskChatQuestionResponse> {
     const request: AskChatQuestionRequest = chatSessionId
@@ -46,5 +50,27 @@ export class ChatService {
 
   getInteractionCitations(chatInteractionId: string): Observable<ChatCitationHistory[]> {
     return this.http.get<ChatCitationHistory[]>(`${this.chatBaseUrl}/interactions/${chatInteractionId}/citations`);
+  }
+
+  submitFeedback(
+    chatInteractionId: string,
+    rating: AnswerFeedbackRating
+  ): Observable<AnswerFeedbackResponse> {
+    return this.http.post<AnswerFeedbackResponse>(`${this.chatBaseUrl}/interactions/${chatInteractionId}/feedback`, {
+      rating
+    });
+  }
+
+  updateFeedback(
+    chatInteractionId: string,
+    rating: AnswerFeedbackRating
+  ): Observable<AnswerFeedbackResponse> {
+    return this.http.put<AnswerFeedbackResponse>(`${this.chatBaseUrl}/interactions/${chatInteractionId}/feedback`, {
+      rating
+    });
+  }
+
+  getFeedbackReviewData(): Observable<AnswerFeedbackReviewResponse> {
+    return this.http.get<AnswerFeedbackReviewResponse>(this.feedbackUrl);
   }
 }

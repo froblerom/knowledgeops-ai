@@ -16,6 +16,8 @@ public sealed class OperationalContractsTests
 
         Assert.Equal(
             [
+                "AnswerFeedbackSubmitted",
+                "AnswerFeedbackUpdated",
                 "ChatAnswerGenerationCompleted",
                 "ChatAnswerGenerationFailed",
                 "ChatHistoryDenied",

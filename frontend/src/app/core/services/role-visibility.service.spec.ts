@@ -41,6 +41,13 @@ describe('RoleVisibilityService', () => {
     expect(service.canAskChat()).toBe(false);
   });
 
+  it('canSubmitFeedback returns true for all authenticated MVP roles', () => {
+    for (const role of ['Agent', 'Supervisor', 'KnowledgeAdmin', 'Manager', 'Admin']) {
+      sessionService.saveSession(makeSession([role]));
+      expect(service.canSubmitFeedback()).toBe(true);
+    }
+  });
+
   // ── canViewDocuments ─────────────────────────────────────────────────────────
 
   it('canViewDocuments returns true for KnowledgeAdmin', () => {

@@ -4,6 +4,7 @@ using KnowledgeOps.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace KnowledgeOps.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(KnowledgeOpsDbContext))]
-    partial class KnowledgeOpsDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260530202303_AddAnswerFeedbackTable")]
+    partial class AddAnswerFeedbackTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -300,14 +303,6 @@ namespace KnowledgeOps.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("organization_id");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasDefaultValue("Active")
-                        .HasColumnName("status");
 
                     b.Property<string>("Title")
                         .HasMaxLength(500)
@@ -1071,13 +1066,6 @@ namespace KnowledgeOps.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("FK_citations_document_chunks_chunk_id");
-
-                    b.HasOne("KnowledgeOps.Domain.Documents.Document", null)
-                        .WithMany()
-                        .HasForeignKey("DocumentId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("FK_citations_documents_document_id");
 
                     b.HasOne("KnowledgeOps.Domain.Organizations.Organization", null)
                         .WithMany()
