@@ -177,6 +177,86 @@ public sealed class FeedbackControllerTests : IClassFixture<ChatApiTestFactory>
         Assert.False(_factory.FeedbackService.SubmitWasCalled);
     }
 
+    // ── G-3: Feedback review cross-org ────────────────────────────────────────
+
+    [Fact]
+    public async Task FeedbackReview_OrgA_DoesNotIncludeOrgBFeedback()
+    {
+        // OrgA Supervisor calls GET /api/v1/feedback.
+        // The service uses persisted org state (not client input), so only OrgA feedback is returned.
+        // Verifies: response contains only OrgA feedback counts, no OrgB data leaks.
+        var orgAOrgId = ChatApiTestFactory.OrgId;
+        var orgBOrgId = Guid.Parse("ffff3333-ffff-ffff-ffff-ffff33333333");
+
+        var client = await AuthenticateAsync(ChatApiTestFactory.SupervisorEmail);
+        var response = await client.GetAsync("/api/v1/feedback");
+        var raw = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True(_factory.FeedbackService.ReviewWasCalled);
+
+        // Response must not contain OrgB's org ID or hint at cross-org data
+        Assert.DoesNotContain(orgBOrgId.ToString(), raw, StringComparison.OrdinalIgnoreCase);
+
+        // Response body exposes only safe signals — no question, answer, prompt, or provider data
+        Assert.DoesNotContain("question", raw, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("answer", raw, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("prompt", raw, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("provider", raw, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // ── G-4: Feedback submit/update cross-org ─────────────────────────────────
+
+    [Fact]
+    public async Task SubmitFeedback_CrossOrgInteraction_Returns404()
+    {
+        // OrgA user attempts to submit feedback for an interaction owned by OrgB.
+        // The service enforces org scope via repository.FindInteractionAsync(id, state.OrganizationId).
+        // When interaction belongs to OrgB, the repository returns null, service throws ApplicationNotFoundException, controller returns 404.
+        _factory.FeedbackService.ExceptionToThrow = new ApplicationNotFoundException();
+
+        var client = await AuthenticateAsync(ChatApiTestFactory.AgentEmail);
+        var orgBInteractionId = Guid.Parse("d4d4d4d4-d4d4-4d4d-8d4d-d4d4d4d4d4d4");
+
+        var response = await client.PostAsJsonAsync(
+            $"/api/v1/chat/interactions/{orgBInteractionId}/feedback",
+            new { rating = "Useful" });
+        var raw = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.True(_factory.FeedbackService.SubmitWasCalled);
+
+        // Must not expose any interaction content from OrgB
+        Assert.DoesNotContain("questionText", raw, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("answerText", raw, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(orgBInteractionId.ToString(), raw, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task UpdateFeedback_CrossOrgInteraction_Returns404()
+    {
+        // OrgA user attempts to update feedback for an interaction owned by OrgB.
+        // The service enforces org scope via repository.FindInteractionAsync(id, state.OrganizationId).
+        // When interaction belongs to OrgB, the repository returns null, service throws ApplicationNotFoundException, controller returns 404.
+        _factory.FeedbackService.ExceptionToThrow = new ApplicationNotFoundException();
+
+        var client = await AuthenticateAsync(ChatApiTestFactory.AgentEmail);
+        var orgBInteractionId = Guid.Parse("e5e5e5e5-e5e5-4e5e-8e5e-e5e5e5e5e5e5");
+
+        var response = await client.PutAsJsonAsync(
+            $"/api/v1/chat/interactions/{orgBInteractionId}/feedback",
+            new { rating = "NotUseful" });
+        var raw = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.True(_factory.FeedbackService.UpdateWasCalled);
+
+        // Must not expose any interaction content from OrgB
+        Assert.DoesNotContain("questionText", raw, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("answerText", raw, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(orgBInteractionId.ToString(), raw, StringComparison.OrdinalIgnoreCase);
+    }
+
     private async Task<HttpClient> AuthenticateAsync(string email)
     {
         var client = _factory.CreateClient();

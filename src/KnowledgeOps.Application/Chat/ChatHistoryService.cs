@@ -126,9 +126,9 @@ internal sealed class ChatHistoryService(
     {
         var activeState = await RequireActiveStateAsync(ct);
 
-        var interaction = await interactionRepository.FindByIdAsync(interactionId, ct);
+        var interaction = await interactionRepository.FindByIdAsync(interactionId, activeState.OrganizationId, ct);
 
-        if (interaction is null || interaction.OrganizationId != activeState.OrganizationId)
+        if (interaction is null)
             return null;
 
         if (!IsAuthorizedForResource(interaction.UserId, interaction.OrganizationId, activeState))
@@ -176,9 +176,9 @@ internal sealed class ChatHistoryService(
     {
         var activeState = await RequireActiveStateAsync(ct);
 
-        var interaction = await interactionRepository.FindByIdAsync(interactionId, ct);
+        var interaction = await interactionRepository.FindByIdAsync(interactionId, activeState.OrganizationId, ct);
 
-        if (interaction is null || interaction.OrganizationId != activeState.OrganizationId)
+        if (interaction is null)
             return null;
 
         if (!IsAuthorizedForResource(interaction.UserId, interaction.OrganizationId, activeState))

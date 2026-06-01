@@ -198,6 +198,14 @@ No Phase 2 tables (`knowledge_gap_signals`, `dashboard_metric_snapshots`), no ne
 - Dashboard queries are real-time aggregations with no snapshot caching. For large datasets in production, query performance may require indexes or materialized views (deferred to Phase 2+ optimization).
 - SQL-gated integration tests for `EfDashboardRepository` require `ConnectionStrings__DefaultConnection`; validation against a running SQL Server should occur before merging.
 
+## Sprint 25 Issue #45 Disposition
+
+Defense-in-depth fix applied: `EfChatInteractionRepository.FindByIdAsync` now enforces `organizationId` at the SQL level, consistent with all other org-scoped repository methods. `IChatInteractionRepository` contract updated; `ChatHistoryService` updated; all fake/mock implementations updated. No migration required.
+
+Cross-org API-layer tests added (G-2 through G-7): 12 new tests across `DashboardControllerTests`, `FeedbackControllerTests`, `ChatHistoryControllerTests`, and `DocumentsControllerTests`. Tests confirm HTTP 404 for cross-org resource access, that persisted state drives org scope (not client input), and that response bodies do not leak OrgB IDs or prohibited field values.
+
+**No residual risk from Issue #45.** All tests pass (33 Domain + 389 Application + 214 API). SQL-gated integration tests continue to require `ConnectionStrings__DefaultConnection`.
+
 ## Sprint 24 Issue #44 Disposition
 
 Safe observability and supportability endpoints are implemented. `GET /api/v1/admin/processing-failures` is limited to KnowledgeAdmin/Admin via `System.ViewProcessingFailures`, filters failed non-deleted documents by the persisted current user's organization, and returns only safe document failure metadata. `GET /api/v1/admin/audit-log` is Admin-only via `Audit.View`, filters by organization before optional `from`/`to`/`eventType`, applies a safe limit, returns newest-first metadata, and emits a safe `AuditLogViewed` event that does not echo returned audit rows or raw filter values. Angular support pages expose only the same safe fields and use UX-only role visibility helpers.

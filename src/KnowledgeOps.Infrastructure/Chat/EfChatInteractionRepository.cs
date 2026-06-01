@@ -7,8 +7,9 @@ namespace KnowledgeOps.Infrastructure.Chat;
 
 internal sealed class EfChatInteractionRepository(KnowledgeOpsDbContext db) : IChatInteractionRepository
 {
-    public Task<ChatInteraction?> FindByIdAsync(Guid id, CancellationToken ct = default) =>
-        db.ChatInteractions.FirstOrDefaultAsync(i => i.Id == id, ct);
+    public Task<ChatInteraction?> FindByIdAsync(Guid id, Guid organizationId, CancellationToken ct = default) =>
+        db.ChatInteractions.FirstOrDefaultAsync(
+            i => i.Id == id && i.OrganizationId == organizationId, ct);
 
     public async Task<IReadOnlyList<ChatInteraction>> GetBySessionIdAsync(
         Guid sessionId, Guid organizationId, CancellationToken ct = default) =>

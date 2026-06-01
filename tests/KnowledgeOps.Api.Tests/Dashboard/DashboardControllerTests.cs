@@ -227,6 +227,73 @@ public sealed class DashboardControllerTests : IClassFixture<DashboardApiTestFac
         Assert.Equal(DashboardApiTestFactory.OrgId, _factory.DashboardService.LastOrganizationId);
     }
 
+    // ── G-2: Dashboard cross-org isolation ───────────────────────────────────
+
+    [Fact]
+    public async Task DashboardOverview_OrgA_DoesNotIncludeOrgBData()
+    {
+        // Manager from OrgA calls overview. Service receives OrgA's org ID from persisted state.
+        // OrgB's org ID must never be used. Verifies the controller passes persisted state not client input.
+        var client = await AuthenticateAsync(DashboardApiTestFactory.ManagerEmail);
+        var response = await client.GetAsync("/api/v1/dashboard/overview");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        // LastOrganizationId is set by the capturing service from persisted state.
+        Assert.Equal(DashboardApiTestFactory.OrgId, _factory.DashboardService.LastOrganizationId);
+        Assert.NotEqual(DashboardApiTestFactory.OrgBId, _factory.DashboardService.LastOrganizationId);
+
+        var raw = await response.Content.ReadAsStringAsync();
+        Assert.DoesNotContain(DashboardApiTestFactory.OrgBId.ToString(), raw, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task DashboardDocuments_OrgA_DoesNotIncludeOrgBDocuments()
+    {
+        // KnowledgeAdmin from OrgA calls documents dashboard.
+        // The service must use OrgA's org ID from persisted state, not OrgB's.
+        var client = await AuthenticateAsync(DashboardApiTestFactory.KnowledgeAdminEmail);
+        var response = await client.GetAsync("/api/v1/dashboard/documents");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(DashboardApiTestFactory.OrgId, _factory.DashboardService.LastOrganizationId);
+        Assert.NotEqual(DashboardApiTestFactory.OrgBId, _factory.DashboardService.LastOrganizationId);
+
+        var raw = await response.Content.ReadAsStringAsync();
+        Assert.DoesNotContain(DashboardApiTestFactory.OrgBId.ToString(), raw, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task DashboardChat_OrgA_DoesNotIncludeOrgBData()
+    {
+        // Manager from OrgA calls chat dashboard.
+        // The service must use OrgA's org ID from persisted state, not OrgB's.
+        var client = await AuthenticateAsync(DashboardApiTestFactory.ManagerEmail);
+        var response = await client.GetAsync("/api/v1/dashboard/chat");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(DashboardApiTestFactory.OrgId, _factory.DashboardService.LastOrganizationId);
+        Assert.NotEqual(DashboardApiTestFactory.OrgBId, _factory.DashboardService.LastOrganizationId);
+
+        var raw = await response.Content.ReadAsStringAsync();
+        Assert.DoesNotContain(DashboardApiTestFactory.OrgBId.ToString(), raw, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task DashboardFeedback_OrgA_DoesNotIncludeOrgBFeedback()
+    {
+        // Supervisor from OrgA calls feedback dashboard.
+        // The service must use OrgA's org ID from persisted state, not OrgB's.
+        var client = await AuthenticateAsync(DashboardApiTestFactory.SupervisorEmail);
+        var response = await client.GetAsync("/api/v1/dashboard/feedback");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(DashboardApiTestFactory.OrgId, _factory.DashboardService.LastOrganizationId);
+        Assert.NotEqual(DashboardApiTestFactory.OrgBId, _factory.DashboardService.LastOrganizationId);
+
+        var raw = await response.Content.ReadAsStringAsync();
+        Assert.DoesNotContain(DashboardApiTestFactory.OrgBId.ToString(), raw, StringComparison.OrdinalIgnoreCase);
+    }
+
     // ── Response body safety ─────────────────────────────────────────────────
 
     [Fact]
@@ -358,6 +425,8 @@ public sealed class DashboardApiTestFactory : WebApplicationFactory<Program>
     public const string Password = "test-password";
 
     public static readonly Guid OrgId = Guid.Parse("dddd1111-dddd-dddd-dddd-dddd11111111");
+    // OrgBId is a separate organization used exclusively to verify cross-org isolation in tests.
+    public static readonly Guid OrgBId = Guid.Parse("eeee2222-eeee-eeee-eeee-eeee22222222");
 
     public RecordingDashboardService DashboardService { get; } = new();
 
