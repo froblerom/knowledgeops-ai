@@ -1,6 +1,6 @@
 # Open Implementation Risks
 
-Last updated: 2026-06-01 (updated for Sprint 28 Issue #48)
+Last updated: 2026-06-02 (updated for Sprint 29 Issue #49)
 
 | Risk | Severity | Related Area | Mitigation | Status |
 | --- | --- | --- | --- | --- |
@@ -237,6 +237,24 @@ Local validation passed: `.NET Release build (0 errors, 0 warnings); non-integra
 - SQL-gated integration tests (KnowledgeOps.IntegrationTests) were not executed in this implementation session because `ConnectionStrings__DefaultConnection` is not set and Docker is not available locally. The tests skip gracefully without a connection string.
 - Docker image builds were not validated locally because Docker daemon is not available in this session. Docker build validation is delegated to the GitHub Actions `docker` job in `ci.yml`.
 - The `--health-cmd` for SQL Server 2022 in `integration-tests.yml` uses `/opt/mssql-tools18/bin/sqlcmd`; the actual path on `ubuntu-latest` may vary across GitHub Actions runner image updates. If the health check fails, the path may need adjustment to `/opt/mssql-tools/bin/sqlcmd` or a TCP connectivity probe.
+
+## Sprint 29 Issue #49 Disposition
+
+Release artifacts created: `docs/releases/mvp-release-readiness-checklist.md`, `docs/releases/mvp-release-notes.md`, `docs/releases/mvp-release-signoff.md`. `docs/demo-data.md` updated with credential provisioning and retrieval-enable demo procedures. Local build and tests passed (659 backend + 196 frontend). Secrets and scope-creep searches clean.
+
+**Residual evidence gaps (accepted for this session)**:
+- CI run on main not confirmed; must trigger `ci.yml` to record GitHub Actions evidence in `docs/releases/mvp-release-signoff.md`.
+- `integration-tests.yml` not run; SQL-gated tests require `SQL_SA_PASSWORD` secret and `workflow_dispatch` trigger.
+- Docker builds not locally confirmed; delegated to CI `docker` job.
+- `--health-cmd` path risk in `integration-tests.yml` remains open until CI run confirms it passes.
+
+Pre-existing open risks (from Sprint 27 disposition) remain applicable:
+- GitHub Actions CI run requires push or PR to GitHub.
+- `SQL_SA_PASSWORD` secret must be configured before `integration-tests.yml` will pass.
+- Docker daemon unavailable locally; delegated to CI.
+- `--health-cmd` path may vary — fix allowed if health check fails at CI run.
+
+**No new source code risks introduced by Issue #49** (documentation-only changes).
 
 ## Update Rule
 

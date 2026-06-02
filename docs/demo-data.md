@@ -200,6 +200,114 @@ added without an authorized sprint:
 
 ---
 
+## Demo Credential Provisioning
+
+Seed users have `password_hash = null`. Login is not possible until credentials are provisioned.
+
+**Do not commit real passwords, generated hashes, or any credential material to source control.**
+
+### Option A — Provision via the Admin API (recommended)
+
+Once the API is running and you have direct database access to set an initial Admin password
+(see Option B below for the first-Admin bootstrap), use the Admin user creation endpoint:
+
+```http
+POST /api/v1/users
+Authorization: Bearer <admin-jwt-token>
+Content-Type: application/json
+
+{
+  "email": "agent.a@asteria.example.com",
+  "displayName": "Agent A",
+  "initialPassword": "<choose-a-local-demo-password>",
+  "roles": ["Agent"]
+}
+```
+
+This endpoint is Admin-only (`Users.Create` permission). The `initialPassword` is hashed
+immediately in the Application layer and is never logged, returned, or persisted in plaintext.
+
+### Option B — Bootstrap the first Admin password directly (local only)
+
+To log in as `Admin A` for the first time, set a password hash directly in the local database.
+This is a local-only setup step — never use a real password or commit this command.
+
+Generate a BCrypt hash outside source control (workFactor=12):
+
+```csharp
+// In a local .NET script or REPL — do not commit
+var hash = BCrypt.Net.BCrypt.HashPassword("<choose-a-local-demo-password>", workFactor: 12);
+Console.WriteLine(hash);
+```
+
+Then apply it to the local database (replace the placeholder values):
+
+```sql
+-- Local demo only. Replace placeholders. Do not commit.
+UPDATE users
+SET password_hash = '<bcrypt-hash-from-above>'
+WHERE email = 'admin.a@asteria.example.com';
+```
+
+### Security rules for demo credentials
+
+- Use a local-only demo password — not a real or shared password.
+- Never commit the password, the hash, or any credential file.
+- After setting the Admin password, provision other users via `POST /api/v1/users` from the Admin UI.
+- Demo credentials are for local development and demonstration only.
+- Do not use seed identities to access, process, or store real documents.
+
+---
+
+## Demo Retrieval Enablement
+
+Documents are retrievable for RAG chat only when all of the following conditions are true:
+
+- `processing_status = 'Processed'`
+- `is_retrieval_enabled = 1` (true)
+- `deleted_at IS NULL`
+- Organization scope authorizes access
+
+By default, `is_retrieval_enabled` is `false` for all newly uploaded documents. The document
+retrieval re-enable endpoint is **deferred to Phase 2**. For a local demo showing grounded
+answers, a direct SQL update is required after a document is processed.
+
+### E2E smoke tests
+
+The `KnowledgeOps.E2ETests` project validates the full grounded-answer and
+insufficient-context workflows using `WebApplicationFactory<Program>` and sets up the
+required database state directly. No manual intervention is needed for automated test coverage.
+
+### Live demo setup procedure (local only)
+
+1. Upload a TXT or Markdown document via the Angular document upload page (`/documents/new`).
+2. Wait for the Worker to process the document (`processing_status` becomes `Processed`).
+3. Use the document list page to find the `document_id` (displayed in the detail view).
+4. Run the following SQL against the local database to enable retrieval:
+
+```sql
+-- Local demo only. Replace <document-id> with the actual GUID shown in the UI.
+-- Do not use real document IDs, real document content, or production connection strings.
+UPDATE documents
+SET is_retrieval_enabled = 1
+WHERE document_id = '<document-id>'
+  AND processing_status = 'Processed'
+  AND deleted_at IS NULL;
+```
+
+5. Confirm the update affected exactly 1 row.
+6. Ask a question in the `/chat` page that relates to the document content.
+
+### Important notes
+
+- This is a **local demo setup only**. This is not a production workflow.
+- The re-enable endpoint is deferred to Phase 2. Do not implement it in MVP scope.
+- Never use real customer, employee, or internal operational documents in a demo.
+- Use only the fictional seed data or synthetic documents you upload yourself.
+- Never commit document files, document IDs, or retrieval state to source control.
+
+---
+
 ## Safety Rules
 
 - Never commit real passwords, API keys, or secrets to source control.
