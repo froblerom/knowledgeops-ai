@@ -2,7 +2,7 @@
 
 > An enterprise-grade AI knowledge assistant for contact centers — built with .NET 10, Angular, SQL Server, and RAG.
 
-[![CI](https://github.com/froblerom/knowdledgeops_ai/actions/workflows/ci.yml/badge.svg)](https://github.com/froblerom/knowdledgeops_ai/actions/workflows/ci.yml)
+[![CI](https://github.com/froblerom/knowledgeops-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/froblerom/knowledgeops-ai/actions/workflows/ci.yml)
 [![.NET](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![Angular](https://img.shields.io/badge/Angular-19-DD0031?logo=angular)](https://angular.dev/)
 [![SQL Server](https://img.shields.io/badge/SQL%20Server-2022-CC2927?logo=microsoftsqlserver)](https://www.microsoft.com/en-us/sql-server)
@@ -46,39 +46,9 @@ KnowledgeOps-AI gives organizations a single interface to upload internal docume
 
 ## Architecture Overview
 
-┌─────────────────────────────────────────────────────────┐
-│  Angular SPA  (port 4200)                               │
-│  Login · Chat · Documents · Dashboard · Admin           │
-└────────────────────────┬────────────────────────────────┘
-│ HTTP / JWT
-┌────────────────────────▼────────────────────────────────┐
-│  ASP.NET Core Web API  (port 5194)                      │
-│  Controllers · RBAC · Organization scope · Audit log    │
-└────────────────────────┬────────────────────────────────┘
-│ CQRS / Application services
-┌────────────────────────▼────────────────────────────────┐
-│  Application Layer                                      │
-│  RAG orchestration · Prompt builder · Citations        │
-│  Feedback · Dashboard · Document processing pipeline   │
-└──────────┬────────────────────────────┬─────────────────┘
-│ EF Core                    │ Provider interfaces
-┌──────────▼───────────┐   ┌────────────▼────────────────┐
-│  SQL Server           │   │  AI / Embedding providers   │
-│  Documents · Chunks  │   │  Azure OpenAI · OpenAI API  │
-│  Chat · Feedback     │   │  Fake (CI / local dev)      │
-│  Dashboard · Audit   │   └─────────────────────────────┘
-└──────────────────────┘
-▲
-┌──────────┴───────────┐
-│  .NET Worker Service │
-│  Async doc pipeline  │
-│  Extract · Chunk     │
-│  Embed · Index       │
-└──────────────────────┘
+![KnowledgeOps-AI Container Diagram](docs/diagrams/architecture/c4-container-diagram.png)
 
-
-
-For C4 diagrams, ERD, RAG flow, and Clean Architecture diagram see [docs/12-c4-architecture.md](docs/12-c4-architecture.md).
+For C4 system context, component diagrams, ERD, and RAG flow see [docs/12-c4-architecture.md](docs/12-c4-architecture.md).
 
 ---
 
@@ -132,7 +102,7 @@ For C4 diagrams, ERD, RAG flow, and Clean Architecture diagram see [docs/12-c4-a
 - Structured audit event logging
 - Correlation ID middleware
 - Health check endpoint
-- GitHub Actions CI with backend restore / build / test / lint, frontend install / build / test
+- GitHub Actions CI with backend restore / build / test and frontend install / build / test
 - Fake AI providers in CI — no external API calls, no secrets required
 - Docker Compose stack (SQL Server)
 - EF Core migrations with fictional seed data (two organizations, seven users, five roles)
@@ -177,71 +147,106 @@ For C4 diagrams, ERD, RAG flow, and Clean Architecture diagram see [docs/12-c4-a
 ### 1. Clone and configure
 
 ```bash
-git clone https://github.com/froblerom/knowdledgeops_ai.git
-cd knowdledgeops_ai
+git clone https://github.com/froblerom/knowledgeops-ai.git
+cd knowledgeops-ai
 cp .env.example .env
 # Edit .env — set KNOWLEDGEOPS_SQL_PASSWORD to a strong local password
-2. Start SQL Server
+```
 
+### 2. Start SQL Server
+
+```bash
 docker compose up -d sqlserver
 docker compose ps   # wait for "healthy"
-3. Apply migrations
+```
 
+### 3. Apply migrations
+
+```powershell
 $env:ConnectionStrings__DefaultConnection = "Server=localhost,1433;Database=KnowledgeOpsLocal;User Id=sa;Password=<your-local-password>;TrustServerCertificate=True;Encrypt=True"
 
 dotnet tool run dotnet-ef database update `
   --project src/KnowledgeOps.Infrastructure/KnowledgeOps.Infrastructure.csproj `
   --startup-project src/KnowledgeOps.Infrastructure/KnowledgeOps.Infrastructure.csproj
-4. Run the API
+```
 
+### 4. Run the API
+
+```bash
 dotnet run --project src/KnowledgeOps.Api/KnowledgeOps.Api.csproj
 # http://localhost:5194
-5. Run the Worker
+```
 
+### 5. Run the Worker
+
+```bash
 dotnet run --project src/KnowledgeOps.Worker/KnowledgeOps.Worker.csproj
-6. Run the frontend
+```
 
+### 6. Run the frontend
+
+```bash
 cd frontend
 npm install
 npm start
 # http://localhost:4200
-AI provider: The default is Fake mode — no Azure OpenAI or OpenAI API keys needed. To use a real provider, set KNOWLEDGEOPS_AI_PROVIDER_MODE=AzureOpenAI (or OpenAI) and add your credentials in .env only.
+```
 
-Demo Users
-Two fictional organizations are seeded. Passwords are not seeded — provision them locally via the Admin API or a direct SQL update. See docs/demo-data.md for the credential bootstrap procedure.
+> **AI provider:** The default is `Fake` mode — no Azure OpenAI or OpenAI API keys needed. To use a real provider, set `KNOWLEDGEOPS_AI_PROVIDER_MODE=AzureOpenAI` (or `OpenAI`) and add your credentials in `.env` only.
 
-Asteria Support Group — covers all five roles
+---
 
-Display Name	Email	Role
-Admin A	admin.a@asteria.example.com	Admin
-KnowledgeAdmin A	knowledgeadmin.a@asteria.example.com	KnowledgeAdmin
-Manager A	manager.a@asteria.example.com	Manager
-Supervisor A	supervisor.a@asteria.example.com	Supervisor
-Agent A	agent.a@asteria.example.com	Agent
-Boreal Contact Services — separate organization for isolation testing
+## Demo Users
 
-Display Name	Email	Role
-Admin B	admin.b@boreal.example.com	Admin
-Agent B	agent.b@boreal.example.com	Agent
-Agents from Asteria cannot access documents or chat sessions from Boreal, and vice versa.
+Two fictional organizations are seeded. Passwords are not seeded — provision them locally via the Admin API or a direct SQL update. See [docs/demo-data.md](docs/demo-data.md) for the credential bootstrap procedure.
 
-Running Tests
-Backend
+**Asteria Support Group** — covers all five roles
 
-# Build
+| Display Name | Email | Role |
+|---|---|---|
+| Admin A | admin.a@asteria.example.com | Admin |
+| KnowledgeAdmin A | knowledgeadmin.a@asteria.example.com | KnowledgeAdmin |
+| Manager A | manager.a@asteria.example.com | Manager |
+| Supervisor A | supervisor.a@asteria.example.com | Supervisor |
+| Agent A | agent.a@asteria.example.com | Agent |
+
+**Boreal Contact Services** — separate organization for isolation testing
+
+| Display Name | Email | Role |
+|---|---|---|
+| Admin B | admin.b@boreal.example.com | Admin |
+| Agent B | agent.b@boreal.example.com | Agent |
+
+> Agents from Asteria cannot access documents or chat sessions from Boreal, and vice versa.
+
+---
+
+## Running Tests
+
+### Backend
+
+```bash
 dotnet msbuild KnowledgeOps.sln -t:Build -p:Configuration=Release
-
-# Unit and integration tests
 dotnet test KnowledgeOps.sln --configuration Release
-Frontend
+```
 
+### Frontend
+
+```bash
 cd frontend
-npm run test        # unit tests (Karma)
-npm run build       # production build check
-CI runs both suites on every push. No live AI calls are made — the Fake embedding and generation providers are used. See .github/workflows/ci.yml.
+npm run test
+npm run build
+```
 
-Project Structure
+> CI runs both suites on every push with no live AI calls. See [.github/workflows/ci.yml](.github/workflows/ci.yml).
 
+
+
+---
+
+## Project Structure
+
+```
 knowdledgeops_ai/
 ├── src/
 │   ├── KnowledgeOps.Domain/          # Entities, value objects — no dependencies
@@ -255,42 +260,88 @@ knowdledgeops_ai/
 ├── .github/workflows/                # CI pipelines
 ├── docker-compose.yml
 └── .env.example
-Documentation
-Document	Description
-Executive Summary	Business problem, value, and technical vision
-Scope & Roadmap	MVP scope, Phase 2 / 3 plans, out-of-scope boundaries
-C4 Architecture	System context, container, and component diagrams
-Local Development	Full local setup guide
-Demo Data	Seed organizations, users, credential bootstrap
-Security & Permissions	RBAC model and permission matrix
-Architecture Decisions	ADRs for SQL Server, Angular, RBAC, EF Core, RAG, Clean Architecture
-Video Demo
-<!-- VIDEO PLACEHOLDER --> <!-- [![Watch the demo](docs/screenshots/video-thumbnail.png)](https://youtu.be/PLACEHOLDER) -->
-Demo video coming soon — will cover: login, document upload, processing status, grounded RAG answer with citations, insufficient-context response, feedback submission, and the operational dashboard.
+```
 
-Screenshots
-<!-- SCREENSHOTS PLACEHOLDER — add to docs/screenshots/ and uncomment --> <!-- | Login | Chat — grounded answer | |---|---| | ![Login](docs/screenshots/login.png) | ![Chat](docs/screenshots/chat-grounded-answer.png) | | Source citations | Insufficient context | |---|---| | ![Citations](docs/screenshots/chat-citations.png) | ![No context](docs/screenshots/chat-insufficient-context.png) | | Document upload | Document list + processing status | |---|---| | ![Upload](docs/screenshots/document-upload.png) | ![Documents](docs/screenshots/document-list.png) | | Dashboard metrics | Admin — user management | |---|---| | ![Dashboard](docs/screenshots/dashboard.png) | ![Admin](docs/screenshots/admin-users.png) | | CI — GitHub Actions green | |---| | ![CI](docs/screenshots/ci-green.png) | -->
-Known Limitations
-This project is a portfolio-grade MVP, not a production deployment. Honest limitations:
+---
 
-No cloud deployment. The stack runs locally via Docker Compose. Azure hosting, Blob Storage, and Application Insights are planned for Phase 2–3.
-No enterprise SSO. Authentication uses local JWT + BCrypt. Azure Entra ID is Phase 3.
-is_retrieval_enabled requires a manual SQL update for local demos. The re-enable API endpoint is deferred to Phase 2.
-No document replacement or versioning. Uploading a new version requires deleting the old document first.
-No real AI calls in CI. The Fake provider is deterministic and tests the orchestration layer; it does not validate retrieval or generation quality.
-No real-time agent assist. This is an explicit Phase 3 feature, out of scope for MVP.
-Portfolio Note
+## Documentation
+
+| Document | Description |
+|---|---|
+| [Executive Summary](docs/00-executive-summary.md) | Business problem, value, and technical vision |
+| [Scope & Roadmap](docs/05-scope-and-roadmap.md) | MVP scope, Phase 2 / 3 plans, out-of-scope boundaries |
+| [C4 Architecture](docs/12-c4-architecture.md) | System context, container, and component diagrams |
+| [Local Development](docs/local-development.md) | Full local setup guide |
+| [Demo Data](docs/demo-data.md) | Seed organizations, users, credential bootstrap |
+| [Security & Permissions](docs/16-security-and-permissions.md) | RBAC model and permission matrix |
+| [Architecture Decisions](docs/decisions/) | ADRs for SQL Server, Angular, RBAC, EF Core, RAG, Clean Architecture |
+
+---
+
+## Video Demo
+
+<!-- VIDEO PLACEHOLDER -->
+<!-- [![Watch the demo](docs/screenshots/video-thumbnail.png)](https://youtu.be/PLACEHOLDER) -->
+
+*Demo video coming soon — will cover: login, document upload, processing status, grounded RAG answer with citations, insufficient-context response, feedback submission, and the operational dashboard.*
+
+---
+
+## Screenshots
+
+<!-- SCREENSHOTS PLACEHOLDER — add to docs/screenshots/ and uncomment -->
+<!--
+| Login | Chat — grounded answer |
+|---|---|
+| ![Login](docs/screenshots/login.png) | ![Chat](docs/screenshots/chat-grounded-answer.png) |
+
+| Source citations | Insufficient context |
+|---|---|
+| ![Citations](docs/screenshots/chat-citations.png) | ![No context](docs/screenshots/chat-insufficient-context.png) |
+
+| Document upload | Document list + processing status |
+|---|---|
+| ![Upload](docs/screenshots/document-upload.png) | ![Documents](docs/screenshots/document-list.png) |
+
+| Dashboard metrics | Admin — user management |
+|---|---|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Admin](docs/screenshots/admin-users.png) |
+
+| CI — GitHub Actions green |
+|---|
+| ![CI](docs/screenshots/ci-green.png) |
+-->
+
+---
+
+## Known Limitations
+
+This project is a **portfolio-grade MVP**, not a production deployment. Honest limitations:
+
+- **No cloud deployment.** The stack runs locally via Docker Compose. Azure hosting, Blob Storage, and Application Insights are planned for Phase 2–3.
+- **No enterprise SSO.** Authentication uses local JWT + BCrypt. Azure Entra ID is Phase 3.
+- **`is_retrieval_enabled` requires a manual SQL update for local demos.** The re-enable API endpoint is deferred to Phase 2.
+- **No document replacement or versioning.** Uploading a new version requires deleting the old document first.
+- **No real AI calls in CI.** The Fake provider is deterministic and tests the orchestration layer; it does not validate retrieval or generation quality.
+- **No real-time agent assist.** This is an explicit Phase 3 feature, out of scope for MVP.
+
+---
+
+## Portfolio Note
+
 KnowledgeOps-AI was designed and built as a senior-level portfolio project demonstrating applied AI engineering in a realistic enterprise context — not as a generic CRUD app with an LLM bolted on.
 
 It shows:
+- Business-driven software design with documented scope boundaries
+- Clean Architecture across a multi-project .NET 10 solution
+- Provider abstraction for AI / embedding services
+- Async background processing with a dedicated Worker service
+- Multi-tenant data isolation enforced at the application layer
+- RBAC with a permission matrix, not just role guards
+- RAG orchestration with grounded prompts, citations, and safe insufficient-context handling
+- Observability from the start: audit events, correlation IDs, health checks
+- CI with fake providers so no secrets are required to run the full test suite
 
-Business-driven software design with documented scope boundaries
-Clean Architecture across a multi-project .NET 10 solution
-Provider abstraction for AI / embedding services
-Async background processing with a dedicated Worker service
-Multi-tenant data isolation enforced at the application layer
-RBAC with a permission matrix, not just role guards
-RAG orchestration with grounded prompts, citations, and safe insufficient-context handling
-Observability from the start: audit events, correlation IDs, health checks
-CI with fake providers so no secrets are required to run the full test suite
-Built by Fred Roblero · LinkedIn · GitHub
+---
+
+*Built by Fred Roblero · [LinkedIn](https://www.linkedin.com/in/fred-roblerom/) · [GitHub](https://github.com/froblerom/knowledgeops-ai)*
