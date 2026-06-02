@@ -36,6 +36,56 @@ The system is designed for contact centers and support operations where agents, 
 
 ## Project Status
 
-Release 0 — Foundation and Documentation.
+MVP Implementation — Sprint 27 Complete.
 
-This repository is currently establishing the business context, scope, architecture, requirements, use cases, business rules, and roadmap before major implementation work begins.
+The core MVP workflow is implemented and verified through Sprint 27:
+
+- Authenticated internal users with JWT Bearer, five RBAC roles (Agent, Supervisor, KnowledgeAdmin, Manager, Admin), and organization-scoped access.
+- Document upload (TXT/Markdown), asynchronous background processing, text extraction, sliding-window chunking, and deterministic embedding generation.
+- Organization-scoped semantic retrieval using a local SQL-backed vector store.
+- Retrieval-Augmented Generation (RAG) chat pipeline with grounded prompt construction, context sufficiency policy, and safe insufficient-context handling.
+- Source citations for grounded answers; safe `ProviderFailure` outcome for AI provider errors.
+- Chat history, session management, and scoped review (Supervisor/Manager/Admin).
+- Useful/NotUseful answer feedback.
+- Permission-gated dashboard metrics (overview, documents, chat, feedback).
+- Admin user and role management; safe audit log and processing failure visibility.
+- Public basic health (`GET /api/v1/health`) and Admin-only sanitized health details (`GET /api/v1/health/details`).
+- Multi-stage Dockerfiles for API, Worker, and Frontend; GitHub Actions CI workflow.
+
+**Fake providers are normal for automated tests and CI.** `FakeEmbeddingProvider` (SHA-256 deterministic) and `FakeAnswerGenerator` require no external credentials and are the default for all automated tests. Azure OpenAI or OpenAI API is the intended production provider and is optional, manually configured only.
+
+**Known limitations:**
+- Text extraction supports TXT and Markdown only; PDF and DOCX extraction are deferred to Phase 2.
+- Document re-enable and retry-processing endpoints are deferred to Phase 2.
+- JWT logout is stateless (client-side token clear only); no server-side token revocation.
+- Local filesystem document storage only; no production cloud storage adapter.
+- SQL Server integration tests require `ConnectionStrings__DefaultConnection` and a running SQL Server container.
+- Azure deployment, enterprise SSO, and production-grade cloud hardening are deferred to Phase 2/3.
+
+## Local Setup
+
+```bash
+# 1. Copy the env template and configure local secrets
+cp .env.example .env
+# Edit .env with your Jwt:SigningKey and other local values
+
+# 2. Start SQL Server
+docker compose up sqlserver -d
+
+# 3. Apply database migrations
+dotnet tool restore
+dotnet tool run dotnet-ef database update \
+  --project src/KnowledgeOps.Infrastructure \
+  --startup-project src/KnowledgeOps.Infrastructure
+
+# 4. Start the API (in a terminal)
+dotnet run --project src/KnowledgeOps.Api
+
+# 5. Start the background Worker (in a separate terminal)
+dotnet run --project src/KnowledgeOps.Worker
+
+# 6. Start the Angular frontend (in a separate terminal)
+cd frontend && npm install && ng serve
+```
+
+Demo user credentials are defined in [`docs/demo-data.md`](docs/demo-data.md).

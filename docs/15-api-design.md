@@ -515,10 +515,7 @@ title=Refund Escalation Policy
 ```json
 {
   "chatSessionId": "5e9f7014-6672-4a63-a70b-cc118b402910",
-  "question": "What is the escalation process for a critical customer complaint?",
-  "retrievalOptions": {
-    "maxResults": 5
-  }
+  "questionText": "What is the escalation process for a critical customer complaint?"
 }
 ```
 
@@ -527,9 +524,9 @@ title=Refund Escalation Policy
 | Field | Type | Required | Notes |
 |---|---|---:|---|
 | chatSessionId | guid | No | If omitted, system may create or use default session. |
-| question | string | Yes | Natural-language question. |
-| retrievalOptions | object | No | Optional retrieval overrides within allowed limits. |
-| retrievalOptions.maxResults | int | No | Must not exceed configured system maximum. |
+| questionText | string | Yes | Natural-language question. |
+| retrievalOptions | object | No | Optional retrieval overrides within allowed limits. Deferred to Phase 2. |
+| retrievalOptions.maxResults | int | No | Must not exceed configured system maximum. Deferred to Phase 2. |
 
 ---
 
@@ -721,9 +718,9 @@ Full chunk text should only be exposed to authorized roles. The MVP may return p
 {
   "chatInteractionId": "426d593a-2c37-40df-bcb4-32e04b465831",
   "chatSessionId": "5e9f7014-6672-4a63-a70b-cc118b402910",
-  "question": "What is the escalation process for a critical customer complaint?",
-  "answer": "According to the available escalation policy, critical customer complaints should be escalated to a supervisor immediately and documented according to the escalation procedure.",
-  "answerStatus": "Answered",
+  "questionText": "What is the escalation process for a critical customer complaint?",
+  "answerText": "According to the available escalation policy, critical customer complaints should be escalated to a supervisor immediately and documented according to the escalation procedure.",
+  "answerStatus": "GroundedAnswer",
   "insufficientContext": false,
   "citations": [
     {
@@ -751,6 +748,16 @@ Full chunk text should only be exposed to authorized roles. The MVP may return p
 }
 ```
 
+### answerStatus Values
+
+The `answerStatus` field uses one of three stable string values:
+
+| Value | Meaning |
+|---|---|
+| `GroundedAnswer` | Retrieval succeeded and a grounded answer with citations was generated. |
+| `InsufficientContext` | Retrieval returned insufficient authorized context; no answer was generated. |
+| `ProviderFailure` | The AI generation provider failed; a safe failure response was returned. |
+
 ---
 
 ## 7.9 InsufficientContextResponse
@@ -761,8 +768,8 @@ This response uses the same shape as `AskQuestionResponse`, but with insufficien
 {
   "chatInteractionId": "426d593a-2c37-40df-bcb4-32e04b465831",
   "chatSessionId": "5e9f7014-6672-4a63-a70b-cc118b402910",
-  "question": "What is the refund policy for VIP customers in Brazil?",
-  "answer": "The available documents do not contain enough information to answer this question safely. Please contact a supervisor or knowledge administrator for confirmation.",
+  "questionText": "What is the refund policy for VIP customers in Brazil?",
+  "answerText": "The available documents do not contain enough information to answer this question safely. Please contact a supervisor or knowledge administrator for confirmation.",
   "answerStatus": "InsufficientContext",
   "insufficientContext": true,
   "citations": [],
@@ -836,9 +843,9 @@ This response uses the same shape as `AskQuestionResponse`, but with insufficien
 {
   "chatInteractionId": "426d593a-2c37-40df-bcb4-32e04b465831",
   "chatSessionId": "5e9f7014-6672-4a63-a70b-cc118b402910",
-  "question": "What is the escalation process for a critical customer complaint?",
-  "answer": "According to the available escalation policy...",
-  "answerStatus": "Answered",
+  "questionText": "What is the escalation process for a critical customer complaint?",
+  "answerText": "According to the available escalation policy...",
+  "answerStatus": "GroundedAnswer",
   "insufficientContext": false,
   "citations": [],
   "feedback": {
@@ -973,8 +980,8 @@ The API should return errors in a consistent format.
     "message": "One or more validation errors occurred.",
     "details": [
       {
-        "field": "question",
-        "message": "Question is required."
+        "field": "questionText",
+        "message": "Question text is required."
       }
     ],
     "correlationId": "b6c8c79f4a9a4a3e9f221187f64a2d41"

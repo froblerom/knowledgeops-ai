@@ -435,14 +435,16 @@ src/
 
   KnowledgeOps.Worker/
     DocumentProcessingWorker.cs
-    EmbeddingGenerationWorker.cs
 
 tests/
-  KnowledgeOps.UnitTests/
+  KnowledgeOps.Domain.Tests/
+  KnowledgeOps.Application.Tests/
+  KnowledgeOps.Api.Tests/
   KnowledgeOps.IntegrationTests/
+  KnowledgeOps.E2ETests/
 ```
 
-This structure may be adjusted during implementation, but the core separation should remain stable.
+This structure reflects the implemented MVP layout. Core Clean Architecture separation (Domain, Application, Infrastructure, API, Worker) is stable.
 
 ---
 

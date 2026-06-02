@@ -516,7 +516,7 @@ Stores individual user question and assistant answer exchanges.
 | organization_id | uniqueidentifier | Yes | Organization scope. |
 | question_text | nvarchar(max) | Yes | User question. |
 | answer_text | nvarchar(max) | No | Assistant answer. |
-| answer_status | nvarchar(50) | Yes | Answered, InsufficientContext, Failed. |
+| answer_status | int | Yes | Integer-backed enum: Grounded=0, InsufficientContext=1, ProviderFailed=2. API surface strings: `GroundedAnswer`, `InsufficientContext`, `ProviderFailure`. |
 | insufficient_context | bit | Yes | True if context was insufficient. |
 | prompt_version | nvarchar(100) | No | Prompt template version. |
 | retrieval_configuration_version | nvarchar(100) | No | Retrieval configuration version. |
@@ -538,7 +538,7 @@ Stores individual user question and assistant answer exchanges.
 | IX_chat_interactions_organization_id | organization_id | Organization-scoped review and metrics. |
 | IX_chat_interactions_session_id | chat_session_id | Load interactions by session. |
 | IX_chat_interactions_created_at | created_at | Time-based dashboard metrics. |
-| IX_chat_interactions_answer_status | answer_status | Filter answered, failed, insufficient-context records. |
+| IX_chat_interactions_answer_status | answer_status | Filter grounded, provider-failed, insufficient-context records. |
 | IX_chat_interactions_insufficient_context | organization_id, insufficient_context | Knowledge gap and dashboard metrics. |
 
 ### Data Integrity Rules
@@ -1316,19 +1316,32 @@ Failed
 
 ## 13.5 embedding_status
 
+MVP terminal states implemented:
+
 ```text
-Pending
-Processing
 Ready
 Failed
 ```
 
+`Pending` and `Processing` are transitional states reserved for potential future asynchronous
+embedding provider implementations and are not implemented in the MVP synchronous pipeline.
+
 ## 13.6 chat_answer_status
 
+Logical domain values (stored as integer enum in `chat_interactions.answer_status`):
+
 ```text
-Answered
+Grounded          (= 0)
+InsufficientContext (= 1)
+ProviderFailed    (= 2)
+```
+
+Corresponding stable API surface strings returned in `answerStatus` response fields:
+
+```text
+GroundedAnswer
 InsufficientContext
-Failed
+ProviderFailure
 ```
 
 ## 13.7 feedback_rating

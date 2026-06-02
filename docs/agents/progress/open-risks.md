@@ -1,6 +1,6 @@
 # Open Implementation Risks
 
-Last updated: 2026-06-01 (updated for Sprint 26 Issue #46)
+Last updated: 2026-06-01 (updated for Sprint 28 Issue #48)
 
 | Risk | Severity | Related Area | Mitigation | Status |
 | --- | --- | --- | --- | --- |
@@ -8,7 +8,7 @@ Last updated: 2026-06-01 (updated for Sprint 26 Issue #46)
 | RAG may be implemented as unsupported general answer behavior rather than grounded document assistance. | High | Retrieval/RAG | Use `rag-implementation-agent.md`, citation and insufficient-context rules, and fake-provider safety tests. Sprint 17 `RagChatOrchestrationService` enforces retrieval-before-generation and insufficient-context handling. Sprint 18 added grounded prompt construction and context sufficiency policy. Sprint 19 added citation mapping and persistence. Sprint 20 exposes only an authorized chat API/UI with safe outcomes and metadata-only citations. | Mitigated for MVP chat surface through Sprint 20 Issue #40 |
 | Authorization may be skipped during retrieval or prompt construction. | Critical | Security/RAG | Load security, business-rules and RAG contexts for relevant tasks; require cross-scope tests and verification. Sprint 16 validates active persisted user state, `Chat.AskQuestion`, organization scope, and Application-level candidate revalidation. Sprint 17 `RagChatOrchestrationService` re-validates org scope from `UserAccessState` (not JWT claims) before passing chunks to generator; chunk text reader enforces org scope. Sprint 18 `GroundedPromptBuilder` applies `IPromptAuthorizationFilter` (org-scope check via `DefaultPromptAuthorizationFilter`) as a second enforcement gate before including any chunk in the grounded prompt. `ContextSufficiencyPolicy` gates on zero authorized chunks. Issue #37 closes this risk for the prompt construction path. | Resolved — Sprint 18 Issue #37 applied IPromptAuthorizationFilter in GroundedPromptBuilder |
 | Agent context summaries may diverge from canonical documents over time. | High | Documentation governance | Use documentation and verification agents; update harness when canonical docs change; treat canonical docs as authoritative. | Open |
-| Diagram artifact filename cleanup remains pending. | Low | Documentation artifacts | Address in Sprint 28 or an explicitly authorized diagram artifact task. | Open |
+| Diagram artifact filename cleanup remains pending. | Low | Documentation artifacts | `docs/diagrams/business-process/monitoring-sla-process.png` is the existing stale artifact; `docs/diagrams/business-process/monitoring-operational-process.png` is the canonical target name. Documentation wording corrected in Issue #48. PNG replacement requires explicit authorization. | Open — PNG not yet replaced |
 
 ## Sprint 0 Issue #2 Disposition
 
