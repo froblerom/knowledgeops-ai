@@ -1332,38 +1332,12 @@ Recommended structure:
 
 ```text
 tests/
-  KnowledgeOps.UnitTests/
-    Documents/
-    Processing/
-    Retrieval/
-    Chat/
-    Feedback/
-    Dashboard/
-    Security/
-    Common/
-
+  KnowledgeOps.Domain.Tests/
+  KnowledgeOps.Application.Tests/
+  KnowledgeOps.Api.Tests/
   KnowledgeOps.IntegrationTests/
-    Persistence/
-    Documents/
-    Processing/
-    Retrieval/
-    Chat/
-    Feedback/
-    Dashboard/
-    Security/
-    Api/
-
-  KnowledgeOps.ApiTests/
-    Auth/
-    Users/
-    Documents/
-    Chat/
-    Feedback/
-    Dashboard/
-    Health/
+  KnowledgeOps.E2ETests/
 ```
-
-Depending on implementation preference, `ApiTests` may be part of `IntegrationTests`.
 
 ---
 

@@ -4,7 +4,7 @@ Last updated: 2026-06-01
 
 ## Current Phase
 
-Sprint 27 CI Pipeline And Container Hardening / Issue #47 implementation complete
+Sprint 28 Final Documentation And Diagram Alignment / Issue #48 implementation complete
 
 ## Active Issue Execution Entry
 
@@ -115,7 +115,7 @@ Issue #37 adds RAG prompt building and defense-in-depth authorization: **IGround
 - Audit emissions are safe best-effort; workflow-specific telemetry remains deferred.
 - Detailed health exposes sanitized application, database, and retrieval storage status only.
 - Chat.ViewInteraction and Chat.ViewCitations carry an own-only/scoped convention; actual query-level enforcement is deferred to Sprint 17+ chat workflows.
-- Diagram artifact cleanup remains pending for `docs/diagrams/business-process/monitoring-operational-process.png`.
+- Diagram artifact cleanup remains pending: `docs/diagrams/business-process/monitoring-sla-process.png` is the existing stale artifact; `docs/diagrams/business-process/monitoring-operational-process.png` is the canonical target name. No PNG generation, replacement, or deletion should occur unless diagram artifact generation is explicitly authorized.
 - Serializable-isolation final-active-Admin check in EfUserManagementRepository does not span distributed transactions; acceptable for MVP single-node SQL Server.
 - SQL integration tests for user management, document processing, and local vector retrieval require `ConnectionStrings__DefaultConnection` env var and a running SQL Server container.
 - SQL-gated validation for Issue #44 EF support queries requires `ConnectionStrings__DefaultConnection` and a running SQL Server container.
@@ -136,7 +136,7 @@ Issue #41 adds secure chat history and interaction detail views: `ChatSession.St
 
 ## Next Recommended Action
 
-Open the pull request for Issue #47. After merge, push to GitHub so the CI workflow is triggered on the main branch. Run the SQL integration-tests workflow manually after configuring the `SQL_SA_PASSWORD` secret in GitHub repository settings. Next sprint: Sprint 28 diagram artifact cleanup and documentation polish.
+Open pull requests for Issue #47 and Issue #48. After Issue #47 is merged, push to GitHub so the CI workflow is triggered on the main branch. Run the SQL integration-tests workflow manually after configuring the `SQL_SA_PASSWORD` secret in GitHub repository settings. Next: if diagram artifact PNG generation is authorized, replace `docs/diagrams/business-process/monitoring-sla-process.png` with `monitoring-operational-process.png`.
 
 ## Source Of Truth
 
