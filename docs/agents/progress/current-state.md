@@ -4,17 +4,17 @@ Last updated: 2026-06-01
 
 ## Current Phase
 
-Sprint 26 Integration, API, Frontend, And E2E Test Completion / Issue #46 implementation complete
+Sprint 27 CI Pipeline And Container Hardening / Issue #47 implementation complete
 
 ## Active Issue Execution Entry
 
 ### Issue Summary
 
-- Issue ID/title: Issue #46 - `[Sprint 26] Complete MVP automated and E2E smoke test coverage`
-- Related roadmap sprint: Sprint 26 - Integration, API, Frontend, And E2E Test Completion
-- Related milestone, if applicable: MVP automated coverage and smoke validation completion
-- Objective: Complete deterministic automated coverage and in-process E2E smoke validation for implemented MVP workflows.
-- Expected outcome: MVP success paths and security-failure paths are covered across domain, integration/SQL-gated, API/E2E smoke, and Angular specs without adding product scope, live AI dependencies, browser E2E frameworks, CI workflows, real data, or production credentials.
+- Issue ID/title: Issue #47 - `[Sprint 27] Harden GitHub Actions CI and container validation`
+- Related roadmap sprint: Sprint 27 - CI Pipeline And Container Hardening
+- Related milestone, if applicable: MVP CI and container readiness
+- Objective: Add GitHub Actions CI workflows and multi-stage Dockerfiles for API, Worker, and Frontend; update .gitignore; validate locally.
+- Expected outcome: A clean CI run builds the application, runs critical tests with fake providers, and validates containers without real secrets.
 
 ### Classification
 
@@ -92,9 +92,9 @@ Sprint 26 Integration, API, Frontend, And E2E Test Completion / Issue #46 implem
 
 | Item | Status |
 | --- | --- |
-| Current sprint | Sprint 26 completed through Issue #46 |
-| Last completed sprint | Sprint 26: Integration, API, Frontend, And E2E Test Completion / Issue #46 (implementation complete; PR pending) |
-| Active implementation issue | None; Issue #46 is implemented. Open PR after validation. |
+| Current sprint | Sprint 27 completed through Issue #47 |
+| Last completed sprint | Sprint 27: CI Pipeline And Container Hardening / Issue #47 (implementation complete; PR pending) |
+| Active implementation issue | None; Issue #47 is implemented. Open PR after validation. |
 | Current architecture status | Buildable .NET 10 backend + Angular 21 frontend + local SQL Server container + EF Core persistence foundation + `SeedFictionalOrganizationsAndPersonas` migration + JWT Bearer authentication + ICurrentUser abstraction + working login page with authGuard and apiInterceptor + **RBAC permission catalog** + **RolePermissionMatrix** (5 MVP roles, 30 permissions) + **IPermissionService / PermissionService** + **IOrganizationScopeService / OrganizationScopeService** + **[RequirePermission] attribute + PermissionPolicyProvider + PermissionAuthorizationHandler** + **persisted-current-state authorization via IUserAccessStateReader / EfUserAccessStateReader** + **correlation ID and global safe-error middleware** + **application observability contracts with Infrastructure EF audit/database-health adapters** + **public basic and Admin-only sanitized health endpoints** + **frontend generic Error ID UX** + **frontend RoleVisibilityService (UX-only)** + **future RAG/retrieval authorization hook interfaces** + **Admin-only same-organization user management API (GET/POST/PUT /api/v1/users, GET/POST/DELETE /api/v1/users/{id}/roles)** + **UserManagementService with initialPassword hashing, email normalization, self-lockout protection, final-active-Admin protection, persisted-disable permission check** + **safe audit events (UserCreated, UserUpdated, UserStatusChanged, UserRoleAssigned, UserRoleRemoved, UserManagementDenied, DocumentRetrievalDisabled, DocumentUploadAccepted, DocumentUploadRejected, DocumentUploadFailed, DocumentProcessingStarted, DocumentProcessingSucceeded, DocumentProcessingFailed, EmbeddingGenerationSucceeded, EmbeddingGenerationFailed)** + **minimal Angular Admin UI (user list, user detail/edit, user create, role assignment/removal)** + **canonical Document metadata and behavior-protected lifecycle (StartProcessing, MarkProcessed, MarkFailed, DisableRetrieval, IsEligibleForRetrieval)** + **DocumentProcessingStatus enum (Uploaded, Processing, Processed, Failed)** + **transition-aware DocumentService + IDocumentRepository** + **EfDocumentRepository** + **DocumentConfiguration with status check constraint + DocumentMetadataFoundation migration** + **5 document API endpoints (POST /api/v1/documents, GET /api/v1/documents, GET /{id}, GET /{id}/processing-status, POST /{id}/disable)** + **IDocumentStorage abstraction (Application, now includes OpenReadAsync) + LocalDocumentStorage (Infrastructure, local:// URI scheme, path-containment-safe OpenReadAsync)** + **UploadDocumentCommand with atomic validate→store→persist flow; best-effort cleanup on persistence failure** + **Angular documents list, detail/status/action (with 5 s status polling), and upload pages** + **DocumentService Angular service (list/get/getProcessingStatus/disableRetrieval/upload)** + **canUploadDocuments() / canDisableDocumentRetrieval() UX helpers** + **IDocumentProcessingOrchestrator / DocumentProcessingOrchestrator (atomic claim, ordered multi-step pipeline, transaction-wrapped steps + MarkProcessed, safe failure reason, processing audit events)** + **IDocumentProcessingStep / ExtractAndChunkDocumentProcessingStep + GenerateChunkEmbeddingsProcessingStep** + **IDocumentProcessingTransactionFactory / EfDocumentProcessingTransactionFactory (transaction wraps all steps + MarkProcessed atomically)** + **IDocumentTextExtractor / TxtMarkdownTextExtractor (text/plain, text/markdown, parameterized forms; normalizes line endings)** + **IDocumentChunker / DocumentChunker (sliding window, MaxChunkCharacters=1200, OverlapCharacters=150, token_estimate=ceil(len/4.0))** + **IDocumentChunkRepository / EfDocumentChunkRepository (includes GetChunksForDocumentAsync)** + **DocumentChunk domain entity + DocumentChunkConfiguration + DocumentChunksFoundation migration (11 columns, 4 indexes including UX on document_id+chunk_index)** + **DocumentExtractionException + DocumentChunkingException + DocumentEmbeddingException (controlled safe-message exceptions)** + **IEmbeddingProvider / FakeEmbeddingProvider (Infrastructure, SHA-256 deterministic, network-free, no SDK required)** + **FakeEmbeddingProviderSettings bound from Embeddings:Fake config** + **EmbeddingStatus enum (Ready, Failed)** + **ChunkEmbedding domain entity + ChunkEmbeddingConfiguration + ChunkEmbeddingsFoundation migration (12 columns, 4 indexes, UX_chunk_embeddings_chunk_id unique)** + **IChunkEmbeddingRepository / EfChunkEmbeddingRepository** + **ManagedDocument includes StorageLocation (never serialized to API/Angular)** + **IDocumentProcessingOrchestrator DI registration in Application** + **4 processing lifecycle repository methods (FindPendingForProcessingAsync, ClaimForProcessingAsync, MarkProcessedAsync, MarkFailedAsync) on IDocumentRepository + EfDocumentRepository** + **DocumentProcessingWorker BackgroundService (PeriodicTimer, scoped orchestrator per cycle, safe error logging)** + **WorkerCorrelationContext (per-scope, non-HTTP ICorrelationContext)** + **WorkerSettings (PollingIntervalSeconds with safe default 10)** + **AddJwtInfrastructure() split from AddInfrastructure() (Worker does not need JWT ValidateOnStart)**. |
 
 Issue #28 adds Application-owned retrieval contracts, a local SQL-backed `LocalVectorStore`, QueryVector-only cosine search, Ready + Indexed retrieval eligibility, `AddChunkEmbeddingIndexMetadata`, safe retrieval settings, sanitized retrieval health, and provider-SDK boundary tests. No retrieval API endpoint, RAG answer generation, prompt construction, chat API, citation mapping, frontend retrieval work, external vector service, Azure AI Search, OpenAI/Azure OpenAI SDK, Semantic Kernel, or vector database SDK was added.
@@ -136,7 +136,7 @@ Issue #41 adds secure chat history and interaction detail views: `ChatSession.St
 
 ## Next Recommended Action
 
-Open the pull request for Issue #44. Before merge, run SQL-gated validation for the EF processing-failure and audit-log support queries when `ConnectionStrings__DefaultConnection` and SQL Server are available.
+Open the pull request for Issue #47. After merge, push to GitHub so the CI workflow is triggered on the main branch. Run the SQL integration-tests workflow manually after configuring the `SQL_SA_PASSWORD` secret in GitHub repository settings. Next sprint: Sprint 28 diagram artifact cleanup and documentation polish.
 
 ## Source Of Truth
 

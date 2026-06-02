@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  backend:
+    name: Backend — Build and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.204'
+
+      - name: Restore
+        run: dotnet restore KnowledgeOpsAI.sln
+
+      - name: Build
+        run: dotnet build KnowledgeOpsAI.sln -c Release --no-restore
+
+      # Runs all tests except those in the KnowledgeOps.IntegrationTests namespace
+      # (which require a live SQL Server connection string — see integration-tests.yml).
+      # KnowledgeOps.E2ETests passes this filter because its namespace does not contain
+      # "IntegrationTests"; the 7 in-process WebApplicationFactory smoke tests are included.
+      - name: Test (non-SQL and E2E smoke)
+        run: dotnet test KnowledgeOpsAI.sln --no-build -c Release --filter "FullyQualifiedName!~IntegrationTests"
+
+  frontend:
+    name: Frontend — Build and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+      - name: Test
+        working-directory: frontend
+        run: npm test -- --watch=false
+
+  docker:
+    name: Docker — Build Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build API image
+        run: docker build -f src/KnowledgeOps.Api/Dockerfile -t knowledgeops-api:ci .
+
+      - name: Build Worker image
+        run: docker build -f src/KnowledgeOps.Worker/Dockerfile -t knowledgeops-worker:ci .
+
+      - name: Build Frontend image
+        run: docker build -f frontend/Dockerfile -t knowledgeops-frontend:ci ./frontend

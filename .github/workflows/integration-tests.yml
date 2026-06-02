@@ -1,0 +1,70 @@
+name: SQL Integration Tests
+
+# This workflow runs the SQL Server-gated integration tests that require a live database.
+# It is intentionally NOT part of the standard CI workflow because it depends on a
+# SQL_SA_PASSWORD secret configured in the GitHub repository settings.
+#
+# Run conditions:
+#   - Manually via workflow_dispatch (typical for pre-merge validation)
+#
+# Prerequisites before this workflow will pass:
+#   - Add the SQL_SA_PASSWORD secret in GitHub repository Settings > Secrets and variables > Actions.
+#   - The password must meet SQL Server complexity requirements (uppercase, lowercase, digit, symbol).
+#
+# Migration note:
+#   The EF migration step applies all pending migrations using the connection string set
+#   in the job-level env block. The design-time factory in KnowledgeOps.Infrastructure
+#   reads ConnectionStrings__DefaultConnection from environment variables.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  sql-integration:
+    name: SQL Server Integration Tests
+    runs-on: ubuntu-latest
+
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: 'Y'
+          MSSQL_SA_PASSWORD: ${{ secrets.SQL_SA_PASSWORD }}
+          MSSQL_PID: Developer
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$MSSQL_SA_PASSWORD\" -Q 'SELECT 1' -No"
+          --health-interval 15s
+          --health-timeout 10s
+          --health-retries 10
+
+    env:
+      # The design-time factory and integration tests read this environment variable.
+      # No connection string is baked into source code or configuration files.
+      ConnectionStrings__DefaultConnection: "Server=localhost,1433;Database=KnowledgeOpsCI;User Id=sa;Password=${{ secrets.SQL_SA_PASSWORD }};TrustServerCertificate=True;Encrypt=True"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.204'
+
+      - name: Restore
+        run: dotnet restore KnowledgeOpsAI.sln
+
+      - name: Build
+        run: dotnet build KnowledgeOpsAI.sln -c Release --no-restore
+
+      - name: Restore dotnet tools
+        run: dotnet tool restore
+
+      - name: Apply EF migrations
+        # The design-time factory in KnowledgeOps.Infrastructure reads
+        # ConnectionStrings__DefaultConnection from the job-level env block above.
+        run: dotnet ef database update --project src/KnowledgeOps.Infrastructure --startup-project src/KnowledgeOps.Api
+
+      - name: Run SQL-gated integration tests
+        run: dotnet test tests/KnowledgeOps.IntegrationTests/KnowledgeOps.IntegrationTests.csproj --no-build -c Release
