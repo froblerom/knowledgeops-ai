@@ -51,6 +51,7 @@ public static class RolePermissionMatrix
                 KnowledgeOpsPermissions.Documents.ViewProcessingStatus,
                 KnowledgeOpsPermissions.Documents.ViewChunks,
                 KnowledgeOpsPermissions.Documents.Disable,
+                KnowledgeOpsPermissions.Documents.Enable,
                 KnowledgeOpsPermissions.Documents.ViewUsage,
                 KnowledgeOpsPermissions.Chat.AskQuestion,
                 KnowledgeOpsPermissions.Chat.ViewOwnHistory,

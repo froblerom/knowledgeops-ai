@@ -5,9 +5,9 @@ namespace KnowledgeOps.Application.Tests.Authorization;
 public sealed class KnowledgeOpsPermissionsTests
 {
     [Fact]
-    public void AllMvpPermissions_ContainsExpected30Permissions()
+    public void AllMvpPermissions_ContainsExpected31Permissions()
     {
-        Assert.Equal(30, KnowledgeOpsPermissions.AllMvpPermissions.Count);
+        Assert.Equal(31, KnowledgeOpsPermissions.AllMvpPermissions.Count);
     }
 
     [Theory]
@@ -24,6 +24,7 @@ public sealed class KnowledgeOpsPermissionsTests
     [InlineData(KnowledgeOpsPermissions.Documents.ViewProcessingStatus)]
     [InlineData(KnowledgeOpsPermissions.Documents.ViewChunks)]
     [InlineData(KnowledgeOpsPermissions.Documents.Disable)]
+    [InlineData(KnowledgeOpsPermissions.Documents.Enable)]
     [InlineData(KnowledgeOpsPermissions.Documents.ViewUsage)]
     [InlineData(KnowledgeOpsPermissions.Chat.AskQuestion)]
     [InlineData(KnowledgeOpsPermissions.Chat.ViewOwnHistory)]
@@ -47,7 +48,6 @@ public sealed class KnowledgeOpsPermissionsTests
     }
 
     [Theory]
-    [InlineData("Documents.Enable")]
     [InlineData("Documents.RetryProcessing")]
     [InlineData("KnowledgeGaps.View")]
     [InlineData("KnowledgeGaps.Review")]
