@@ -1,6 +1,7 @@
 import { NgIf } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { finalize } from 'rxjs/operators';
 import { ApiErrorService, ApiRequestError } from '../../../core/services/api-error.service';
 import { ErrorState } from '../../../shared/components/error-state/error-state';
 import { LoadingState } from '../../../shared/components/loading-state/loading-state';
@@ -22,6 +23,7 @@ import { DashboardService } from '../services/dashboard.service';
 export class DashboardPage implements OnInit {
   private readonly dashboard = inject(DashboardService);
   private readonly apiError = inject(ApiErrorService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   // Overview section
   overviewLoading = true;
@@ -77,7 +79,9 @@ export class DashboardPage implements OnInit {
   loadOverview(): void {
     this.overviewLoading = true;
     this.overviewError = null;
-    this.dashboard.getOverview().subscribe({
+    this.dashboard.getOverview().pipe(
+      finalize(() => this.cdr.markForCheck())
+    ).subscribe({
       next: result => {
         this.overview = result;
         this.overviewLoading = false;
@@ -92,7 +96,9 @@ export class DashboardPage implements OnInit {
   loadDocuments(): void {
     this.documentsLoading = true;
     this.documentsError = null;
-    this.dashboard.getDocuments().subscribe({
+    this.dashboard.getDocuments().pipe(
+      finalize(() => this.cdr.markForCheck())
+    ).subscribe({
       next: result => {
         this.documents = result;
         this.documentsLoading = false;
@@ -107,7 +113,9 @@ export class DashboardPage implements OnInit {
   loadChat(): void {
     this.chatLoading = true;
     this.chatError = null;
-    this.dashboard.getChat().subscribe({
+    this.dashboard.getChat().pipe(
+      finalize(() => this.cdr.markForCheck())
+    ).subscribe({
       next: result => {
         this.chat = result;
         this.chatLoading = false;
@@ -122,7 +130,9 @@ export class DashboardPage implements OnInit {
   loadFeedback(): void {
     this.feedbackLoading = true;
     this.feedbackError = null;
-    this.dashboard.getFeedback().subscribe({
+    this.dashboard.getFeedback().pipe(
+      finalize(() => this.cdr.markForCheck())
+    ).subscribe({
       next: result => {
         this.feedback = result;
         this.feedbackLoading = false;

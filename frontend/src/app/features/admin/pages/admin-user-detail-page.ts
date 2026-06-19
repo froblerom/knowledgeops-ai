@@ -1,7 +1,8 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
+import { finalize } from 'rxjs/operators';
 import { UserAdminService, ManagedUser, UserRole, UserStatus } from '../../../core/services/user-admin.service';
 import { ApiErrorService, ApiRequestError } from '../../../core/services/api-error.service';
 import { ErrorState } from '../../../shared/components/error-state/error-state';
@@ -18,6 +19,7 @@ export class AdminUserDetailPage implements OnInit {
   private readonly errors = inject(ApiErrorService);
   private readonly route = inject(ActivatedRoute);
   private readonly fb = inject(FormBuilder);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   readonly availableRoles: UserRole[] = ['Agent', 'Supervisor', 'KnowledgeAdmin', 'Manager', 'Admin'];
   readonly statuses: UserStatus[] = ['Pending', 'Active', 'Disabled'];
@@ -34,7 +36,9 @@ export class AdminUserDetailPage implements OnInit {
   });
 
   ngOnInit(): void {
-    this.api.get(this.userId).subscribe({
+    this.api.get(this.userId).pipe(
+      finalize(() => this.cdr.markForCheck())
+    ).subscribe({
       next: user => this.setUser(user),
       error: response => this.fail(response)
     });
@@ -49,7 +53,9 @@ export class AdminUserDetailPage implements OnInit {
       displayName: value.displayName,
       email: value.email,
       status: value.status
-    }).subscribe({
+    }).pipe(
+      finalize(() => this.cdr.markForCheck())
+    ).subscribe({
       next: user => this.setUser(user),
       error: response => this.fail(response)
     });
@@ -66,7 +72,9 @@ export class AdminUserDetailPage implements OnInit {
   private mutateRole(request: ReturnType<UserAdminService['addRole']>): void {
     this.saving = true;
     this.error = null;
-    request.subscribe({
+    request.pipe(
+      finalize(() => this.cdr.markForCheck())
+    ).subscribe({
       next: user => this.setUser(user),
       error: response => this.fail(response)
     });

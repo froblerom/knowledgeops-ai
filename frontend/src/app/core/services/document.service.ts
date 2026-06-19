@@ -49,6 +49,13 @@ export class DocumentService {
     );
   }
 
+  enableRetrieval(documentId: string): Observable<ManagedDocument> {
+    return this.http.post<ManagedDocument>(
+      `${this.baseUrl}/${documentId}/enable`,
+      {}
+    );
+  }
+
   disableRetrieval(documentId: string): Observable<ManagedDocument> {
     return this.http.post<ManagedDocument>(
       `${this.baseUrl}/${documentId}/disable`,

@@ -24,10 +24,19 @@
       <dt>Processed</dt><dd>{{ status.processedAt ? (status.processedAt | date:'medium') : 'Not processed' }}</dd>
     </dl>
 
-    @if (canDisable && document.isRetrievalEnabled) {
-      <button type="button" [disabled]="saving" (click)="disableRetrieval()">
-        {{ saving ? 'Disabling...' : 'Disable retrieval' }}
-      </button>
+    @if (status.processingStatus === 'Processed') {
+      @if (canEnable && !document.isRetrievalEnabled) {
+        <button type="button" [disabled]="saving" (click)="enableRetrieval()">
+          {{ saving ? 'Enabling...' : 'Enable retrieval' }}
+        </button>
+      }
+      @if (canDisable && document.isRetrievalEnabled) {
+        <button type="button" [disabled]="saving" (click)="disableRetrieval()">
+          {{ saving ? 'Disabling...' : 'Disable retrieval' }}
+        </button>
+      }
+    } @else {
+      <p class="retrieval-hint">Only processed documents can be enabled for chat retrieval.</p>
     }
   }
 </section>

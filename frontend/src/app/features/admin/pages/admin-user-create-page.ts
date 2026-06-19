@@ -1,6 +1,7 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, inject } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { finalize } from 'rxjs/operators';
 import { UserAdminService, UserRole, UserStatus } from '../../../core/services/user-admin.service';
 import { ApiErrorService, ApiRequestError } from '../../../core/services/api-error.service';
 import { ErrorState } from '../../../shared/components/error-state/error-state';
@@ -16,6 +17,7 @@ export class AdminUserCreatePage {
   private readonly errors = inject(ApiErrorService);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   readonly roles: UserRole[] = ['Agent', 'Supervisor', 'KnowledgeAdmin', 'Manager', 'Admin'];
   readonly statuses: UserStatus[] = ['Pending', 'Active', 'Disabled'];
@@ -40,7 +42,9 @@ export class AdminUserCreatePage {
       status: value.status,
       roles: value.role ? [value.role] : [],
       initialPassword: value.initialPassword
-    }).subscribe({
+    }).pipe(
+      finalize(() => this.cdr.markForCheck())
+    ).subscribe({
       next: user => this.router.navigate(['/admin/users', user.userId]),
       error: response => {
         this.error = this.errors.fromHttpError(response);

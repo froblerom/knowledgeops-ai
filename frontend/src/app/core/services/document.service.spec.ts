@@ -40,6 +40,13 @@ describe('DocumentService', () => {
     req.flush({});
   });
 
+  it('enableRetrieval() calls POST /documents/:id/enable', () => {
+    service.enableRetrieval('doc-1').subscribe();
+    const req = httpMock.expectOne(`${baseUrl}/doc-1/enable`);
+    expect(req.request.method).toBe('POST');
+    req.flush({});
+  });
+
   it('disableRetrieval() calls POST /documents/:id/disable', () => {
     service.disableRetrieval('doc-1').subscribe();
     const req = httpMock.expectOne(`${baseUrl}/doc-1/disable`);

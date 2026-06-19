@@ -38,7 +38,7 @@ describe('ChatPage', () => {
     expect(fixture.componentInstance).toBeTruthy();
   });
 
-  it('posts the first question and renders only allowed citation metadata', () => {
+  it('posts the first question and renders Sources heading without Rank or Score', () => {
     const fixture = TestBed.createComponent(ChatPage);
     fixture.componentInstance.questionText = 'What is the escalation policy?';
 
@@ -74,10 +74,13 @@ describe('ChatPage', () => {
     const text = fixture.nativeElement.textContent;
     expect(text).toContain('Follow the approved escalation policy.');
     expect(text).toContain('Escalation Policy');
-    expect(text).toContain('Rank 1');
+    expect(text).toContain('Sources');
+    expect(text).not.toContain('Citations');
     expect(text).toContain('Page 3');
-    expect(text).toContain('Section Priority cases');
-    expect(text).toContain('Score 0.88');
+    expect(text).toContain('Priority cases');
+    // Rank and score are hidden in the main chat view — kept only in Chat History detail
+    expect(text).not.toContain('Rank 1');
+    expect(text).not.toContain('Score 0.88');
     expect(text).not.toContain('document-1');
     expect(text).not.toContain('chunk-1');
     expect(text).not.toContain('citation-1');

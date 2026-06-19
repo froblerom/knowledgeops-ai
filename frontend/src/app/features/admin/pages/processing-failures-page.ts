@@ -1,4 +1,5 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { finalize } from 'rxjs/operators';
 import { ApiErrorService, ApiRequestError } from '../../../core/services/api-error.service';
 import { ErrorState } from '../../../shared/components/error-state/error-state';
 import { LoadingState } from '../../../shared/components/loading-state/loading-state';
@@ -14,13 +15,16 @@ import { AdminSupportService } from '../services/admin-support.service';
 export class ProcessingFailuresPage implements OnInit {
   private readonly support = inject(AdminSupportService);
   private readonly apiError = inject(ApiErrorService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   failures: ProcessingFailure[] = [];
   loading = true;
   error: ApiRequestError | null = null;
 
   ngOnInit(): void {
-    this.support.getProcessingFailures().subscribe({
+    this.support.getProcessingFailures().pipe(
+      finalize(() => this.cdr.markForCheck())
+    ).subscribe({
       next: failures => {
         this.failures = failures;
         this.loading = false;

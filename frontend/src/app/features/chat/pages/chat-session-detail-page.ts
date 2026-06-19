@@ -1,7 +1,8 @@
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { finalize } from 'rxjs/operators';
 import { ApiErrorService, ApiRequestError } from '../../../core/services/api-error.service';
 import { ErrorState } from '../../../shared/components/error-state/error-state';
 import { LoadingState } from '../../../shared/components/loading-state/loading-state';
@@ -18,6 +19,7 @@ export class ChatSessionDetailPage implements OnInit {
   private readonly chat = inject(ChatService);
   private readonly apiError = inject(ApiErrorService);
   private readonly route = inject(ActivatedRoute);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   session: ChatSessionDetail | null = null;
   loading = true;
@@ -27,10 +29,13 @@ export class ChatSessionDetailPage implements OnInit {
     const sessionId = this.route.snapshot.paramMap.get('chatSessionId');
     if (!sessionId) {
       this.loading = false;
+      this.cdr.markForCheck();
       return;
     }
 
-    this.chat.getSession(sessionId).subscribe({
+    this.chat.getSession(sessionId).pipe(
+      finalize(() => this.cdr.markForCheck())
+    ).subscribe({
       next: session => {
         this.session = session;
         this.loading = false;
