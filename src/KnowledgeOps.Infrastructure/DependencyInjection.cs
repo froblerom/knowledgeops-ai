@@ -76,13 +76,78 @@ public static class DependencyInjection
         services.AddScoped<IChunkTextReader, EfChunkTextReader>();
         services.AddScoped<ICitationRepository, EfCitationRepository>();
         services.AddScoped<IDocumentTitleReader, EfDocumentTitleReader>();
-        services.AddScoped<IAiAnswerGenerator, FakeAnswerGenerator>();
-        services.AddOptions<FakeAnswerGeneratorSettings>().BindConfiguration("FakeAnswerGenerator");
         services.AddScoped<IDashboardRepository, EfDashboardRepository>();
         services.AddScoped<IAuditLogRepository, EfAuditLogRepository>();
         services.AddScoped<IAuditEventWriter, EfAuditEventWriter>();
         services.AddScoped<IDatabaseHealthCheck, EfDatabaseHealthCheck>();
         services.AddScoped<IRetrievalStorageHealthCheck, LocalRetrievalStorageHealthCheck>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers the answer generation provider based on the Ai:AnswerProvider configuration value.
+    /// Call only from the API host. The Worker host does not perform answer generation.
+    /// Supported values:
+    ///   Demo (default, no API key required)
+    ///   OpenAI (requires Ai:OpenAI:ApiKey)
+    ///   LocalOpenAICompatible (requires Ai:LocalOpenAICompatible:BaseUrl; no API key required for Ollama)
+    /// </summary>
+    public static IServiceCollection AddAiAnswerInfrastructure(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        var providerValue = (configuration["Ai:AnswerProvider"] ?? "Demo").Trim();
+
+        if (string.Equals(providerValue, "OpenAI", StringComparison.OrdinalIgnoreCase))
+        {
+            var apiKey = configuration["Ai:OpenAI:ApiKey"];
+            if (string.IsNullOrWhiteSpace(apiKey))
+                throw new InvalidOperationException(
+                    "Ai:AnswerProvider is 'OpenAI' but 'Ai:OpenAI:ApiKey' is not configured. " +
+                    "Set it via dotnet user-secrets or the environment variable Ai__OpenAI__ApiKey. " +
+                    "Never commit an API key to source control.");
+
+            var openAiModel = configuration["Ai:OpenAI:Model"] ?? "gpt-4.1-mini";
+            services.AddSingleton<IAiProviderDiagnostics>(
+                new AiProviderDiagnosticsService("OpenAI", true, openAiModel));
+            services.AddScoped<IAiAnswerGenerator, OpenAIAnswerGenerator>();
+            services.AddOptions<OpenAIAnswerGeneratorSettings>().BindConfiguration("Ai:OpenAI");
+        }
+        else if (string.Equals(providerValue, "Demo", StringComparison.OrdinalIgnoreCase))
+        {
+            var demoModel = configuration["Ai:Demo:ModelName"] ?? "demo-extractive-v1";
+            services.AddSingleton<IAiProviderDiagnostics>(
+                new AiProviderDiagnosticsService("Demo", false, demoModel));
+            services.AddScoped<IAiAnswerGenerator, DemoGroundedAnswerGenerator>();
+            services.AddOptions<DemoGroundedAnswerGeneratorSettings>().BindConfiguration("Ai:Demo");
+        }
+        else if (string.Equals(providerValue, "LocalOpenAICompatible", StringComparison.OrdinalIgnoreCase))
+        {
+            var baseUrl = configuration["Ai:LocalOpenAICompatible:BaseUrl"];
+            if (string.IsNullOrWhiteSpace(baseUrl))
+                throw new InvalidOperationException(
+                    "Ai:AnswerProvider is 'LocalOpenAICompatible' but " +
+                    "'Ai:LocalOpenAICompatible:BaseUrl' is not configured. " +
+                    "Set it in appsettings.json or via the environment variable " +
+                    "Ai__LocalOpenAICompatible__BaseUrl. " +
+                    "For Ollama: http://localhost:11434/v1");
+
+            var localModel = configuration["Ai:LocalOpenAICompatible:Model"] ?? "qwen3:8b";
+            services.AddSingleton<IAiProviderDiagnostics>(
+                new AiProviderDiagnosticsService(
+                    "LocalOpenAICompatible", false, localModel,
+                    localProviderBaseUrl: baseUrl));
+            services.AddScoped<IAiAnswerGenerator, LocalOpenAICompatibleAnswerGenerator>();
+            services.AddOptions<LocalOpenAICompatibleAnswerGeneratorSettings>()
+                .BindConfiguration("Ai:LocalOpenAICompatible");
+        }
+        else
+        {
+            throw new InvalidOperationException(
+                $"Unknown Ai:AnswerProvider value '{providerValue}'. " +
+                $"Supported values: Demo, OpenAI, LocalOpenAICompatible.");
+        }
 
         return services;
     }
