@@ -9,6 +9,7 @@ using KnowledgeOps.Application.Auth.Abstractions;
 using KnowledgeOps.Application.Observability;
 using KnowledgeOps.Infrastructure;
 using KnowledgeOps.Infrastructure.Auth;
+using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
@@ -19,6 +20,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddJwtInfrastructure();
+builder.Services.AddAiAnswerInfrastructure(builder.Configuration);
 
 builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
 {
@@ -117,6 +119,15 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+// Log active AI provider mode at startup (never logs API keys).
+var startupLogger = app.Services.GetRequiredService<ILogger<Program>>();
+var aiDiagnostics = app.Services.GetRequiredService<IAiProviderDiagnostics>();
+startupLogger.LogInformation(
+    "AI answer provider: {AnswerProvider} Model={Model} OpenAiConfigured={OpenAiConfigured}",
+    aiDiagnostics.AnswerProvider,
+    aiDiagnostics.Model,
+    aiDiagnostics.OpenAiConfigured);
 
 if (app.Environment.IsDevelopment())
 {

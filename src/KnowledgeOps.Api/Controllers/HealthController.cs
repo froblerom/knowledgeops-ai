@@ -15,6 +15,7 @@ public sealed class HealthController : ControllerBase
 {
     private readonly IDatabaseHealthCheck _databaseHealthCheck;
     private readonly IRetrievalStorageHealthCheck _retrievalStorageHealthCheck;
+    private readonly IAiProviderDiagnostics _aiProviderDiagnostics;
     private readonly IAuditEventWriter _auditEventWriter;
     private readonly ICorrelationContext _correlationContext;
     private readonly ICurrentUser _currentUser;
@@ -23,6 +24,7 @@ public sealed class HealthController : ControllerBase
     public HealthController(
         IDatabaseHealthCheck databaseHealthCheck,
         IRetrievalStorageHealthCheck retrievalStorageHealthCheck,
+        IAiProviderDiagnostics aiProviderDiagnostics,
         IAuditEventWriter auditEventWriter,
         ICorrelationContext correlationContext,
         ICurrentUser currentUser,
@@ -30,6 +32,7 @@ public sealed class HealthController : ControllerBase
     {
         _databaseHealthCheck = databaseHealthCheck;
         _retrievalStorageHealthCheck = retrievalStorageHealthCheck;
+        _aiProviderDiagnostics = aiProviderDiagnostics;
         _auditEventWriter = auditEventWriter;
         _correlationContext = correlationContext;
         _currentUser = currentUser;
@@ -65,6 +68,11 @@ public sealed class HealthController : ControllerBase
                 "Healthy",
                 databaseStatus.IsHealthy ? "Healthy" : "Unavailable",
                 retrievalStatus.IsHealthy ? "Healthy" : "Unavailable"),
+            new AiProviderStatusResponse(
+                _aiProviderDiagnostics.AnswerProvider,
+                _aiProviderDiagnostics.OpenAiConfigured,
+                _aiProviderDiagnostics.Model,
+                _aiProviderDiagnostics.LocalProviderBaseUrl),
             DateTimeOffset.UtcNow);
 
         return isHealthy
