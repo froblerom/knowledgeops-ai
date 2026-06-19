@@ -32,6 +32,7 @@ public sealed class OperationalContractsTests
                 "DocumentProcessingStarted",
                 "DocumentProcessingSucceeded",
                 "DocumentRetrievalDisabled",
+                "DocumentRetrievalEnabled",
                 "DocumentUploadAccepted",
                 "DocumentUploadFailed",
                 "DocumentUploadRejected",

@@ -254,6 +254,137 @@ public sealed class DocumentsControllerTests : IClassFixture<DocumentsApiTestFac
     }
 
     // ──────────────────────────────────────────────────────────────
+    // Enable — authorization
+    // ──────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Enable_WithoutAuthenticationReturns401()
+    {
+        var response = await _factory.CreateClient().PostAsJsonAsync(
+            $"/api/v1/documents/{DocumentsApiTestFactory.DocId}/enable",
+            new { });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(DocumentsApiTestFactory.AgentEmail)]
+    [InlineData(DocumentsApiTestFactory.SupervisorEmail)]
+    [InlineData(DocumentsApiTestFactory.ManagerEmail)]
+    public async Task Enable_WithoutEnablePermissionReturns403(string email)
+    {
+        var response = await (await AuthenticateAsync(email)).PostAsJsonAsync(
+            $"/api/v1/documents/{DocumentsApiTestFactory.DocId}/enable",
+            new { });
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(DocumentsApiTestFactory.KnowledgeAdminEmail)]
+    [InlineData(DocumentsApiTestFactory.AdminEmail)]
+    public async Task Enable_AllowedRolesEnableWithoutChangingStatusAndAuditTransitionOnce(string email)
+    {
+        _factory.DocumentRepository.AddDocument(
+            MakeDocument(
+                DocumentsApiTestFactory.DocId,
+                DocumentsApiTestFactory.OrgId,
+                DocumentProcessingStatus.Processed,
+                isRetrievalEnabled: false));
+
+        var client = await AuthenticateAsync(email);
+        var response = await client.PostAsJsonAsync(
+            $"/api/v1/documents/{DocumentsApiTestFactory.DocId}/enable",
+            new { });
+        var repeated = await client.PostAsJsonAsync(
+            $"/api/v1/documents/{DocumentsApiTestFactory.DocId}/enable",
+            new { });
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, repeated.StatusCode);
+        Assert.True(body.GetProperty("isRetrievalEnabled").GetBoolean());
+        Assert.Equal("Processed", body.GetProperty("processingStatus").GetString());
+        Assert.Single(_factory.Audit.Events, e => e.EventType == AuditEventTypes.DocumentRetrievalEnabled);
+    }
+
+    [Fact]
+    public async Task Enable_CrossOrganizationReturnsSafe404()
+    {
+        _factory.DocumentRepository.AddDocument(
+            MakeDocument(DocumentsApiTestFactory.DocId, DocumentsApiTestFactory.OtherOrgId));
+
+        var response = await (await AuthenticateAsync(DocumentsApiTestFactory.KnowledgeAdminEmail)).PostAsJsonAsync(
+            $"/api/v1/documents/{DocumentsApiTestFactory.DocId}/enable",
+            new { });
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(DocumentProcessingStatus.Uploaded)]
+    [InlineData(DocumentProcessingStatus.Processing)]
+    [InlineData(DocumentProcessingStatus.Failed)]
+    public async Task Enable_NonProcessedDocumentReturns409(DocumentProcessingStatus status)
+    {
+        _factory.DocumentRepository.AddDocument(
+            MakeDocument(DocumentsApiTestFactory.DocId, DocumentsApiTestFactory.OrgId, status));
+
+        var response = await (await AuthenticateAsync(DocumentsApiTestFactory.KnowledgeAdminEmail)).PostAsJsonAsync(
+            $"/api/v1/documents/{DocumentsApiTestFactory.DocId}/enable",
+            new { });
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Enable_ResponseDoesNotExposeOrganizationIdOrStorageLocation()
+    {
+        _factory.DocumentRepository.AddDocument(
+            MakeDocument(
+                DocumentsApiTestFactory.DocId,
+                DocumentsApiTestFactory.OrgId,
+                DocumentProcessingStatus.Processed));
+
+        var raw = await (await (await AuthenticateAsync(DocumentsApiTestFactory.KnowledgeAdminEmail))
+            .PostAsJsonAsync(
+                $"/api/v1/documents/{DocumentsApiTestFactory.DocId}/enable",
+                new { })).Content.ReadAsStringAsync();
+
+        Assert.DoesNotContain("storageLocation", raw, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("organizationId", raw, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData(DocumentsApiTestFactory.KnowledgeAdminEmail)]
+    [InlineData(DocumentsApiTestFactory.AdminEmail)]
+    public async Task EnableThenDisable_BothWorkCorrectly(string email)
+    {
+        _factory.DocumentRepository.AddDocument(
+            MakeDocument(
+                DocumentsApiTestFactory.DocId,
+                DocumentsApiTestFactory.OrgId,
+                DocumentProcessingStatus.Processed,
+                isRetrievalEnabled: false));
+
+        var client = await AuthenticateAsync(email);
+
+        var enabled = await client.PostAsJsonAsync(
+            $"/api/v1/documents/{DocumentsApiTestFactory.DocId}/enable", new { });
+        var disabled = await client.PostAsJsonAsync(
+            $"/api/v1/documents/{DocumentsApiTestFactory.DocId}/disable", new { });
+
+        Assert.Equal(HttpStatusCode.OK, enabled.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, disabled.StatusCode);
+
+        var enabledBody = await enabled.Content.ReadFromJsonAsync<JsonElement>();
+        var disabledBody = await disabled.Content.ReadFromJsonAsync<JsonElement>();
+
+        Assert.True(enabledBody.GetProperty("isRetrievalEnabled").GetBoolean());
+        Assert.False(disabledBody.GetProperty("isRetrievalEnabled").GetBoolean());
+    }
+
+    // ──────────────────────────────────────────────────────────────
     // Upload — authorization
     // ──────────────────────────────────────────────────────────────
 
@@ -609,6 +740,29 @@ public sealed class DocumentsApiTestFactory : WebApplicationFactory<Program>
                 : _documents[idx];
             _documents[idx] = updated;
             return Task.FromResult<DocumentDisableResult?>(new DocumentDisableResult(updated, changed));
+        }
+
+        public Task<DocumentEnableResult?> EnableRetrievalAsync(
+            Guid documentId,
+            Guid organizationId,
+            DateTimeOffset updatedAt,
+            CancellationToken ct = default)
+        {
+            var idx = _documents.FindIndex(
+                d => d.DocumentId == documentId && d.OrganizationId == organizationId);
+            if (idx < 0)
+                return Task.FromResult<DocumentEnableResult?>(null);
+
+            var doc = _documents[idx];
+            if (doc.ProcessingStatus != DocumentProcessingStatus.Processed)
+                throw new InvalidOperationException("Only processed documents can be enabled for retrieval.");
+
+            var changed = !doc.IsRetrievalEnabled;
+            var updated = changed
+                ? doc with { IsRetrievalEnabled = true, UpdatedAt = updatedAt }
+                : doc;
+            _documents[idx] = updated;
+            return Task.FromResult<DocumentEnableResult?>(new DocumentEnableResult(updated, changed));
         }
 
         public Task<IReadOnlyList<ManagedDocument>> FindPendingForProcessingAsync(int maxCount, CancellationToken ct = default) =>

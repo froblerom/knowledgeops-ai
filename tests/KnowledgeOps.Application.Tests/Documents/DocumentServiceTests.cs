@@ -114,6 +114,109 @@ public sealed class DocumentServiceTests
         Assert.DoesNotContain("pending://", messages, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task EnableRetrievalAsync_RealTransition_EnablesPreservesStatusAndAuditsOnce()
+    {
+        var repository = new FakeRepository();
+        var audit = new RecordingAuditWriter();
+        repository.AddDocument(MakeDocument(
+            DocId,
+            OrgId,
+            DocumentProcessingStatus.Processed,
+            isRetrievalEnabled: false));
+        var service = BuildService(repository, audit);
+
+        var first = await service.EnableRetrievalAsync(Actor, DocId);
+        var second = await service.EnableRetrievalAsync(Actor, DocId);
+
+        Assert.True(first.IsRetrievalEnabled);
+        Assert.True(second.IsRetrievalEnabled);
+        Assert.Equal(DocumentProcessingStatus.Processed, second.ProcessingStatus);
+        Assert.Single(audit.Events, e => e.EventType == AuditEventTypes.DocumentRetrievalEnabled);
+    }
+
+    [Fact]
+    public async Task EnableRetrievalAsync_WhenAlreadyEnabled_EmitsNoAudit()
+    {
+        var repository = new FakeRepository { ForceNoChange = true };
+        var audit = new RecordingAuditWriter();
+        repository.AddDocument(MakeDocument(
+            DocId,
+            OrgId,
+            DocumentProcessingStatus.Processed,
+            isRetrievalEnabled: false));
+
+        await BuildService(repository, audit).EnableRetrievalAsync(Actor, DocId);
+
+        Assert.Empty(audit.Events);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task EnableRetrievalAsync_AbsentOrCrossOrganizationIsSafelyNotFound(bool crossOrganization)
+    {
+        var repository = new FakeRepository();
+        if (crossOrganization)
+            repository.AddDocument(MakeDocument(DocId, OtherOrgId, DocumentProcessingStatus.Processed));
+
+        await Assert.ThrowsAsync<ApplicationNotFoundException>(() =>
+            BuildService(repository).EnableRetrievalAsync(Actor, DocId));
+    }
+
+    [Theory]
+    [InlineData(DocumentProcessingStatus.Uploaded)]
+    [InlineData(DocumentProcessingStatus.Processing)]
+    [InlineData(DocumentProcessingStatus.Failed)]
+    public async Task EnableRetrievalAsync_WhenNotProcessed_ThrowsConflict(DocumentProcessingStatus status)
+    {
+        var repository = new FakeRepository();
+        repository.AddDocument(MakeDocument(DocId, OrgId, status));
+
+        await Assert.ThrowsAsync<ApplicationConflictException>(() =>
+            BuildService(repository).EnableRetrievalAsync(Actor, DocId));
+    }
+
+    [Fact]
+    public async Task EnableRetrievalAsync_AuditContainsNoMetadataOrStorageLocation()
+    {
+        var repository = new FakeRepository();
+        var audit = new RecordingAuditWriter();
+        repository.AddDocument(MakeDocument(
+            DocId,
+            OrgId,
+            DocumentProcessingStatus.Processed,
+            isRetrievalEnabled: false,
+            title: "Sensitive Title"));
+
+        await BuildService(repository, audit).EnableRetrievalAsync(Actor, DocId);
+
+        var messages = string.Join("|", audit.Events.Select(e => e.Message));
+        Assert.DoesNotContain("Sensitive Title", messages, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("pending://", messages, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task EnableThenDisableRetrieval_BothWorkCorrectly()
+    {
+        var repository = new FakeRepository();
+        var audit = new RecordingAuditWriter();
+        repository.AddDocument(MakeDocument(
+            DocId,
+            OrgId,
+            DocumentProcessingStatus.Processed,
+            isRetrievalEnabled: false));
+        var service = BuildService(repository, audit);
+
+        var enabled = await service.EnableRetrievalAsync(Actor, DocId);
+        var disabled = await service.DisableRetrievalAsync(Actor, DocId);
+
+        Assert.True(enabled.IsRetrievalEnabled);
+        Assert.False(disabled.IsRetrievalEnabled);
+        Assert.Single(audit.Events, e => e.EventType == AuditEventTypes.DocumentRetrievalEnabled);
+        Assert.Single(audit.Events, e => e.EventType == AuditEventTypes.DocumentRetrievalDisabled);
+    }
+
     private static DocumentService BuildService(
         IDocumentRepository repository,
         RecordingAuditWriter? audit = null,
@@ -224,6 +327,24 @@ public sealed class DocumentServiceTests
             var updated = changed ? doc with { IsRetrievalEnabled = false, UpdatedAt = updatedAt } : doc;
             _documents[documentId] = updated;
             return Task.FromResult<DocumentDisableResult?>(new DocumentDisableResult(updated, changed));
+        }
+
+        public Task<DocumentEnableResult?> EnableRetrievalAsync(
+            Guid documentId,
+            Guid organizationId,
+            DateTimeOffset updatedAt,
+            CancellationToken ct = default)
+        {
+            if (!_documents.TryGetValue(documentId, out var doc) || doc.OrganizationId != organizationId)
+                return Task.FromResult<DocumentEnableResult?>(null);
+
+            if (doc.ProcessingStatus != DocumentProcessingStatus.Processed)
+                throw new InvalidOperationException("Only processed documents can be enabled for retrieval.");
+
+            var changed = !doc.IsRetrievalEnabled && !ForceNoChange;
+            var updated = changed ? doc with { IsRetrievalEnabled = true, UpdatedAt = updatedAt } : doc;
+            _documents[documentId] = updated;
+            return Task.FromResult<DocumentEnableResult?>(new DocumentEnableResult(updated, changed));
         }
 
         public Task<IReadOnlyList<ManagedDocument>> FindPendingForProcessingAsync(int maxCount, CancellationToken ct = default) =>

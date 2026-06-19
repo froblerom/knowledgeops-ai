@@ -105,6 +105,38 @@ internal sealed class EfDocumentRepository(KnowledgeOpsDbContext dbContext) : ID
             : new DocumentDisableResult(document, changedRows == 1);
     }
 
+    public async Task<DocumentEnableResult?> EnableRetrievalAsync(
+        Guid documentId,
+        Guid organizationId,
+        DateTimeOffset updatedAt,
+        CancellationToken ct = default)
+    {
+        // Check existence and status first (read-only, no lock needed for MVP single-node).
+        var existing = await FindAsync(documentId, organizationId, ct);
+        if (existing is null)
+            return null;
+
+        if (existing.ProcessingStatus != DocumentProcessingStatus.Processed)
+            throw new InvalidOperationException("Only processed documents can be enabled for retrieval.");
+
+        var changedRows = await dbContext.Documents
+            .Where(
+                doc => doc.Id == documentId
+                    && doc.OrganizationId == organizationId
+                    && doc.DeletedAt == null
+                    && !doc.IsRetrievalEnabled)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(doc => doc.IsRetrievalEnabled, true)
+                    .SetProperty(doc => doc.UpdatedAt, updatedAt),
+                ct);
+
+        var document = await FindAsync(documentId, organizationId, ct);
+        return document is null
+            ? null
+            : new DocumentEnableResult(document, changedRows == 1);
+    }
+
     public async Task<IReadOnlyList<ManagedDocument>> FindPendingForProcessingAsync(
         int maxCount,
         CancellationToken ct = default)
