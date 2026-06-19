@@ -17,14 +17,30 @@ namespace KnowledgeOps.Application;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddApplication(this IServiceCollection services)
+    /// <summary>
+    /// Registers Application-layer services required by all hosts (API and Worker).
+    /// No service registered here may depend on ICurrentUser.
+    /// </summary>
+    public static IServiceCollection AddApplicationCore(this IServiceCollection services)
+    {
+        services.AddScoped<IDocumentProcessingOrchestrator, DocumentProcessingOrchestrator>();
+        services.AddScoped<IDocumentProcessingStep, ExtractAndChunkDocumentProcessingStep>();
+        services.AddScoped<IDocumentProcessingStep, GenerateChunkEmbeddingsProcessingStep>();
+        services.AddScoped<IDocumentProcessingStep, IndexDocumentChunkEmbeddingsProcessingStep>();
+        services.AddSingleton<IPermissionService, PermissionService>();
+        services.AddSingleton<IOrganizationScopeService, OrganizationScopeService>();
+        return services;
+    }
+
+    /// <summary>
+    /// Registers Application-layer services that require an authenticated HTTP request context
+    /// (ICurrentUser). Call this only from the API host. Do not call from the Worker host.
+    /// </summary>
+    public static IServiceCollection AddApplicationApiFeatures(this IServiceCollection services)
     {
         services.AddScoped<LoginCommandHandler>();
         services.AddScoped<GetCurrentUserQueryHandler>();
         services.AddScoped<DocumentService>();
-        services.AddScoped<IDocumentProcessingOrchestrator, DocumentProcessingOrchestrator>();
-        services.AddScoped<IDocumentProcessingStep, ExtractAndChunkDocumentProcessingStep>();
-        services.AddScoped<IDocumentProcessingStep, GenerateChunkEmbeddingsProcessingStep>();
         services.AddScoped<UserManagementService>();
         services.AddScoped<IEligibleSemanticRetrievalService, EligibleSemanticRetrievalService>();
         services.AddSingleton<IPromptAuthorizationFilter, DefaultPromptAuthorizationFilter>();
@@ -37,10 +53,17 @@ public static class DependencyInjection
         services.AddScoped<IChatHistoryService, ChatHistoryService>();
         services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<IAdminSupportService, AdminSupportService>();
+        return services;
+    }
 
-        services.AddSingleton<IPermissionService, PermissionService>();
-        services.AddSingleton<IOrganizationScopeService, OrganizationScopeService>();
-
+    /// <summary>
+    /// Registers all Application-layer services. Use in the API host.
+    /// Equivalent to calling AddApplicationCore() followed by AddApplicationApiFeatures().
+    /// </summary>
+    public static IServiceCollection AddApplication(this IServiceCollection services)
+    {
+        services.AddApplicationCore();
+        services.AddApplicationApiFeatures();
         return services;
     }
 }

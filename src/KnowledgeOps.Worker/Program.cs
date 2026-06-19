@@ -5,7 +5,10 @@ using KnowledgeOps.Worker;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-builder.Services.AddApplication();
+// Register only the Application services required for document processing.
+// AddApplicationApiFeatures() is intentionally excluded: those services depend on
+// ICurrentUser, which is an HTTP/JWT-request concept unavailable in the Worker host.
+builder.Services.AddApplicationCore();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 // Worker-specific services — do not call AddJwtInfrastructure(); Worker does not handle JWT.
