@@ -12,8 +12,7 @@ KnowledgeOps-AI helps contact center teams turn fragmented internal documentatio
 
 ---
 
-<!-- SCREENSHOT PLACEHOLDER — replace with actual screenshot once captured -->
-<!-- ![KnowledgeOps-AI chat with grounded answer and citations](docs/screenshots/chat-grounded-answer.png) -->
+![KnowledgeOps-AI — grounded answer with citations](docs/screenshots/chat-grounded-answer.png)
 
 ---
 
@@ -36,11 +35,12 @@ KnowledgeOps-AI gives organizations a single interface to upload internal docume
 | Background processing | .NET Worker Service |
 | Database | SQL Server 2022 (Docker) · Entity Framework Core |
 | Frontend | Angular 19 · TypeScript |
-| AI / Embeddings | Azure OpenAI · OpenAI API · Provider abstraction (pluggable) |
+| AI / Answer generation | Demo provider (deterministic, extractive, CI-safe) · OpenAI API · Local OpenAI-compatible (Ollama / Qwen) · Pluggable provider abstraction |
+| AI / Embeddings | Fake deterministic embedding provider (CI-safe, no API key) · Pluggable interface |
 | Retrieval | Vector similarity search over stored chunk embeddings |
 | Auth | JWT · BCrypt · RBAC permission matrix |
 | DevOps | Docker Compose · GitHub Actions CI |
-| Testing | xUnit · Fake AI providers (no live calls in CI) |
+| Testing | xUnit · Demo answer provider + Fake embedding provider (no live AI calls in CI) |
 
 ---
 
@@ -61,14 +61,14 @@ For C4 system context, component diagrams, ERD, and RAG flow see [docs/12-c4-arc
 - Organization-scoped data isolation — users can only access their own organization's data and documents
 
 ### Document Management
-- Document upload (TXT, Markdown, PDF)
+- Document upload (TXT, Markdown) — PDF and DOCX uploads are accepted but fail during processing; full extractor support is Phase 2
 - Document metadata storage and processing status tracking (`Uploaded → Processing → Processed / Failed`)
 - Document list and detail views with processing status
 
 ### Async Document Processing Pipeline
 - Background Worker service picks up uploaded documents and processes them asynchronously
 - Text extraction, document chunking, and embedding generation
-- Provider abstraction supports Azure OpenAI, OpenAI API, or Fake (deterministic, no API keys needed)
+- Provider abstraction supports Demo (deterministic, extractive, CI-safe), OpenAI API, or a local OpenAI-compatible endpoint (e.g. Ollama running Qwen)
 - Failure reason storage and admin visibility into failed documents
 
 ### RAG Chat Assistant
@@ -103,7 +103,7 @@ For C4 system context, component diagrams, ERD, and RAG flow see [docs/12-c4-arc
 - Correlation ID middleware
 - Health check endpoint
 - GitHub Actions CI with backend restore / build / test and frontend install / build / test
-- Fake AI providers in CI — no external API calls, no secrets required
+- Demo answer provider + Fake embedding provider in CI — no external API calls, no secrets required
 - Docker Compose stack (SQL Server)
 - EF Core migrations with fictional seed data (two organizations, seven users, five roles)
 
@@ -192,7 +192,7 @@ npm start
 # http://localhost:4200
 ```
 
-> **AI provider:** The default is `Fake` mode — no Azure OpenAI or OpenAI API keys needed. To use a real provider, set `KNOWLEDGEOPS_AI_PROVIDER_MODE=AzureOpenAI` (or `OpenAI`) and add your credentials in `.env` only.
+> **AI provider:** The default is `Demo` — a deterministic, extractive answer generator; no API keys needed. To use a real provider, set `Ai:AnswerProvider` to `OpenAI` (supply `Ai__OpenAI__ApiKey` via `dotnet user-secrets` or environment variable) or `LocalOpenAICompatible` (supply `Ai__LocalOpenAICompatible__BaseUrl`, e.g. an Ollama endpoint running `qwen3:8b`). Never commit API keys.
 
 ---
 
@@ -226,8 +226,8 @@ Two fictional organizations are seeded. Passwords are not seeded — provision t
 ### Backend
 
 ```bash
-dotnet msbuild KnowledgeOps.sln -t:Build -p:Configuration=Release
-dotnet test KnowledgeOps.sln --configuration Release
+dotnet msbuild KnowledgeOpsAI.sln -t:Build -p:Configuration=Release
+dotnet test KnowledgeOpsAI.sln --configuration Release
 ```
 
 ### Frontend
@@ -271,46 +271,48 @@ knowdledgeops_ai/
 | [Executive Summary](docs/00-executive-summary.md) | Business problem, value, and technical vision |
 | [Scope & Roadmap](docs/05-scope-and-roadmap.md) | MVP scope, Phase 2 / 3 plans, out-of-scope boundaries |
 | [C4 Architecture](docs/12-c4-architecture.md) | System context, container, and component diagrams |
-| [Local Development](docs/local-development.md) | Full local setup guide |
+| [Local Development](docs/local-development.md) | Full local setup guide (legacy) |
+| [Local Setup Guide](docs/local-setup-guide.md) | Streamlined onboarding guide for new contributors |
 | [Demo Data](docs/demo-data.md) | Seed organizations, users, credential bootstrap |
 | [Security & Permissions](docs/16-security-and-permissions.md) | RBAC model and permission matrix |
 | [Architecture Decisions](docs/decisions/) | ADRs for SQL Server, Angular, RBAC, EF Core, RAG, Clean Architecture |
+| [Portfolio Review Guide](docs/portfolio-review-guide.md) | 5- and 15-minute reviewer paths through the codebase |
 
 ---
 
-## Video Demo
+## Demo Walkthrough
 
-<!-- VIDEO PLACEHOLDER -->
-<!-- [![Watch the demo](docs/screenshots/video-thumbnail.png)](https://youtu.be/PLACEHOLDER) -->
+This project is designed to be reviewed through a screenshot-based demo flow:
 
-*Demo video coming soon — will cover: login, document upload, processing status, grounded RAG answer with citations, insufficient-context response, feedback submission, and the operational dashboard.*
+1. **Login** — authenticated internal access (see [Screenshots](#screenshots) below)
+2. **Grounded RAG answer** — answer with citations and per-chunk source references
+3. **Insufficient context** — safe refusal when documents do not support an answer
+4. **Document list** — processing lifecycle visibility (`Uploaded → Processing → Processed / Failed`)
+5. **Document upload** — ingestion entry point
+6. **Dashboard** — usage, latency, estimated AI cost, feedback, and document metrics
+7. **CI** — automated validation through GitHub Actions (no live AI calls, no secrets)
 
 ---
 
 ## Screenshots
 
-<!-- SCREENSHOTS PLACEHOLDER — add to docs/screenshots/ and uncomment -->
-<!--
 | Login | Chat — grounded answer |
 |---|---|
-| ![Login](docs/screenshots/login.png) | ![Chat](docs/screenshots/chat-grounded-answer.png) |
+| ![Login](docs/screenshots/login.png) | ![Chat — grounded answer](docs/screenshots/chat-grounded-answer.png) |
 
-| Source citations | Insufficient context |
+| Chat — insufficient context | Document list + processing status |
 |---|---|
-| ![Citations](docs/screenshots/chat-citations.png) | ![No context](docs/screenshots/chat-insufficient-context.png) |
+| ![Chat — insufficient context](docs/screenshots/chat-insufficient-context.png) | ![Document list](docs/screenshots/document-list.png) |
 
-| Document upload | Document list + processing status |
+| Document upload | Dashboard metrics |
 |---|---|
-| ![Upload](docs/screenshots/document-upload.png) | ![Documents](docs/screenshots/document-list.png) |
+| ![Document upload](docs/screenshots/document-upload.png) | ![Dashboard](docs/screenshots/dashboard.png) |
 
-| Dashboard metrics | Admin — user management |
-|---|---|
-| ![Dashboard](docs/screenshots/dashboard.png) | ![Admin](docs/screenshots/admin-users.png) |
-
-| CI — GitHub Actions green |
+| CI — GitHub Actions |
 |---|
-| ![CI](docs/screenshots/ci-green.png) |
--->
+| ![CI — GitHub Actions green](docs/screenshots/ci-green.png) |
+
+<!-- admin-users.png not yet captured — add to docs/screenshots/ to re-enable -->
 
 ---
 
@@ -320,27 +322,26 @@ This project is a **portfolio-grade MVP**, not a production deployment. Honest l
 
 - **No cloud deployment.** The stack runs locally via Docker Compose. Azure hosting, Blob Storage, and Application Insights are planned for Phase 2–3.
 - **No enterprise SSO.** Authentication uses local JWT + BCrypt. Azure Entra ID is Phase 3.
-- **`is_retrieval_enabled` requires a manual SQL update for local demos.** The re-enable API endpoint is deferred to Phase 2.
 - **No document replacement or versioning.** Uploading a new version requires deleting the old document first.
-- **No real AI calls in CI.** The Fake provider is deterministic and tests the orchestration layer; it does not validate retrieval or generation quality.
+- **Retry-processing for failed documents is Phase 2.** Re-enabling retrieval (`POST /api/v1/documents/{id}/enable`) is already implemented; retrying a failed processing job is not yet.
+- **No real AI calls in CI.** The Demo answer provider and Fake embedding provider are deterministic and test the orchestration layer; they do not validate retrieval or generation quality against a live model.
 - **No real-time agent assist.** This is an explicit Phase 3 feature, out of scope for MVP.
 
 ---
 
-## Portfolio Note
+## Why This Project Demonstrates Senior-Level Engineering
 
-KnowledgeOps-AI was designed and built as a senior-level portfolio project demonstrating applied AI engineering in a realistic enterprise context — not as a generic CRUD app with an LLM bolted on.
+KnowledgeOps-AI was designed and built as a senior-level portfolio project in a realistic enterprise context — not a generic CRUD app with an LLM bolted on. Each decision was made for a reason:
 
-It shows:
-- Business-driven software design with documented scope boundaries
-- Clean Architecture across a multi-project .NET 10 solution
-- Provider abstraction for AI / embedding services
-- Async background processing with a dedicated Worker service
-- Multi-tenant data isolation enforced at the application layer
-- RBAC with a permission matrix, not just role guards
-- RAG orchestration with grounded prompts, citations, and safe insufficient-context handling
-- Observability from the start: audit events, correlation IDs, health checks
-- CI with fake providers so no secrets are required to run the full test suite
+- **Business-driven scope with documented boundaries.** Features are tied to a defined business problem and roadmap. Phase 2 / Phase 3 items are explicit non-scope, not forgotten work.
+- **Clean Architecture across five projects.** Domain has zero dependencies; Application depends only on Domain; Infrastructure and API are the outermost rings. The Worker host registers only `AddApplicationCore()` — it cannot accidentally receive `ICurrentUser` because it has no HTTP request context.
+- **Pluggable AI provider abstraction.** Swapping from Demo to OpenAI to Ollama/Qwen requires only a config change — no code change. The embedding interface is similarly abstracted.
+- **Async document processing with a dedicated Worker.** Upload and processing are decoupled: the API returns immediately, the Worker processes in the background, and processing failures are surfaced to admins without blocking the upload path.
+- **Multi-tenant data isolation enforced at the application layer,** not just at the query level. Every service method receives an `OrganizationId` from the authenticated actor, not from the request body.
+- **RBAC with a permission matrix, not just role guards.** `KnowledgeOpsPermissions` defines granular string constants; `RolePermissionMatrix` maps roles to permission sets; endpoints declare `[RequirePermission(...)]`. Adding a new role requires touching one file.
+- **RAG orchestration with grounded prompts, citations, and safe refusal.** The assistant is given only retrieved context — not external knowledge. When no relevant chunk is found it says so, rather than hallucinating.
+- **Observability from the start:** structured audit events, correlation ID middleware, health check endpoint with sanitized AI provider diagnostics (no API keys in output).
+- **CI with deterministic AI providers.** The full test suite runs on GitHub Actions with no secrets, no external API calls, and no flakiness from model responses.
 
 ---
 
