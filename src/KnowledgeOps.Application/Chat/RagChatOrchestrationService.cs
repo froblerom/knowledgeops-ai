@@ -157,9 +157,12 @@ internal sealed class RagChatOrchestrationService(
             interaction.RecordProviderFailedOutcome(
                 retrievalResult.FailureCode,
                 retrievalResult.RetrievalQueryId,
+                retrievalResult.ReturnedCount,
                 retrievalMs,
                 generationMs: null,
-                totalStopwatch.ElapsedMilliseconds);
+                totalStopwatch.ElapsedMilliseconds,
+                aiProvider: null,
+                aiModel: null);
 
             await AuditAsync(
                 AuditEventTypes.ChatAnswerGenerationFailed,
@@ -245,9 +248,12 @@ internal sealed class RagChatOrchestrationService(
             interaction.RecordProviderFailedOutcome(
                 promptBuildResult.FailureCode ?? "PromptBuildFailed",
                 retrievalResult.RetrievalQueryId,
+                authorizedCandidates.Length,
                 retrievalMs,
                 generationMs: null,
-                totalStopwatch.ElapsedMilliseconds);
+                totalStopwatch.ElapsedMilliseconds,
+                aiProvider: null,
+                aiModel: null);
 
             await AuditAsync(
                 AuditEventTypes.PromptBuildFailed,
@@ -282,7 +288,9 @@ internal sealed class RagChatOrchestrationService(
                     builtPrompt.AuthorizedChunksForGeneration,
                     trimmedQuestion,
                     PromptVersion: builtPrompt.PromptVersion,
-                    ModelName: null),
+                    ModelName: null,
+                    SystemInstruction: builtPrompt.SystemInstruction,
+                    FormattedContext: builtPrompt.FormattedContext),
                 cancellationToken);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -298,9 +306,12 @@ internal sealed class RagChatOrchestrationService(
             interaction.RecordProviderFailedOutcome(
                 "GenerationException",
                 retrievalResult.RetrievalQueryId,
+                authorizedCandidates.Length,
                 retrievalMs,
                 generationStopwatch.ElapsedMilliseconds,
-                totalStopwatch.ElapsedMilliseconds);
+                totalStopwatch.ElapsedMilliseconds,
+                aiProvider: answerGenerator.ProviderName,
+                aiModel: answerGenerator.DefaultModelName);
 
             await AuditAsync(
                 AuditEventTypes.ChatAnswerGenerationFailed,
@@ -345,9 +356,12 @@ internal sealed class RagChatOrchestrationService(
                 interaction.RecordProviderFailedOutcome(
                     "CitationMappingFailed",
                     retrievalResult.RetrievalQueryId,
+                    authorizedCandidates.Length,
                     retrievalMs,
                     generationStopwatch.ElapsedMilliseconds,
-                    totalStopwatch.ElapsedMilliseconds);
+                    totalStopwatch.ElapsedMilliseconds,
+                    aiProvider: generationResult.ProviderName,
+                    aiModel: generationResult.ModelUsed);
 
                 await AuditAsync(
                     AuditEventTypes.CitationMappingFailed,
@@ -385,6 +399,13 @@ internal sealed class RagChatOrchestrationService(
                 generationResult.ModelUsed,
                 promptVersion: builtPrompt.PromptVersion);
 
+            // Step 14: Persist session + interaction + tracked citations atomically.
+            // AuditAsync(ChatAnswerGenerationCompleted) is intentionally deferred until AFTER
+            // PersistAsync: EfAuditEventWriter calls dbContext.SaveChangesAsync() on the shared
+            // scoped DbContext, which would flush the already-tracked citations before the
+            // chat_interaction row exists, violating FK_citations_chat_interactions_chat_interaction_id.
+            await PersistAsync(session, interaction, isNewSession, cancellationToken);
+
             await AuditAsync(
                 AuditEventTypes.ChatAnswerGenerationCompleted,
                 $"Answer generation completed. SessionId={session.Id} CandidateCount={authorizedCandidates.Length}",
@@ -393,11 +414,6 @@ internal sealed class RagChatOrchestrationService(
                 activeState.UserId,
                 interaction.Id,
                 cancellationToken);
-
-            // Step 14: Persist session + interaction + tracked citations atomically.
-            // interactionRepository.SaveChangesAsync() flushes all EF-tracked changes (interaction
-            // and citations) in one round-trip, satisfying the chat_interaction FK before citations.
-            await PersistAsync(session, interaction, isNewSession, cancellationToken);
 
             await AuditAsync(
                 AuditEventTypes.CitationsPersisted,
@@ -437,9 +453,12 @@ internal sealed class RagChatOrchestrationService(
         interaction.RecordProviderFailedOutcome(
             generationResult.SafeFailureCode,
             retrievalResult.RetrievalQueryId,
+            authorizedCandidates.Length,
             retrievalMs,
             generationStopwatch.ElapsedMilliseconds,
-            totalStopwatch.ElapsedMilliseconds);
+            totalStopwatch.ElapsedMilliseconds,
+            aiProvider: generationResult.ProviderName,
+            aiModel: generationResult.ModelUsed);
 
         await AuditAsync(
             AuditEventTypes.ChatAnswerGenerationFailed,

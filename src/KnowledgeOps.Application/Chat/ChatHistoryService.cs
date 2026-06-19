@@ -166,7 +166,10 @@ internal sealed class ChatHistoryService(
                 interaction.TotalLatencyMs,
                 interaction.TokenUsageInput,
                 interaction.TokenUsageOutput,
-                interaction.EstimatedCost),
+                interaction.EstimatedCost,
+                interaction.AiProvider,
+                interaction.AiModel,
+                interaction.ProviderFailureCode),
             citations.OrderBy(c => c.Rank).Select(ToCitationDto).ToList(),
             interaction.CreatedAt);
     }

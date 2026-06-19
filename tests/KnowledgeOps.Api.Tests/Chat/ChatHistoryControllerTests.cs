@@ -188,14 +188,38 @@ public sealed class ChatHistoryControllerTests : IClassFixture<ChatHistoryApiTes
     }
 
     [Fact]
-    public async Task GetInteraction_DoesNotExposeProviderFailureCode()
+    public async Task GetInteraction_MetadataIncludesAiProviderAndModel()
     {
-        _factory.HistoryService.NextInteraction = ChatHistoryApiTestFactory.SampleInteractionDetail(Guid.NewGuid());
+        _factory.HistoryService.NextInteraction = ChatHistoryApiTestFactory.SampleInteractionDetail(
+            Guid.NewGuid(), aiProvider: "QwenLocal", aiModel: "qwen3:8b");
+
         var client = await AuthenticateAsync(ChatHistoryApiTestFactory.AgentEmail);
         var response = await client.GetAsync($"/api/v1/chat/interactions/{Guid.NewGuid()}");
-        var raw = await response.Content.ReadAsStringAsync();
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
 
-        Assert.DoesNotContain("providerFailureCode", raw, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var metadata = body.GetProperty("metadata");
+        Assert.Equal("QwenLocal", metadata.GetProperty("aiProvider").GetString());
+        Assert.Equal("qwen3:8b", metadata.GetProperty("aiModel").GetString());
+    }
+
+    [Fact]
+    public async Task GetInteraction_ProviderFailure_MetadataIncludesProviderFailureCode()
+    {
+        _factory.HistoryService.NextInteraction = ChatHistoryApiTestFactory.SampleInteractionDetail(
+            Guid.NewGuid(),
+            answerState: "ProviderFailure",
+            aiProvider: "QwenLocal",
+            aiModel: "qwen3:8b",
+            providerFailureCode: "ProviderMalformedResponse");
+
+        var client = await AuthenticateAsync(ChatHistoryApiTestFactory.AgentEmail);
+        var response = await client.GetAsync($"/api/v1/chat/interactions/{Guid.NewGuid()}");
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var metadata = body.GetProperty("metadata");
+        Assert.Equal("ProviderMalformedResponse", metadata.GetProperty("providerFailureCode").GetString());
     }
 
     [Fact]
@@ -397,7 +421,10 @@ public sealed class ChatHistoryApiTestFactory : WebApplicationFactory<Program>
     public static ChatInteractionDetailDto SampleInteractionDetail(
         Guid interactionId,
         string answerState = "GroundedAnswer",
-        bool insufficientContext = false) =>
+        bool insufficientContext = false,
+        string? aiProvider = "TestProvider",
+        string? aiModel = "test-model-v1",
+        string? providerFailureCode = null) =>
         new(interactionId,
             Guid.NewGuid(),
             answerState,
@@ -406,7 +433,8 @@ public sealed class ChatHistoryApiTestFactory : WebApplicationFactory<Program>
             insufficientContext ? null : "According to the policy...",
             "rag-grounded-v1",
             "test-correlation",
-            new ChatRetrievalMetadataDto(1, 200L, 800L, 1000L, 100, 50, 0.001m),
+            new ChatRetrievalMetadataDto(1, 200L, 800L, 1000L, 100, 50, 0.001m,
+                aiProvider, aiModel, providerFailureCode),
             [],
             DateTimeOffset.UtcNow);
 

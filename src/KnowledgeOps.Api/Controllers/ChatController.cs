@@ -157,7 +157,10 @@ public sealed class ChatController(
                 dto.Metadata.TotalLatencyMs,
                 dto.Metadata.TokenUsageInput,
                 dto.Metadata.TokenUsageOutput,
-                dto.Metadata.EstimatedCost),
+                dto.Metadata.EstimatedCost,
+                dto.Metadata.AiProvider,
+                dto.Metadata.AiModel,
+                dto.Metadata.ProviderFailureCode),
             dto.Citations.Select(ToCitationHistoryResponse).ToList(),
             dto.CreatedAt);
 

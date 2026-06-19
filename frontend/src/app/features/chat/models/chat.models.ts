@@ -113,6 +113,9 @@ export interface ChatInteractionMetadata {
   tokenUsageInput: number | null;
   tokenUsageOutput: number | null;
   estimatedCost: number | null;
+  aiProvider: string | null;
+  aiModel: string | null;
+  providerFailureCode: string | null;
 }
 
 export interface ChatCitationHistory {
