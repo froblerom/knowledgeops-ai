@@ -179,7 +179,7 @@ public sealed class MvpRepositorySqlTests
             var insufficient = await SeedInteractionAsync(context, orgA, userA2, now, AnswerState.InsufficientContext);
             insufficient.RecordInsufficientContextOutcome(Guid.NewGuid(), 0, 5, 5);
             var orgBInteraction = await SeedInteractionAsync(context, orgB, userB, now, AnswerState.ProviderFailed);
-            orgBInteraction.RecordProviderFailedOutcome("ProviderUnavailable", Guid.NewGuid(), 7, 8, 15);
+            orgBInteraction.RecordProviderFailedOutcome("ProviderUnavailable", Guid.NewGuid(), 0, 7, 8, 15);
 
             context.AnswerFeedback.AddRange(
                 AnswerFeedback.Create(orgA.Id, userA1.Id, grounded.Id, AnswerFeedbackRating.Useful),
@@ -369,7 +369,7 @@ public sealed class MvpRepositorySqlTests
         if (outcome == AnswerState.InsufficientContext)
             interaction.RecordInsufficientContextOutcome(Guid.NewGuid(), 0, 1, 1);
         else if (outcome == AnswerState.ProviderFailed)
-            interaction.RecordProviderFailedOutcome("ProviderUnavailable", Guid.NewGuid(), 1, 1, 2);
+            interaction.RecordProviderFailedOutcome("ProviderUnavailable", Guid.NewGuid(), 0, 1, 1, 2);
 
         context.ChatInteractions.Add(interaction);
         await context.SaveChangesAsync();
