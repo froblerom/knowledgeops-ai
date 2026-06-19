@@ -11,6 +11,7 @@ Use operational signals to support the internal document/RAG assistant safely wi
 - Text extraction and embedding failures.
 - Retrieval completion/failure and retrieval latency.
 - AI generation completion/failure and generation latency.
+- Provider attribution for AI generation outcomes: `AiProvider` (provider name), `ModelUsed` (model identifier), `ProviderFailureCode` (pre-defined safe code string) when applicable.
 - Total RAG response latency.
 - Correlation IDs across related processing and chat work.
 - Estimated AI cost and token usage when available.
@@ -38,6 +39,18 @@ GET /api/v1/health/details
 - Do not log full prompt context or full protected document/chunk text.
 - Do not expose sensitive dependency details in basic health.
 - Scope reviewable telemetry and metrics by role and organization where applicable.
+
+## Provider Attribution Safety Boundary
+
+The only approved provider-identity fields for API responses and structured logs are:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `AiProvider` | string | Provider display name (e.g. `"QwenLocal"`, `"OpenAI"`) |
+| `ModelUsed` | string | Model identifier resolved at generation time |
+| `ProviderFailureCode` | string | Pre-defined safe code (e.g. `"ProviderUnavailable"`, `"ProviderMalformedResponse"`) — never the raw provider error message |
+
+**Never expose:** API keys, Authorization headers, `SystemInstruction`, `FormattedContext`, raw provider error response bodies, stack traces, or chunk/document text through any observability surface.
 
 ## MVP Metrics Boundary
 

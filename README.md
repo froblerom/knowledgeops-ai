@@ -36,9 +36,9 @@ The system is designed for contact centers and support operations where agents, 
 
 ## Project Status
 
-MVP Implementation — Sprint 27 Complete.
+MVP Implementation — Post-Sprint 29 Complete.
 
-The core MVP workflow is implemented and verified through Sprint 27:
+The core MVP workflow is implemented and verified through Post-Sprint 29:
 
 - Authenticated internal users with JWT Bearer, five RBAC roles (Agent, Supervisor, KnowledgeAdmin, Manager, Admin), and organization-scoped access.
 - Document upload (TXT/Markdown), asynchronous background processing, text extraction, sliding-window chunking, and deterministic embedding generation.
@@ -52,11 +52,11 @@ The core MVP workflow is implemented and verified through Sprint 27:
 - Public basic health (`GET /api/v1/health`) and Admin-only sanitized health details (`GET /api/v1/health/details`).
 - Multi-stage Dockerfiles for API, Worker, and Frontend; GitHub Actions CI workflow.
 
-**Fake providers are normal for automated tests and CI.** `FakeEmbeddingProvider` (SHA-256 deterministic) and `FakeAnswerGenerator` require no external credentials and are the default for all automated tests. Azure OpenAI or OpenAI API is the intended production provider and is optional, manually configured only.
+**Fake providers are normal for automated tests and CI.** `FakeEmbeddingProvider` (SHA-256 deterministic) and `DemoGroundedAnswerGenerator` (extractive, CI-safe) require no external credentials and are the default for all automated tests. Azure OpenAI, OpenAI API, or a local Ollama-compatible model are optional production providers, manually configured only.
 
 **Known limitations:**
 - Text extraction supports TXT and Markdown only; PDF and DOCX extraction are deferred to Phase 2.
-- Document re-enable and retry-processing endpoints are deferred to Phase 2.
+- Document retry-processing endpoint is deferred to Phase 2.
 - JWT logout is stateless (client-side token clear only); no server-side token revocation.
 - Local filesystem document storage only; no production cloud storage adapter.
 - SQL Server integration tests require `ConnectionStrings__DefaultConnection` and a running SQL Server container.

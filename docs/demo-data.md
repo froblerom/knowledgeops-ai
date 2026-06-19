@@ -259,6 +259,48 @@ WHERE email = 'admin.a@asteria.example.com';
 
 ---
 
+## Demo AI Provider Mode
+
+The chat assistant runs in **Demo mode** by default — no API key required.
+
+| Mode | Config | API Key | Answer Quality |
+|---|---|---|---|
+| Demo (default) | `Ai:AnswerProvider = Demo` | Not required | Deterministic extractive answer from retrieved policy text |
+| OpenAI (optional) | `Ai:AnswerProvider = OpenAI` | Required (user-secrets) | Generative, fluent, grounded answer using OpenAI |
+| LocalOpenAICompatible (optional) | `Ai:AnswerProvider = LocalOpenAICompatible` | Not required (Ollama) | Local generative answer via `qwen3:8b` through Ollama |
+
+**Demo mode** is recommended for stable portfolio screenshots and CI — deterministic, no external dependencies.
+**OpenAI mode** requires an active OpenAI account with billing credits.
+**LocalOpenAICompatible mode** requires [Ollama](https://ollama.com) running locally with `qwen3:8b` pulled. See `docs/local-setup-guide.md` for full setup instructions.
+
+### Switching to OpenAI mode (optional, local only)
+
+```powershell
+dotnet user-secrets set "Ai:AnswerProvider" "OpenAI" --project src/KnowledgeOps.Api/KnowledgeOps.Api.csproj
+dotnet user-secrets set "Ai:OpenAI:ApiKey" "<your-key>" --project src/KnowledgeOps.Api/KnowledgeOps.Api.csproj
+```
+
+**Never commit an API key to source control.** Remove user-secrets when done:
+
+```powershell
+dotnet user-secrets remove "Ai:AnswerProvider" --project src/KnowledgeOps.Api/KnowledgeOps.Api.csproj
+dotnet user-secrets remove "Ai:OpenAI:ApiKey" --project src/KnowledgeOps.Api/KnowledgeOps.Api.csproj
+```
+
+### Switching to Local Qwen mode (optional, requires Ollama)
+
+```powershell
+dotnet user-secrets set "Ai:AnswerProvider" "LocalOpenAICompatible" --project src/KnowledgeOps.Api/KnowledgeOps.Api.csproj
+```
+
+Revert to Demo when done:
+
+```powershell
+dotnet user-secrets set "Ai:AnswerProvider" "Demo" --project src/KnowledgeOps.Api/KnowledgeOps.Api.csproj
+```
+
+---
+
 ## Demo Retrieval Enablement
 
 Documents are retrievable for RAG chat only when all of the following conditions are true:
@@ -268,9 +310,8 @@ Documents are retrievable for RAG chat only when all of the following conditions
 - `deleted_at IS NULL`
 - Organization scope authorizes access
 
-By default, `is_retrieval_enabled` is `false` for all newly uploaded documents. The document
-retrieval re-enable endpoint is **deferred to Phase 2**. For a local demo showing grounded
-answers, a direct SQL update is required after a document is processed.
+By default, `is_retrieval_enabled` is `false` for all newly uploaded documents. KnowledgeAdmin
+and Admin users can enable retrieval from the Documents UI once a document has been processed.
 
 ### E2E smoke tests
 
@@ -280,31 +321,39 @@ required database state directly. No manual intervention is needed for automated
 
 ### Live demo setup procedure (local only)
 
-1. Upload a TXT or Markdown document via the Angular document upload page (`/documents/new`).
-2. Wait for the Worker to process the document (`processing_status` becomes `Processed`).
-3. Use the document list page to find the `document_id` (displayed in the detail view).
-4. Run the following SQL against the local database to enable retrieval:
+1. Log in as KnowledgeAdmin A or Admin A.
+2. Upload the synthetic sample policy from `docs/demo-samples/Customer Support Refund & Escalation Policy.md` via `/documents/new`.
+3. Wait for the Worker to process the document. The document detail page polls every 5 seconds and shows `Processing Status: Processed` when done.
+4. In the document detail page (`/documents/<id>`), click **Enable retrieval**.
+5. Confirm the Retrieval field shows `Enabled` and the Sources section becomes active.
+6. Ask a question in the `/chat` page (see recommended demo questions below).
+7. Confirm the answer is grounded with policy text and a Sources citation.
+8. Click **Useful** to submit feedback.
+9. Navigate to `/dashboard` to see metrics update.
+10. Navigate to Chat History → interaction detail for technical metadata.
 
-```sql
--- Local demo only. Replace <document-id> with the actual GUID shown in the UI.
--- Do not use real document IDs, real document content, or production connection strings.
-UPDATE documents
-SET is_retrieval_enabled = 1
-WHERE document_id = '<document-id>'
-  AND processing_status = 'Processed'
-  AND deleted_at IS NULL;
+You can also enable retrieval from the **Documents list page** (`/documents`) using the
+inline Enable button in the Actions column without navigating to the detail page.
+
+### Recommended demo questions
+
+```text
+A customer says their item arrived damaged 20 days after purchase. What should I do before offering a refund?
+
+What evidence do I need before processing a damaged item claim?
+
+A customer wants a refund but it has been 18 days since delivery. What are my options?
+
+What is the escalation process for refund requests outside the standard window?
 ```
-
-5. Confirm the update affected exactly 1 row.
-6. Ask a question in the `/chat` page that relates to the document content.
 
 ### Important notes
 
-- This is a **local demo setup only**. This is not a production workflow.
-- The re-enable endpoint is deferred to Phase 2. Do not implement it in MVP scope.
 - Never use real customer, employee, or internal operational documents in a demo.
-- Use only the fictional seed data or synthetic documents you upload yourself.
+- Use only fictional seed data or the synthetic sample from `docs/demo-samples/`.
 - Never commit document files, document IDs, or retrieval state to source control.
+- `retry-processing` (retry failed documents) remains deferred to Phase 2.
+- No raw SQL update is required for retrieval enablement — use the UI Enable button.
 
 ---
 

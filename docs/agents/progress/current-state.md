@@ -1,101 +1,66 @@
 # Current Implementation State
 
-Last updated: 2026-06-02
+Last updated: 2026-06-18 (updated for agent harness audit — 06-frontend-context, 07-backend-context, 09-observability-context, README, local-setup-guide all reconciled)
 
 ## Current Phase
 
-Sprint 29 MVP Stabilization And Release Checklist / Issue #49 implementation complete
+Post-Sprint 29 / Issue A (LocalOpenAICompatible MaxTokens fix) complete. Issue B (expose AiProvider/AiModel/ProviderFailureCode in Chat History interaction detail) complete.
 
 ## Active Issue Execution Entry
 
 ### Issue Summary
 
-- Issue ID/title: Issue #49 - `[Sprint 29] Stabilize and certify the KnowledgeOps-AI MVP release`
-- Related roadmap sprint: Sprint 29 — MVP Stabilization And Release Checklist
+- Issue ID/title: Issue B - Expose AiProvider, AiModel, ProviderFailureCode in Chat History interaction detail
+- Related roadmap sprint: Post-Sprint 29 / Issue B follow-up from Issue A audit
 - Related milestone, if applicable: MVP release candidate
-- Objective: Create release artifacts (checklist, release notes, sign-off), update demo-data.md with credential provisioning and retrieval-enable procedures, run local validation, and record evidence.
-- Expected outcome: Release artifacts created; validation evidence recorded; known limitations documented; demo setup procedures in place; final sign-off record established pending CI/SQL evidence.
+- Objective: Expose AiProvider, AiModel, and ProviderFailureCode in the Chat History interaction detail response; fix hardcoded ProviderName in both answer generators.
+- Expected outcome: All 5 RecordProviderFailedOutcome call sites pass real provider info; API Interaction Detail response includes aiProvider, aiModel, providerFailureCode in metadata; Angular detail page renders them; DB columns no longer NULL on provider-failed interactions where provider info is available.
 
 ### Classification
 
-- Task type: Release stabilization / MVP release readiness implementation
-- Prompt level: Level 3
-- Primary affected area: docs/releases, docs/demo-data.md, progress files, validation evidence
-- Security/organization-scope impact: Verification and documentation only; no production code changes
-- AI/RAG impact: Verification and documentation only; fake-provider RAG validation is the release gate; live providers remain optional/manual
-- Data/migration impact: Verification and documentation only; no new migrations
-- Recommended subagent(s), if any: None; direct audit and documentation was sufficient
+- Task type: Cross-layer feature (Domain → Application → API → Angular)
+- Prompt level: Level 2–3
+- Primary affected area: Domain ChatInteraction, Application orchestration, API DTOs, Angular interaction detail
+- Security/organization-scope impact: Only safe pre-approved fields exposed (AiProvider, AiModel, ProviderFailureCode). No API keys, headers, raw error bodies, stack traces, or SystemInstruction exposed.
+- AI/RAG impact: No retrieval, prompt, or generation behavior changed. Only outcome recording extended.
+- Data/migration impact: No migration required; ai_provider, ai_model, provider_failure_code columns already exist in DB.
+- Recommended subagent(s), if any: None
 
 ### Required Context
 
-- Related documentation and context: Sprint 26 roadmap entry; testing, security, RAG, database, API, frontend, DevOps, observability, and guardrails contracts
-- Agent context files read: `docs/agents/00-agent-operating-protocol.md`, `01-project-context.md`, `02-architecture-context.md`, `03-domain-context.md`, `04-business-rules-context.md`, `05-testing-and-validation-context.md`, `06-frontend-context.md`, `07-backend-context.md`, `08-devops-context.md`, `09-observability-context.md`, `10-issue-execution-template.md`, `12-prompt-levels.md`, `13-prompt-classifier.md`. Prompt-requested filenames `06-backend-implementation-context.md`, `07-frontend-implementation-context.md`, `08-rag-implementation-context.md`, and `09-verification-context.md` are not present; mapped to current backend/frontend/testing/DevOps/observability contexts plus canonical RAG/security docs and ADRs.
-- Canonical documents read for exact contracts: `docs/06-requirements.md`, `docs/07-use-cases.md`, `docs/08-business-process-flows.md`, `docs/09-business-rules.md`, `docs/10-domain-model.md`, `docs/14-database-design.md`, `docs/15-api-design.md`, `docs/16-security-and-permissions.md`, `docs/17-testing-strategy.md`, `docs/18-deployment-and-devops.md`, `docs/19-observability-and-support.md`, `docs/20-risk-register.md`, `docs/21-implementation-roadmap.md`, `docs/22-implementation-guardrails.md`
 - Progress files read: `current-state.md`, `decisions-log.md`, `open-risks.md`, `completed-issues.md`
-- Existing source/config/tests to inspect: backend projects, test projects, frontend app/features/core, Docker/local config, appsettings, `.github`, domain/application/infrastructure/API/Angular tests, E2E absence/patterns
+- Files changed: See Issue B completed-issues row.
 
 ### Scope
 
-- In scope: Issue #42 completed-baseline correction, domain entity tests, SQL-gated integration tests, xUnit WebApplicationFactory E2E smoke project, focused Angular spec gaps, coverage-gap review artifact, progress updates
-- Behavioral/contracts affected: Test coverage and smoke validation only; production behavior may change only if MVP-scoped tests expose a real defect
-- Architecture boundaries affected: Tests may reference API/Infrastructure as appropriate; production Clean Architecture boundaries remain unchanged
-- Security or data risks: Tests must prove RBAC, organization scope, safe errors, support/admin protection, and no live AI or real data dependency
-- Files or areas expected to change: test projects, frontend specs, `KnowledgeOpsAI.sln`, progress docs, coverage-gap artifact
-
-### Out Of Scope
-
-- Deferred phase behavior excluded: performance/load testing, live-provider acceptance gate, Enterprise SSO, Phase 2 knowledge-gap workflow, production Azure deployment tests, CI workflow, Playwright/Cypress/browser E2E
-- Explicit deferred functionality, if applicable: Phase 2/3 product behavior, new dashboard/support features, new RAG strategy, new AI provider behavior, new auth model, new RBAC roles
-- Architecture/contracts not being changed: production authentication, authorization, RAG, retrieval, citation, feedback, dashboard, supportability, processing, and CI contracts unless a test exposes a real MVP defect
-- Prohibited expansion: no new product feature, no new migration unless an existing persistence defect requires it, no live AI dependency, no real customer/employee/internal data
-
-### Files To Inspect
-
-- Existing implementation files: Domain chat/document/feedback/citation entities; Application RAG/chat/feedback/dashboard/admin services; Infrastructure EF repositories; API controllers; Angular auth/documents/chat/dashboard/admin/core
-- Existing tests: Domain/Application/API/Integration/Angular tests and factories; SQL-gated skip conventions; API WebApplicationFactory patterns
-- Relevant configuration/documentation: `KnowledgeOpsAI.sln`, project files, `docker-compose.yml`, appsettings, `.env.example`, `.github`, progress records
-
-### Implementation Plan
-
-1. Correct the Issue #42 completed baseline row.
-2. Add domain entity tests for `ChatInteraction`, `AnswerFeedback`, and `Citation`.
-3. Add SQL-gated integration tests for feedback, chat/citations, dashboard, audit/admin support, and document processing lifecycle.
-4. Create xUnit WebApplicationFactory-based E2E smoke project with seven scenarios.
-5. Add focused Angular specs for failure reason, feedback update/error, and admin user detail.
-6. Create `coverage-gap-review-issue-46.md`, update progress files, then validate.
+- In scope: ProviderName hardcode fix in LocalOpenAICompatibleAnswerGenerator and OpenAIAnswerGenerator; RecordProviderFailedOutcome extended with aiProvider/aiModel; 5 call sites updated in RagChatOrchestrationService; ChatRetrievalMetadataDto, ChatInteractionMetadataResponse, ChatController.ToInteractionDetailResponse, Angular interface + template extended; +3 domain tests, +1 orchestration test, +2 API tests, +3 Angular spec tests.
+- Out of scope: ContextSufficiencyPolicy, retrieval eligibility, org-scope, CitationMapper, GroundedPromptBuilder, no new migration.
 
 ### Acceptance Criteria
 
-- [x] Issue #42 completed baseline row is added.
-- [x] Domain tests cover `ChatInteraction`, `AnswerFeedback`, and `Citation` invariants.
-- [x] SQL-gated tests are added for feedback, chat/citations, dashboard, audit/admin support, and deterministic document processing.
-- [x] xUnit WebApplicationFactory E2E smoke project includes seven MVP scenarios.
-- [x] Angular spec gaps are covered without adding UI behavior.
-- [x] Coverage-gap review artifact is created.
-- [x] Scope boundaries remain intact.
-- [x] Security, organization scope and AI/RAG safeguards are preserved where applicable.
-
-### Validation Plan
-
-- Commands/checks to run: `dotnet msbuild KnowledgeOpsAI.sln -t:Build -p:Configuration=Release`; `dotnet test KnowledgeOpsAI.sln --no-build -c Release --filter "FullyQualifiedName!~IntegrationTests"`; `dotnet test tests/KnowledgeOps.E2ETests/KnowledgeOps.E2ETests.csproj -c Release`; from `frontend/`, `npm run build`; `npm test -- --watch=false`; `git diff --check`; SQL-gated tests when SQL Server is available
-- Testing expectations by affected area: domain invariants, SQL-gated persistence/query contracts, API/E2E smoke success and denial paths, Angular UI states, fake-provider deterministic RAG behavior
-- Negative/security/cross-scope cases: RBAC denial, cross-org document/chat/citation/feedback/dashboard/support filtering or denial, safe insufficient context, provider failure, safe errors, no unsafe metadata
-- Expected limitations or commands unavailable: SQL-gated tests may be environment-blocked without `ConnectionStrings__DefaultConnection` and running SQL Server; if so, document in `open-risks.md` and coverage artifact
+- [x] LocalOpenAICompatibleAnswerGenerator.ProviderFailed uses instance ProviderName and accepts model param.
+- [x] OpenAIAnswerGenerator.ProviderFailed uses instance ProviderName and accepts model param.
+- [x] ChatInteraction.RecordProviderFailedOutcome accepts aiProvider and aiModel optional params.
+- [x] All 5 RecordProviderFailedOutcome call sites in RagChatOrchestrationService pass provider info where available.
+- [x] ChatRetrievalMetadataDto, ChatInteractionMetadataResponse, ChatController, Angular interface, Angular template all carry aiProvider, aiModel, providerFailureCode.
+- [x] Build: 0 errors, 0 warnings.
+- [x] Backend tests: 822 passed, 61 skipped.
+- [x] Angular TypeScript check: no errors in new files.
+- [x] SQL validation: ai_provider=QwenLocal, ai_model=qwen3:8b on grounded interactions; providerFailureCode returned correctly on ProviderFailed interactions.
+- [x] API validation: GET /chat/interactions/{id} returns aiProvider, aiModel, providerFailureCode in metadata.
 
 ### Documentation Updates
 
-- Canonical docs affected, if any: none expected; add coverage artifact under progress docs
-- Progress files to update on completion: `current-state.md`, `decisions-log.md`, `open-risks.md`, `completed-issues.md`, `coverage-gap-review-issue-46.md`
-- ADR review required: no; implementation follows accepted Angular, Clean Architecture, RBAC, EF Core, provider isolation, async processing, RAG safety, and organization-scope decisions
+- Progress files updated: `current-state.md`, `decisions-log.md`, `open-risks.md`, `completed-issues.md`
 
 ## Delivery Status
 
 | Item | Status |
 | --- | --- |
-| Current sprint | Sprint 29 completed through Issue #49 |
-| Last completed sprint | Sprint 29: MVP Stabilization And Release Checklist / Issue #49 (implementation complete; PR pending) |
-| Active implementation issue | None; Issue #49 is implemented. Open PR after validation. |
-| Current architecture status | Buildable .NET 10 backend + Angular 21 frontend + local SQL Server container + EF Core persistence foundation + `SeedFictionalOrganizationsAndPersonas` migration + JWT Bearer authentication + ICurrentUser abstraction + working login page with authGuard and apiInterceptor + **RBAC permission catalog** + **RolePermissionMatrix** (5 MVP roles, 30 permissions) + **IPermissionService / PermissionService** + **IOrganizationScopeService / OrganizationScopeService** + **[RequirePermission] attribute + PermissionPolicyProvider + PermissionAuthorizationHandler** + **persisted-current-state authorization via IUserAccessStateReader / EfUserAccessStateReader** + **correlation ID and global safe-error middleware** + **application observability contracts with Infrastructure EF audit/database-health adapters** + **public basic and Admin-only sanitized health endpoints** + **frontend generic Error ID UX** + **frontend RoleVisibilityService (UX-only)** + **future RAG/retrieval authorization hook interfaces** + **Admin-only same-organization user management API (GET/POST/PUT /api/v1/users, GET/POST/DELETE /api/v1/users/{id}/roles)** + **UserManagementService with initialPassword hashing, email normalization, self-lockout protection, final-active-Admin protection, persisted-disable permission check** + **safe audit events (UserCreated, UserUpdated, UserStatusChanged, UserRoleAssigned, UserRoleRemoved, UserManagementDenied, DocumentRetrievalDisabled, DocumentUploadAccepted, DocumentUploadRejected, DocumentUploadFailed, DocumentProcessingStarted, DocumentProcessingSucceeded, DocumentProcessingFailed, EmbeddingGenerationSucceeded, EmbeddingGenerationFailed)** + **minimal Angular Admin UI (user list, user detail/edit, user create, role assignment/removal)** + **canonical Document metadata and behavior-protected lifecycle (StartProcessing, MarkProcessed, MarkFailed, DisableRetrieval, IsEligibleForRetrieval)** + **DocumentProcessingStatus enum (Uploaded, Processing, Processed, Failed)** + **transition-aware DocumentService + IDocumentRepository** + **EfDocumentRepository** + **DocumentConfiguration with status check constraint + DocumentMetadataFoundation migration** + **5 document API endpoints (POST /api/v1/documents, GET /api/v1/documents, GET /{id}, GET /{id}/processing-status, POST /{id}/disable)** + **IDocumentStorage abstraction (Application, now includes OpenReadAsync) + LocalDocumentStorage (Infrastructure, local:// URI scheme, path-containment-safe OpenReadAsync)** + **UploadDocumentCommand with atomic validate→store→persist flow; best-effort cleanup on persistence failure** + **Angular documents list, detail/status/action (with 5 s status polling), and upload pages** + **DocumentService Angular service (list/get/getProcessingStatus/disableRetrieval/upload)** + **canUploadDocuments() / canDisableDocumentRetrieval() UX helpers** + **IDocumentProcessingOrchestrator / DocumentProcessingOrchestrator (atomic claim, ordered multi-step pipeline, transaction-wrapped steps + MarkProcessed, safe failure reason, processing audit events)** + **IDocumentProcessingStep / ExtractAndChunkDocumentProcessingStep + GenerateChunkEmbeddingsProcessingStep** + **IDocumentProcessingTransactionFactory / EfDocumentProcessingTransactionFactory (transaction wraps all steps + MarkProcessed atomically)** + **IDocumentTextExtractor / TxtMarkdownTextExtractor (text/plain, text/markdown, parameterized forms; normalizes line endings)** + **IDocumentChunker / DocumentChunker (sliding window, MaxChunkCharacters=1200, OverlapCharacters=150, token_estimate=ceil(len/4.0))** + **IDocumentChunkRepository / EfDocumentChunkRepository (includes GetChunksForDocumentAsync)** + **DocumentChunk domain entity + DocumentChunkConfiguration + DocumentChunksFoundation migration (11 columns, 4 indexes including UX on document_id+chunk_index)** + **DocumentExtractionException + DocumentChunkingException + DocumentEmbeddingException (controlled safe-message exceptions)** + **IEmbeddingProvider / FakeEmbeddingProvider (Infrastructure, SHA-256 deterministic, network-free, no SDK required)** + **FakeEmbeddingProviderSettings bound from Embeddings:Fake config** + **EmbeddingStatus enum (Ready, Failed)** + **ChunkEmbedding domain entity + ChunkEmbeddingConfiguration + ChunkEmbeddingsFoundation migration (12 columns, 4 indexes, UX_chunk_embeddings_chunk_id unique)** + **IChunkEmbeddingRepository / EfChunkEmbeddingRepository** + **ManagedDocument includes StorageLocation (never serialized to API/Angular)** + **IDocumentProcessingOrchestrator DI registration in Application** + **4 processing lifecycle repository methods (FindPendingForProcessingAsync, ClaimForProcessingAsync, MarkProcessedAsync, MarkFailedAsync) on IDocumentRepository + EfDocumentRepository** + **DocumentProcessingWorker BackgroundService (PeriodicTimer, scoped orchestrator per cycle, safe error logging)** + **WorkerCorrelationContext (per-scope, non-HTTP ICorrelationContext)** + **WorkerSettings (PollingIntervalSeconds with safe default 10)** + **AddJwtInfrastructure() split from AddInfrastructure() (Worker does not need JWT ValidateOnStart)**. |
+| Current sprint | Post-Sprint 29 — Issue A and Issue B complete |
+| Last completed sprint | Post-Sprint 29: Issue B — Expose AiProvider/AiModel/ProviderFailureCode in Chat History (implementation complete and validated) |
+| Active implementation issue | None; Issue B is implemented and validated. |
+| Current architecture status | Buildable .NET 10 backend + Angular 21 frontend + local SQL Server container + EF Core persistence foundation + `SeedFictionalOrganizationsAndPersonas` migration + JWT Bearer authentication + ICurrentUser abstraction + working login page with authGuard and apiInterceptor + **RBAC permission catalog** + **RolePermissionMatrix** (5 MVP roles, 30 permissions) + **IPermissionService / PermissionService** + **IOrganizationScopeService / OrganizationScopeService** + **[RequirePermission] attribute + PermissionPolicyProvider + PermissionAuthorizationHandler** + **persisted-current-state authorization via IUserAccessStateReader / EfUserAccessStateReader** + **correlation ID and global safe-error middleware** + **application observability contracts with Infrastructure EF audit/database-health adapters** + **public basic and Admin-only sanitized health endpoints** + **frontend generic Error ID UX** + **frontend RoleVisibilityService (UX-only)** + **future RAG/retrieval authorization hook interfaces** + **Admin-only same-organization user management API (GET/POST/PUT /api/v1/users, GET/POST/DELETE /api/v1/users/{id}/roles)** + **UserManagementService with initialPassword hashing, email normalization, self-lockout protection, final-active-Admin protection, persisted-disable permission check** + **safe audit events (UserCreated, UserUpdated, UserStatusChanged, UserRoleAssigned, UserRoleRemoved, UserManagementDenied, DocumentRetrievalDisabled, DocumentRetrievalEnabled, DocumentUploadAccepted, DocumentUploadRejected, DocumentUploadFailed, DocumentProcessingStarted, DocumentProcessingSucceeded, DocumentProcessingFailed, EmbeddingGenerationSucceeded, EmbeddingGenerationFailed)** + **DemoGroundedAnswerGenerator (extractive, CI-safe, no API key) / optional OpenAIAnswerGenerator (raw HttpClient, user-secrets key, grounded prompt context)** + **minimal Angular Admin UI (user list, user detail/edit, user create, role assignment/removal)** + **canonical Document metadata and behavior-protected lifecycle (StartProcessing, MarkProcessed, MarkFailed, DisableRetrieval, IsEligibleForRetrieval)** + **DocumentProcessingStatus enum (Uploaded, Processing, Processed, Failed)** + **transition-aware DocumentService + IDocumentRepository** + **EfDocumentRepository** + **DocumentConfiguration with status check constraint + DocumentMetadataFoundation migration** + **6 document API endpoints (POST /api/v1/documents, GET /api/v1/documents, GET /{id}, GET /{id}/processing-status, POST /{id}/disable, POST /{id}/enable)** + **IDocumentStorage abstraction (Application, now includes OpenReadAsync) + LocalDocumentStorage (Infrastructure, local:// URI scheme, path-containment-safe OpenReadAsync)** + **UploadDocumentCommand with atomic validate→store→persist flow; best-effort cleanup on persistence failure** + **Angular documents list, detail/status/action (with 5 s status polling), and upload pages** + **DocumentService Angular service (list/get/getProcessingStatus/disableRetrieval/upload)** + **canUploadDocuments() / canDisableDocumentRetrieval() / canEnableDocumentRetrieval() UX helpers** + **chat Sources heading (rank/score hidden from primary chat, visible in interaction detail)** + **IDocumentProcessingOrchestrator / DocumentProcessingOrchestrator (atomic claim, ordered multi-step pipeline, transaction-wrapped steps + MarkProcessed, safe failure reason, processing audit events)** + **IDocumentProcessingStep / ExtractAndChunkDocumentProcessingStep + GenerateChunkEmbeddingsProcessingStep** + **IDocumentProcessingTransactionFactory / EfDocumentProcessingTransactionFactory (transaction wraps all steps + MarkProcessed atomically)** + **IDocumentTextExtractor / TxtMarkdownTextExtractor (text/plain, text/markdown, parameterized forms; normalizes line endings)** + **IDocumentChunker / DocumentChunker (sliding window, MaxChunkCharacters=1200, OverlapCharacters=150, token_estimate=ceil(len/4.0))** + **IDocumentChunkRepository / EfDocumentChunkRepository (includes GetChunksForDocumentAsync)** + **DocumentChunk domain entity + DocumentChunkConfiguration + DocumentChunksFoundation migration (11 columns, 4 indexes including UX on document_id+chunk_index)** + **DocumentExtractionException + DocumentChunkingException + DocumentEmbeddingException (controlled safe-message exceptions)** + **IEmbeddingProvider / FakeEmbeddingProvider (Infrastructure, SHA-256 deterministic, network-free, no SDK required)** + **FakeEmbeddingProviderSettings bound from Embeddings:Fake config** + **EmbeddingStatus enum (Ready, Failed)** + **ChunkEmbedding domain entity + ChunkEmbeddingConfiguration + ChunkEmbeddingsFoundation migration (12 columns, 4 indexes, UX_chunk_embeddings_chunk_id unique)** + **IChunkEmbeddingRepository / EfChunkEmbeddingRepository** + **ManagedDocument includes StorageLocation (never serialized to API/Angular)** + **IDocumentProcessingOrchestrator DI registration in Application** + **4 processing lifecycle repository methods (FindPendingForProcessingAsync, ClaimForProcessingAsync, MarkProcessedAsync, MarkFailedAsync) on IDocumentRepository + EfDocumentRepository** + **DocumentProcessingWorker BackgroundService (PeriodicTimer, scoped orchestrator per cycle, safe error logging)** + **WorkerCorrelationContext (per-scope, non-HTTP ICorrelationContext)** + **WorkerSettings (PollingIntervalSeconds with safe default 10)** + **AddJwtInfrastructure() split from AddInfrastructure() (Worker does not need JWT ValidateOnStart)**. |
 
 Issue #28 adds Application-owned retrieval contracts, a local SQL-backed `LocalVectorStore`, QueryVector-only cosine search, Ready + Indexed retrieval eligibility, `AddChunkEmbeddingIndexMetadata`, safe retrieval settings, sanitized retrieval health, and provider-SDK boundary tests. No retrieval API endpoint, RAG answer generation, prompt construction, chat API, citation mapping, frontend retrieval work, external vector service, Azure AI Search, OpenAI/Azure OpenAI SDK, Semantic Kernel, or vector database SDK was added.
 
@@ -108,8 +73,8 @@ Issue #37 adds RAG prompt building and defense-in-depth authorization: **IGround
 ## Current Known Limitations
 
 - Text extraction (TXT/Markdown only) and deterministic character-based chunking are implemented. PDF, DOCX extraction remain deferred (fail-safe with controlled error message).
-- Chunks and embeddings are persisted, local SQL-backed semantic retrieval exists, and Application-level eligible retrieval orchestration exists, but `IsRetrievalEnabled` remains `false` by default; no re-enable endpoint, user-facing retrieval endpoint, chat API, prompt construction, answer generation, citations, or RAG chat exists yet.
-- `MarkProcessed` does not enable retrieval; re-enable and retry endpoints are deferred to Phase 2.
+- Chunks and embeddings are persisted, local SQL-backed semantic retrieval exists, and Application-level eligible retrieval orchestration exists. `IsRetrievalEnabled` defaults to `false`; KnowledgeAdmin/Admin can enable retrieval via `POST /api/v1/documents/{id}/enable` (MVP correction).
+- `MarkProcessed` does not auto-enable retrieval. The re-enable endpoint is now MVP-supported for Processed documents. Retry-processing endpoint remains deferred to Phase 2.
 - Retrieval search eligibility is enforced in `LocalVectorStore` with SQL-level organization, document, chunk, embedding, and index-status filters before vector scoring.
 - JWT logout is stateless (client-side clear only); no server-side token revocation.
 - Audit emissions are safe best-effort; workflow-specific telemetry remains deferred.
@@ -138,7 +103,7 @@ Issue #49 adds MVP release readiness artifacts and demo data documentation: `doc
 
 ## Next Recommended Action
 
-Open pull request for Issue #49. After merge, trigger `ci.yml` on main to obtain CI green evidence. Run `integration-tests.yml` via workflow_dispatch with `SQL_SA_PASSWORD` configured to validate SQL-gated tests. Record CI run URL and SQL integration result in `docs/releases/mvp-release-signoff.md` to upgrade verdict to READY FOR MVP DEMONSTRATION. If diagram artifact PNG generation is authorized, replace `docs/diagrams/business-process/monitoring-sla-process.png` with `monitoring-operational-process.png`.
+All post-Sprint-29 work is complete: Issue A ✅, Issue B ✅, FK constraint fix ✅, DecimalPipe cleanup ✅, login-page spec fix ✅, app/documents-page spec fixes ✅, agent harness audit ✅. Frontend suite is 207/207. Agent context files (06, 07, 09), README, and local-setup-guide are reconciled. To open a pull request, create a branch and PR covering all changes. SQL-gated integration tests remain available via `integration-tests.yml` with `SQL_SA_PASSWORD`. Diagram PNG artifact cleanup remains deferred until explicitly authorized.
 
 ## Source Of Truth
 

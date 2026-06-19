@@ -317,12 +317,12 @@ Example:
 | GET | `/api/v1/documents` | List documents within organization scope. | KnowledgeAdmin, Manager, Admin |
 | GET | `/api/v1/documents/{documentId}` | Get document details and processing status. | KnowledgeAdmin, Manager, Admin |
 | POST | `/api/v1/documents/{documentId}/disable` | Set `isRetrievalEnabled = false` without changing processing status. | KnowledgeAdmin, Admin |
-| POST | `/api/v1/documents/{documentId}/enable` | Re-enable a processed document for retrieval (Phase 2). | KnowledgeAdmin, Admin |
+| POST | `/api/v1/documents/{documentId}/enable` | Re-enable a processed document for retrieval. Document must have `ProcessingStatus = Processed`. | KnowledgeAdmin, Admin |
 | POST | `/api/v1/documents/{documentId}/retry-processing` | Retry failed document processing (Phase 2). | KnowledgeAdmin, Admin |
 
 ### MVP Note
 
-`retry-processing` and `enable` are deferred to Phase 2. MVP supports upload, status review, and retrieval disablement through `isRetrievalEnabled = false`.
+`retry-processing` is deferred to Phase 2. `enable` was promoted from Phase 2 to MVP as a demo-readiness correction. MVP supports upload, status review, retrieval disablement, and retrieval enablement for Processed documents.
 
 ---
 
