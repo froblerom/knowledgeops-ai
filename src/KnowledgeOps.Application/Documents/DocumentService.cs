@@ -45,6 +45,43 @@ public sealed class DocumentService(
         await repository.FindAsync(documentId, actor.OrganizationId, ct)
         ?? throw new ApplicationNotFoundException();
 
+    public async Task<ManagedDocument> EnableRetrievalAsync(
+        DocumentActor actor,
+        Guid documentId,
+        CancellationToken ct = default)
+    {
+        ManagedDocument document;
+        bool wasChanged;
+        try
+        {
+            var result = await repository.EnableRetrievalAsync(
+                documentId,
+                actor.OrganizationId,
+                DateTimeOffset.UtcNow,
+                ct)
+                ?? throw new ApplicationNotFoundException();
+
+            document = result.Document;
+            wasChanged = result.WasChanged;
+        }
+        catch (InvalidOperationException)
+        {
+            throw new ApplicationConflictException();
+        }
+
+        if (wasChanged)
+        {
+            await AuditAsync(
+                AuditEventTypes.DocumentRetrievalEnabled,
+                "Document retrieval enabled.",
+                actor,
+                documentId,
+                ct);
+        }
+
+        return document;
+    }
+
     public async Task<ManagedDocument> DisableRetrievalAsync(
         DocumentActor actor,
         Guid documentId,

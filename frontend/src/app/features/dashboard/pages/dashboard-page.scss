@@ -1,0 +1,47 @@
+.dashboard-page {
+  max-width: 72rem;
+}
+
+.dashboard-section {
+  margin-bottom: 2rem;
+
+  h2 {
+    color: #1f2937;
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+  }
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  gap: 1rem;
+}
+
+.metric-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 1rem 1.25rem;
+}
+
+.metric-label {
+  color: #6b7280;
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.metric-value {
+  color: #1f2937;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.empty-state {
+  color: #6b7280;
+  font-size: 0.875rem;
+}

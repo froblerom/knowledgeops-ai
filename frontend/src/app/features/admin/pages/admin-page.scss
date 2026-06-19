@@ -1,6 +1,6 @@
 .admin-page {
   max-width: 68rem;
-  color: #e0e0e0;
+  color: #1f2937;
 }
 
 header {
@@ -11,7 +11,7 @@ header {
 
   p {
     margin-top: 0.35rem;
-    color: #a0a0c0;
+    color: #6b7280;
   }
 }
 
@@ -28,22 +28,22 @@ table {
   width: 100%;
 
   th, td {
-    border-bottom: 1px solid #2b2b45;
+    border-bottom: 1px solid #e5e7eb;
     padding: 0.8rem;
     text-align: left;
   }
 
   a {
-    color: #91abff;
+    color: #3b6cf4;
   }
 }
 
 .status {
-  border: 1px solid #394268;
+  border: 1px solid #d1d5db;
   border-radius: 1rem;
   padding: 0.2rem 0.6rem;
 }
 
 .empty {
-  color: #a0a0c0;
+  color: #6b7280;
 }

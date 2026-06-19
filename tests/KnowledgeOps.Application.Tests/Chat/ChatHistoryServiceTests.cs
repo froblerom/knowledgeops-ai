@@ -388,7 +388,7 @@ public sealed class ChatHistoryServiceTests
         if (answerState == AnswerState.InsufficientContext)
             i.RecordInsufficientContextOutcome(null, 0, null, null);
         else if (answerState == AnswerState.ProviderFailed)
-            i.RecordProviderFailedOutcome("safe-code", null, null, null, null);
+            i.RecordProviderFailedOutcome("safe-code", null, 0, null, null, null);
         else if (answerState == AnswerState.Grounded)
             i.RecordGroundedOutcome("answer text", null, 1, null, null, null, null, null, null, null, null);
 

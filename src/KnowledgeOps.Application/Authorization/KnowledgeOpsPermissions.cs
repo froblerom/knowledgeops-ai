@@ -25,8 +25,9 @@ public static class KnowledgeOpsPermissions
         public const string ViewProcessingStatus = "Documents.ViewProcessingStatus";
         public const string ViewChunks = "Documents.ViewChunks";
         public const string Disable = "Documents.Disable";
+        public const string Enable = "Documents.Enable";
         public const string ViewUsage = "Documents.ViewUsage";
-        // Documents.Enable and Documents.RetryProcessing are Phase 2 — not implemented here.
+        // Documents.RetryProcessing is Phase 2 — not implemented here.
     }
 
     public static class Chat
@@ -86,6 +87,7 @@ public static class KnowledgeOpsPermissions
         Documents.ViewProcessingStatus,
         Documents.ViewChunks,
         Documents.Disable,
+        Documents.Enable,
         Documents.ViewUsage,
         Chat.AskQuestion,
         Chat.ViewOwnHistory,

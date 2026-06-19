@@ -1,7 +1,7 @@
-import { DecimalPipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { finalize } from 'rxjs/operators';
 import { ApiErrorService, ApiRequestError } from '../../../core/services/api-error.service';
 import { RoleVisibilityService } from '../../../core/services/role-visibility.service';
 import { ErrorState } from '../../../shared/components/error-state/error-state';
@@ -29,13 +29,14 @@ interface ChatTranscriptItem {
 
 @Component({
   selector: 'app-chat-page',
-  imports: [DecimalPipe, FormsModule, ErrorState, LoadingState],
+  imports: [FormsModule, ErrorState, LoadingState],
   templateUrl: './chat-page.html',
   styleUrl: './chat-page.scss'
 })
 export class ChatPage {
   private readonly chat = inject(ChatService);
   private readonly apiError = inject(ApiErrorService);
+  private readonly cdr = inject(ChangeDetectorRef);
   readonly roleVisibility = inject(RoleVisibilityService);
 
   questionText = '';
@@ -80,7 +81,9 @@ export class ChatPage {
     this.questionText = '';
     this.submitting = true;
 
-    this.chat.askQuestion(questionText, this.chatSessionId ?? undefined).subscribe({
+    this.chat.askQuestion(questionText, this.chatSessionId ?? undefined).pipe(
+      finalize(() => this.cdr.markForCheck())
+    ).subscribe({
       next: response => {
         this.chatSessionId = response.chatSessionId;
         this.replacePendingItem(pendingId, questionText, response);
@@ -140,7 +143,9 @@ export class ChatPage {
       ? this.chat.updateFeedback(item.id, rating)
       : this.chat.submitFeedback(item.id, rating);
 
-    request.subscribe({
+    request.pipe(
+      finalize(() => this.cdr.markForCheck())
+    ).subscribe({
       next: response => {
         this.patchTranscriptItem(item.id, {
           feedbackRating: response.rating,

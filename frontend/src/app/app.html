@@ -1,19 +1,71 @@
-<header class="app-header">
-  <span class="app-title">KnowledgeOps-AI</span>
-  <nav class="app-nav">
-    <a routerLink="/login" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Login</a>
-    <a routerLink="/documents" routerLinkActive="active">Documents</a>
-    <a routerLink="/chat" routerLinkActive="active" [hidden]="!visibility.canAskChat()">Chat</a>
-    <a routerLink="/chat/history" routerLinkActive="active" [hidden]="!visibility.canViewChatHistory()">History</a>
-    <a routerLink="/dashboard" routerLinkActive="active">Dashboard</a>
-    <a routerLink="/admin/processing-failures" routerLinkActive="active" [hidden]="!visibility.canViewProcessingFailures()">Failures</a>
-    <a routerLink="/admin/audit-log" routerLinkActive="active" [hidden]="!visibility.canViewAuditLog()">Audit</a>
-    @if (visibility.canViewAdmin()) {
-      <a routerLink="/admin/users" routerLinkActive="active">Admin</a>
-    }
-  </nav>
-</header>
+<!-- SECURITY NOTE: Navigation visibility is UX only. Backend auth is the source of truth. -->
+<mat-toolbar class="app-toolbar">
+  <div class="brand">
+    <mat-icon aria-hidden="true">psychology</mat-icon>
+    <span>KnowledgeOps-AI</span>
+  </div>
 
-<main class="app-content">
+  @if (authService.isAuthenticated()) {
+    <nav class="app-nav" aria-label="Main navigation">
+      @if (visibility.canAskChat()) {
+        <a mat-button routerLink="/chat" routerLinkActive="nav-active" [routerLinkActiveOptions]="{ exact: true }">
+          <mat-icon aria-hidden="true">chat</mat-icon>
+          Chat
+        </a>
+      }
+      @if (visibility.canViewChatHistory()) {
+        <a mat-button routerLink="/chat/history" routerLinkActive="nav-active">
+          <mat-icon aria-hidden="true">history</mat-icon>
+          History
+        </a>
+      }
+      @if (visibility.canViewDocuments()) {
+        <a mat-button routerLink="/documents" routerLinkActive="nav-active">
+          <mat-icon aria-hidden="true">folder_open</mat-icon>
+          Documents
+        </a>
+      }
+      @if (visibility.canViewDashboard()) {
+        <a mat-button routerLink="/dashboard" routerLinkActive="nav-active">
+          <mat-icon aria-hidden="true">dashboard</mat-icon>
+          Dashboard
+        </a>
+      }
+      @if (visibility.canViewProcessingFailures()) {
+        <a mat-button routerLink="/admin/processing-failures" routerLinkActive="nav-active">
+          <mat-icon aria-hidden="true">error_outline</mat-icon>
+          Failures
+        </a>
+      }
+      @if (visibility.canViewAuditLog()) {
+        <a mat-button routerLink="/admin/audit-log" routerLinkActive="nav-active">
+          <mat-icon aria-hidden="true">receipt_long</mat-icon>
+          Audit
+        </a>
+      }
+      @if (visibility.canViewAdmin()) {
+        <a mat-button routerLink="/admin/users" routerLinkActive="nav-active">
+          <mat-icon aria-hidden="true">manage_accounts</mat-icon>
+          Admin
+        </a>
+      }
+    </nav>
+
+    <span class="toolbar-spacer"></span>
+    <span class="user-display">{{ authService.currentUser()?.displayName }}</span>
+    <button mat-stroked-button type="button" (click)="logout()">
+      <mat-icon aria-hidden="true">logout</mat-icon>
+      Logout
+    </button>
+  } @else {
+    <span class="toolbar-spacer"></span>
+    <a mat-stroked-button routerLink="/login">
+      <mat-icon aria-hidden="true">login</mat-icon>
+      Login
+    </a>
+  }
+</mat-toolbar>
+
+<main class="app-shell">
   <router-outlet />
 </main>

@@ -37,6 +37,8 @@ public sealed record NewManagedDocument(
 
 public sealed record DocumentDisableResult(ManagedDocument Document, bool WasChanged);
 
+public sealed record DocumentEnableResult(ManagedDocument Document, bool WasChanged);
+
 public sealed record UploadDocumentCommand(
     string Title,
     Stream FileStream,

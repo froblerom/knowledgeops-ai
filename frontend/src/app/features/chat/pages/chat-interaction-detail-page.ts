@@ -1,7 +1,8 @@
 import { DecimalPipe, DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { finalize } from 'rxjs/operators';
 import { ApiErrorService, ApiRequestError } from '../../../core/services/api-error.service';
 import { ErrorState } from '../../../shared/components/error-state/error-state';
 import { LoadingState } from '../../../shared/components/loading-state/loading-state';
@@ -18,6 +19,7 @@ export class ChatInteractionDetailPage implements OnInit {
   private readonly chat = inject(ChatService);
   private readonly apiError = inject(ApiErrorService);
   private readonly route = inject(ActivatedRoute);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   interaction: ChatInteractionDetail | null = null;
   loading = true;
@@ -27,10 +29,13 @@ export class ChatInteractionDetailPage implements OnInit {
     const interactionId = this.route.snapshot.paramMap.get('chatInteractionId');
     if (!interactionId) {
       this.loading = false;
+      this.cdr.markForCheck();
       return;
     }
 
-    this.chat.getInteraction(interactionId).subscribe({
+    this.chat.getInteraction(interactionId).pipe(
+      finalize(() => this.cdr.markForCheck())
+    ).subscribe({
       next: interaction => {
         this.interaction = interaction;
         this.loading = false;

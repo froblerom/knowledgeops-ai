@@ -210,7 +210,13 @@ public sealed class OperationalSafetyApiTests : IClassFixture<OperationalSafetyA
         Assert.Contains("\"application\":\"Healthy\"", text, StringComparison.Ordinal);
         Assert.Contains("\"database\":\"Healthy\"", text, StringComparison.Ordinal);
         Assert.Contains("\"retrieval\":\"Healthy\"", text, StringComparison.Ordinal);
-        Assert.DoesNotContain("provider", text, StringComparison.OrdinalIgnoreCase);
+        // AI provider info is intentionally included (answerProvider, openAiConfigured, model,
+        // localProviderBaseUrl) — verify it is present and sanitized (no API key, no raw env vars).
+        Assert.Contains("answerProvider", text, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("openAiConfigured", text, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("localProviderBaseUrl", text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ApiKey", text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("sk-", text, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("storage", text, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("queue", text, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(

@@ -1,5 +1,6 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { finalize } from 'rxjs/operators';
 import { ApiErrorService, ApiRequestError } from '../../../core/services/api-error.service';
 import { ErrorState } from '../../../shared/components/error-state/error-state';
 import { LoadingState } from '../../../shared/components/loading-state/loading-state';
@@ -15,6 +16,7 @@ import { AdminSupportService } from '../services/admin-support.service';
 export class AuditLogPage implements OnInit {
   private readonly support = inject(AdminSupportService);
   private readonly apiError = inject(ApiErrorService);
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly formBuilder = inject(FormBuilder);
 
   readonly filters = this.formBuilder.group({
@@ -40,7 +42,9 @@ export class AuditLogPage implements OnInit {
       from: raw.from || undefined,
       to: raw.to || undefined,
       eventType: raw.eventType?.trim() || undefined
-    }).subscribe({
+    }).pipe(
+      finalize(() => this.cdr.markForCheck())
+    ).subscribe({
       next: entries => {
         this.entries = entries;
         this.loading = false;

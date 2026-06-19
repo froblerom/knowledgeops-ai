@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Brand blue rounded square background -->
+  <rect width="32" height="32" rx="6" fill="#4B5EDA"/>
+  <!-- Brain silhouette: filled white shape with blue grooves cut in -->
+  <!-- Left lobe -->
+  <path fill="white" d="
+    M15 23
+    C13.5 23 11 22.5 9.5 21
+    C7.5 19.5 7 17.5 7 16
+    C7 14.5 7.5 12.5 9 11.5
+    C8.5 10 9 8.5 10.5 8
+    C12 7.5 13.5 8.5 14.5 9.5
+    L15 10
+    L15 23Z
+  "/>
+  <!-- Right lobe -->
+  <path fill="white" d="
+    M17 23
+    C18.5 23 21 22.5 22.5 21
+    C24.5 19.5 25 17.5 25 16
+    C25 14.5 24.5 12.5 23 11.5
+    C23.5 10 23 8.5 21.5 8
+    C20 7.5 18.5 8.5 17.5 9.5
+    L17 10
+    L17 23Z
+  "/>
+  <!-- Center groove (background color cuts between lobes) -->
+  <line x1="16" y1="9.5" x2="16" y2="23" stroke="#4B5EDA" stroke-width="2"/>
+  <!-- Bottom connector / brain stem -->
+  <path fill="white" d="M13.5 23 Q16 25 18.5 23 L17.5 23 Q16 24.5 14.5 23Z"/>
+  <!-- Left hemisphere fold (blue arc cut-in) -->
+  <path fill="none" stroke="#4B5EDA" stroke-width="1.4" stroke-linecap="round"
+    d="M8.5 16.5 Q10.5 14 12 16"/>
+  <!-- Right hemisphere fold (blue arc cut-in) -->
+  <path fill="none" stroke="#4B5EDA" stroke-width="1.4" stroke-linecap="round"
+    d="M23.5 16.5 Q21.5 14 20 16"/>
+</svg>

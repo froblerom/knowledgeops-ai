@@ -16,7 +16,16 @@
   } @else {
     <table>
       <thead>
-        <tr><th>Title</th><th>File</th><th>Status</th><th>Retrieval</th><th>Uploaded</th></tr>
+        <tr>
+          <th>Title</th>
+          <th>File</th>
+          <th>Status</th>
+          <th>Retrieval</th>
+          <th>Uploaded</th>
+          @if (roleVisibility.canEnableDocumentRetrieval() || roleVisibility.canDisableDocumentRetrieval()) {
+            <th>Actions</th>
+          }
+        </tr>
       </thead>
       <tbody>
         @for (doc of documents; track doc.documentId) {
@@ -26,6 +35,33 @@
             <td><span class="status">{{ doc.processingStatus }}</span></td>
             <td>{{ doc.isRetrievalEnabled ? 'Enabled' : 'Disabled' }}</td>
             <td>{{ doc.uploadedAt | date:'short' }}</td>
+            @if (roleVisibility.canEnableDocumentRetrieval() || roleVisibility.canDisableDocumentRetrieval()) {
+              <td class="actions-cell">
+                @if (doc.processingStatus === 'Processed') {
+                  @if (roleVisibility.canEnableDocumentRetrieval() && !doc.isRetrievalEnabled) {
+                    <button
+                      type="button"
+                      class="action-btn"
+                      [disabled]="isActionInProgress(doc.documentId)"
+                      (click)="enableRetrieval(doc)">
+                      {{ actionInProgress[doc.documentId] === 'enabling' ? 'Enabling...' : 'Enable' }}
+                    </button>
+                  }
+                  @if (roleVisibility.canDisableDocumentRetrieval() && doc.isRetrievalEnabled) {
+                    <button
+                      type="button"
+                      class="action-btn action-btn--secondary"
+                      [disabled]="isActionInProgress(doc.documentId)"
+                      (click)="disableRetrieval(doc)">
+                      {{ actionInProgress[doc.documentId] === 'disabling' ? 'Disabling...' : 'Disable' }}
+                    </button>
+                  }
+                }
+                @if (rowErrors[doc.documentId]) {
+                  <span class="row-error">{{ rowErrors[doc.documentId]?.message }}</span>
+                }
+              </td>
+            }
           </tr>
         }
       </tbody>

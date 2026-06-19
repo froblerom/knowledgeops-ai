@@ -1,8 +1,8 @@
 import { DatePipe } from '@angular/common';
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Subject, forkJoin, interval } from 'rxjs';
-import { switchMap, takeUntil } from 'rxjs/operators';
+import { finalize, switchMap, takeUntil } from 'rxjs/operators';
 import {
   DocumentProcessingStatus,
   DocumentProcessingStatusResponse,
@@ -27,10 +27,12 @@ export class DocumentDetailPage implements OnInit, OnDestroy {
   private readonly apiError = inject(ApiErrorService);
   private readonly roles = inject(RoleVisibilityService);
   private readonly route = inject(ActivatedRoute);
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroy$ = new Subject<void>();
 
   readonly documentId = this.route.snapshot.paramMap.get('documentId')!;
   readonly canDisable = this.roles.canDisableDocumentRetrieval();
+  readonly canEnable = this.roles.canEnableDocumentRetrieval();
   document: ManagedDocument | null = null;
   status: DocumentProcessingStatusResponse | null = null;
   loading = true;
@@ -41,7 +43,9 @@ export class DocumentDetailPage implements OnInit, OnDestroy {
     forkJoin({
       document: this.documentsApi.get(this.documentId),
       status: this.documentsApi.getProcessingStatus(this.documentId)
-    }).subscribe({
+    }).pipe(
+      finalize(() => this.cdr.markForCheck())
+    ).subscribe({
       next: result => {
         this.document = result.document;
         this.status = result.status;
@@ -60,12 +64,36 @@ export class DocumentDetailPage implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  enableRetrieval(): void {
+    if (!this.document || this.saving) return;
+
+    this.saving = true;
+    this.error = null;
+    this.documentsApi.enableRetrieval(this.documentId).pipe(
+      finalize(() => this.cdr.markForCheck())
+    ).subscribe({
+      next: document => {
+        this.document = document;
+        if (this.status) {
+          this.status = { ...this.status, isRetrievalEnabled: document.isRetrievalEnabled };
+        }
+        this.saving = false;
+      },
+      error: response => {
+        this.error = this.apiError.fromHttpError(response);
+        this.saving = false;
+      }
+    });
+  }
+
   disableRetrieval(): void {
     if (!this.document || this.saving) return;
 
     this.saving = true;
     this.error = null;
-    this.documentsApi.disableRetrieval(this.documentId).subscribe({
+    this.documentsApi.disableRetrieval(this.documentId).pipe(
+      finalize(() => this.cdr.markForCheck())
+    ).subscribe({
       next: document => {
         this.document = document;
         if (this.status) {
@@ -101,6 +129,7 @@ export class DocumentDetailPage implements OnInit, OnDestroy {
           if (this.isTerminal(statusResponse.processingStatus)) {
             this.destroy$.next();
           }
+          this.cdr.markForCheck();
         },
         error: () => {
           // Polling errors are silent; the last known status remains displayed.

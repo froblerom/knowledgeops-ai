@@ -32,6 +32,10 @@ internal sealed class LocalVectorStore(
         CancellationToken cancellationToken = default)
     {
         var stopwatch = Stopwatch.StartNew();
+        // IndexAsync does not require ProcessingStatus == Processed or IsRetrievalEnabled:
+        // the indexing step runs while the document is still in Processing status,
+        // and IsRetrievalEnabled defaults to false until the user explicitly enables it.
+        // SearchAsync enforces both conditions — indexing only prepares the embedding metadata.
         var eligibleEmbeddings = await (
             from embedding in dbContext.ChunkEmbeddings
             join chunk in dbContext.DocumentChunks on embedding.ChunkId equals chunk.Id
@@ -42,8 +46,6 @@ internal sealed class LocalVectorStore(
                 && chunk.OrganizationId == request.OrganizationId
                 && chunk.DeletedAt == null
                 && document.OrganizationId == request.OrganizationId
-                && document.ProcessingStatus == DocumentProcessingStatus.Processed
-                && document.IsRetrievalEnabled
                 && document.DeletedAt == null
                 && (request.DocumentId == null || document.Id == request.DocumentId.Value)
             select embedding)

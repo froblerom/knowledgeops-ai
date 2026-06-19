@@ -97,16 +97,22 @@ public sealed class ChatInteraction
     public void RecordProviderFailedOutcome(
         string? safeFailureCode,
         Guid? retrievalQueryId,
+        int candidateCount,
         long? retrievalMs,
         long? generationMs,
-        long? totalMs)
+        long? totalMs,
+        string? aiProvider = null,
+        string? aiModel = null)
     {
         AnswerState = AnswerState.ProviderFailed;
         ProviderFailureCode = safeFailureCode;
         RetrievalQueryId = retrievalQueryId;
+        RetrievalCandidateCount = candidateCount;
         RetrievalLatencyMs = retrievalMs;
         GenerationLatencyMs = generationMs;
         TotalLatencyMs = totalMs;
+        AiProvider = aiProvider;
+        AiModel = aiModel;
         UpdatedAt = DateTimeOffset.UtcNow;
     }
 }

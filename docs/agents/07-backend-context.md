@@ -41,6 +41,16 @@
 - Infrastructure adapters may use SDKs and technical configuration.
 - Automated backend tests should use fake AI providers by default.
 
+## Known EF Core Pitfalls
+
+### Shared DbContext audit-write ordering rule
+
+`EfAuditEventWriter.WriteAsync` calls `dbContext.SaveChangesAsync()` on the shared scoped `KnowledgeOpsDbContext`. If any other tracked entity has pending changes in the same context (e.g. citations tracked as `Added` from a prior step), EF Core flushes all tracked entities in one batch. Without an explicit transaction, SQL Server auto-commits each INSERT independently — the audit entry is committed first, then the child rows fail with an FK violation if their parent row does not yet exist.
+
+**Rule: audit the completion of an action only after the action's persistence has been committed.**
+
+Calling `AuditAsync(ActionCompleted, ...)` before `PersistAsync(...)` in the grounded chat path caused `FK_citations_chat_interactions_chat_interaction_id` failures on every grounded answer (fixed 2026-06-18 in `RagChatOrchestrationService`). Any future orchestration step that emits an audit event before persisting a parent row will reproduce this pattern.
+
 ## Sources
 
 - ADR-001, ADR-002, ADR-004 through ADR-008, ADR-010.

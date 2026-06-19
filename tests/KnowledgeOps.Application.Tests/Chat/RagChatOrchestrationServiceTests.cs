@@ -128,6 +128,25 @@ public sealed class RagChatOrchestrationServiceTests
     }
 
     [Fact]
+    public async Task RagChatOrchestration_ProviderFailed_StoresProviderNameFromGenerator()
+    {
+        // When the generator returns ProviderFailed, AiProvider and AiModel on the stored
+        // interaction must come from the generator result, not be null or hardcoded.
+        var harness = CreateHarness(
+            candidates: [AuthorizedCandidate()],
+            generatorState: AnswerState.ProviderFailed,
+            generatorFailureCode: "ProviderUnavailable");
+
+        await harness.Service.AskAsync(new AskQuestionRequest("What is the policy?"));
+
+        var stored = Assert.Single(harness.InteractionRepository.StoredInteractions);
+        Assert.Equal(AnswerState.ProviderFailed, stored.AnswerState);
+        Assert.Equal("FakeTest", stored.AiProvider);
+        Assert.Equal("fake-test-v1", stored.AiModel);
+        Assert.Equal("ProviderUnavailable", stored.ProviderFailureCode);
+    }
+
+    [Fact]
     public async Task RagChatOrchestrationService_StoresLatencyMetadata()
     {
         var harness = CreateHarness(candidates: [AuthorizedCandidate()]);
@@ -242,8 +261,8 @@ public sealed class RagChatOrchestrationServiceTests
         Assert.DoesNotContain(secretMessage, stored.ProviderFailureCode ?? string.Empty, StringComparison.Ordinal);
         if (stored.AnswerText is not null)
             Assert.DoesNotContain(secretMessage, stored.AnswerText, StringComparison.Ordinal);
-        if (stored.AiModel is not null)
-            Assert.DoesNotContain(secretMessage, stored.AiModel, StringComparison.Ordinal);
+        Assert.Equal("throwing-test-v1", stored.AiModel);
+        Assert.DoesNotContain(secretMessage, stored.AiModel, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -421,6 +440,122 @@ public sealed class RagChatOrchestrationServiceTests
         Assert.Equal(AnswerState.ProviderFailed, stored.AnswerState);
         Assert.Null(stored.AnswerText);
         Assert.Equal("CitationMappingFailed", stored.ProviderFailureCode);
+    }
+
+    [Fact]
+    public async Task RagChatOrchestration_GroundedAnswer_ChatAnswerGenerationCompletedAuditedAfterPersist()
+    {
+        // Verifies that ChatAnswerGenerationCompleted is emitted AFTER ChatInteractionStored so
+        // EfAuditEventWriter's SaveChangesAsync cannot flush tracked citations before the
+        // chat_interaction row exists (FK_citations_chat_interactions_chat_interaction_id).
+        var candidate = AuthorizedCandidate();
+        var harness = CreateHarness(candidates: [candidate]);
+
+        var response = await harness.Service.AskAsync(new AskQuestionRequest("What is the policy?"));
+
+        Assert.Equal(AnswerState.Grounded, response.AnswerState);
+
+        var events = harness.AuditWriter.Events.Select(e => e.EventType).ToList();
+        var storedIndex = events.IndexOf(AuditEventTypes.ChatInteractionStored);
+        var completedIndex = events.IndexOf(AuditEventTypes.ChatAnswerGenerationCompleted);
+
+        Assert.True(storedIndex >= 0, "ChatInteractionStored audit event must be present for grounded answer.");
+        Assert.True(completedIndex >= 0, "ChatAnswerGenerationCompleted audit event must be present for grounded answer.");
+        Assert.True(storedIndex < completedIndex,
+            $"ChatInteractionStored (index {storedIndex}) must precede ChatAnswerGenerationCompleted (index {completedIndex}) " +
+            "to prevent FK violation when EfAuditEventWriter flushes the shared DbContext.");
+    }
+
+    [Fact]
+    public async Task RagChatOrchestrationService_PassesSystemInstructionToGenerator()
+    {
+        var harness = CreateHarness(candidates: [AuthorizedCandidate()]);
+
+        await harness.Service.AskAsync(new AskQuestionRequest("What is the policy?"));
+
+        Assert.NotNull(harness.Generator.LastRequest);
+        Assert.False(
+            string.IsNullOrWhiteSpace(harness.Generator.LastRequest!.SystemInstruction),
+            "SystemInstruction must be populated in AnswerGenerationRequest.");
+    }
+
+    [Fact]
+    public async Task RagChatOrchestrationService_PassesFormattedContextToGenerator()
+    {
+        var harness = CreateHarness(candidates: [AuthorizedCandidate()]);
+
+        await harness.Service.AskAsync(new AskQuestionRequest("What is the policy?"));
+
+        Assert.NotNull(harness.Generator.LastRequest);
+        Assert.False(
+            string.IsNullOrWhiteSpace(harness.Generator.LastRequest!.FormattedContext),
+            "FormattedContext must be populated in AnswerGenerationRequest.");
+    }
+
+    [Fact]
+    public async Task RagChatOrchestrationService_ProviderFailedOutcome_StoresRetrievalCandidateCount()
+    {
+        // When the generator returns ProviderFailed, the stored interaction must reflect the
+        // actual number of retrieved candidates, not the default value of 0. This prevents
+        // misleading "Retrieved chunks: 0" in Chat History when retrieval actually succeeded.
+        var candidate = AuthorizedCandidate();
+        var harness = CreateHarness(
+            candidates: [candidate],
+            generatorState: AnswerState.ProviderFailed,
+            generatorFailureCode: "ProviderUnavailable");
+
+        var response = await harness.Service.AskAsync(new AskQuestionRequest("What is the policy?"));
+
+        Assert.Equal(AnswerState.ProviderFailed, response.AnswerState);
+        var stored = Assert.Single(harness.InteractionRepository.StoredInteractions);
+        Assert.Equal(AnswerState.ProviderFailed, stored.AnswerState);
+        Assert.True(
+            stored.RetrievalCandidateCount > 0,
+            "RetrievalCandidateCount must be > 0 when retrieval found candidates before the provider failed.");
+    }
+
+    [Fact]
+    public async Task RagChatOrchestrationService_GenerationException_StoresRetrievalCandidateCount()
+    {
+        // Same as above but for the exception code path.
+        const string secretMessage = "Any exception message";
+        var currentUser = new FakeCurrentUser(true, UserId, ClaimOrganizationId);
+        var accessReader = new FakeAccessStateReader(new UserAccessState(UserId, OrganizationId, ["Agent"]));
+        var permissionService = new PermissionService();
+        var candidate = AuthorizedCandidate();
+        var chunkTexts = new Dictionary<Guid, string> { [candidate.ChunkId] = "Sample chunk text." };
+        var retrievalService = new FakeRetrievalService([candidate], false, null, null);
+        var throwingGenerator = new ThrowingAnswerGenerator(secretMessage);
+        var sessionRepository = new FakeSessionRepository();
+        var interactionRepository = new FakeInteractionRepository();
+        var chunkTextReader = new FakeChunkTextReader(chunkTexts);
+        var auditWriter = new CapturingAuditEventWriter();
+        var correlationContext = new StaticCorrelationContext();
+        var promptBuilder = new GroundedPromptBuilder(new DefaultPromptAuthorizationFilter());
+        var sufficiencyPolicy = new ContextSufficiencyPolicy();
+        var titleReader = new FakeDocumentTitleReader(
+            new Dictionary<Guid, string> { [candidate.DocumentId] = "Test Document" });
+        var citationMapper = new CitationMapper(titleReader, NullLogger<CitationMapper>.Instance);
+        var citationRepository = new FakeCitationRepository();
+        var citationAuthFilter = new DefaultCitationAuthorizationFilter();
+
+        var service = new RagChatOrchestrationService(
+            currentUser, accessReader, permissionService, retrievalService,
+            throwingGenerator, sessionRepository, interactionRepository,
+            chunkTextReader, promptBuilder, sufficiencyPolicy,
+            citationMapper, citationRepository, citationAuthFilter,
+            auditWriter, correlationContext,
+            NullLogger<RagChatOrchestrationService>.Instance);
+
+        var response = await service.AskAsync(new AskQuestionRequest("What is the policy?"));
+
+        Assert.Equal(AnswerState.ProviderFailed, response.AnswerState);
+        var stored = Assert.Single(interactionRepository.StoredInteractions);
+        Assert.True(
+            stored.RetrievalCandidateCount > 0,
+            "RetrievalCandidateCount must reflect actual retrieved candidates even when generation throws.");
+        Assert.Equal("ThrowingTest", stored.AiProvider);
+        Assert.Equal("throwing-test-v1", stored.AiModel);
     }
 
     [Fact]

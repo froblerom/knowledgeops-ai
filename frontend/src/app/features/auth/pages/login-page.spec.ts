@@ -59,25 +59,25 @@ describe('LoginPage', () => {
   });
 
   it('sets errorMessage on failed login', () => {
-    const { componentInstance } = fixture;
+    const instance = fixture.componentInstance as any;
 
-    componentInstance.form.setValue({ email: 'agent@example.com', password: 'wrong' });
-    componentInstance.onSubmit();
+    instance.form.setValue({ email: 'agent@example.com', password: 'wrong' });
+    instance.submit();
 
     httpMock.expectOne(r => r.url.includes('/auth/login')).flush(
       { message: 'Invalid credentials.' },
       { status: 401, statusText: 'Unauthorized' }
     );
 
-    expect(componentInstance.errorMessage).toBe('Invalid email or password.');
-    expect(componentInstance.loading).toBe(false);
+    expect(instance.errorMessage()).toBe('Invalid email or password.');
+    expect(instance.isSubmitting()).toBe(false);
   });
 
-  it('navigates to dashboard on successful login', async () => {
-    const navigateSpy = vi.spyOn(router, 'navigate');
+  it('navigates to chat on successful login', async () => {
+    const navigateSpy = vi.spyOn(router, 'navigateByUrl');
     const { nativeElement, componentInstance } = fixture;
 
-    componentInstance.form.setValue({ email: 'agent@example.com', password: 'correct' });
+    (componentInstance as any).form.setValue({ email: 'agent@example.com', password: 'correct' });
     fixture.detectChanges();
 
     nativeElement.querySelector('form').dispatchEvent(new Event('submit'));
@@ -86,6 +86,6 @@ describe('LoginPage', () => {
     httpMock.expectOne(r => r.url.includes('/auth/login')).flush(loginResponse);
     fixture.detectChanges();
 
-    expect(navigateSpy).toHaveBeenCalledWith(['/dashboard']);
+    expect(navigateSpy).toHaveBeenCalledWith('/chat');
   });
 });

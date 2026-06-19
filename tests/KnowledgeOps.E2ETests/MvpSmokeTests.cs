@@ -393,6 +393,9 @@ public sealed class MvpSmokeTestFactory : WebApplicationFactory<Program>
         public Task<DocumentDisableResult?> DisableRetrievalAsync(Guid documentId, Guid organizationId, DateTimeOffset updatedAt, CancellationToken ct = default) =>
             Task.FromResult<DocumentDisableResult?>(null);
 
+        public Task<DocumentEnableResult?> EnableRetrievalAsync(Guid documentId, Guid organizationId, DateTimeOffset updatedAt, CancellationToken ct = default) =>
+            Task.FromResult<DocumentEnableResult?>(null);
+
         public Task<IReadOnlyList<ManagedDocument>> FindPendingForProcessingAsync(int maxCount, CancellationToken ct = default) =>
             Task.FromResult<IReadOnlyList<ManagedDocument>>([]);
 
@@ -430,7 +433,7 @@ public sealed class MvpSmokeTestFactory : WebApplicationFactory<Program>
         private static ChatInteractionDetailDto SampleInteraction(Guid interactionId) =>
             new(interactionId, Guid.NewGuid(), "GroundedAnswer", false, "Question", "Answer",
                 "rag-grounded-v1", "e2e-corr",
-                new ChatRetrievalMetadataDto(1, 10, 20, 30, null, null, null),
+                new ChatRetrievalMetadataDto(1, 10, 20, 30, null, null, null, null, null, null),
                 [], DateTimeOffset.UtcNow);
     }
 

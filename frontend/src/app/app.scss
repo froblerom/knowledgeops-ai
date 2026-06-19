@@ -1,48 +1,72 @@
+$toolbar-bg: #ffffff;
+$toolbar-border: #d8dee8;
+$toolbar-color: #172033;
+$nav-active-color: #1a56db;
+$user-display-color: #4b5563;
+
 * {
   box-sizing: border-box;
-  margin: 0;
-  padding: 0;
 }
 
-.app-header {
-  display: flex;
+.app-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: $toolbar-bg !important;
+  border-bottom: 1px solid $toolbar-border;
+  color: $toolbar-color;
+  padding: 0 1.5rem;
+  gap: 0.5rem;
+}
+
+.brand {
+  display: inline-flex;
   align-items: center;
-  gap: 2rem;
-  padding: 1rem 2rem;
-  background: #1a1a2e;
-  color: #e0e0e0;
-}
-
-.app-title {
-  font-size: 1.125rem;
+  gap: 0.5rem;
+  font-size: 1rem;
   font-weight: 600;
-  color: #ffffff;
+  color: $toolbar-color;
   white-space: nowrap;
+
+  mat-icon {
+    color: #1a56db;
+  }
 }
 
 .app-nav {
-  display: flex;
-  gap: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+  margin-left: 1rem;
 
   a {
-    color: #a0a0c0;
-    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
     font-size: 0.875rem;
-    padding: 0.25rem 0;
-    border-bottom: 2px solid transparent;
-    transition: color 0.15s, border-color 0.15s;
+    color: #374151;
+    border-radius: 6px;
 
-    &:hover {
-      color: #ffffff;
-    }
-
-    &.active {
-      color: #ffffff;
-      border-bottom-color: #6b8aff;
+    &.nav-active {
+      color: $nav-active-color;
+      background: #eff6ff;
     }
   }
 }
 
-.app-content {
-  padding: 2rem;
+.toolbar-spacer {
+  flex: 1 1 auto;
+}
+
+.user-display {
+  font-size: 0.8125rem;
+  color: $user-display-color;
+  margin-right: 0.25rem;
+  white-space: nowrap;
+}
+
+.app-shell {
+  width: min(1120px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 2rem 0;
 }

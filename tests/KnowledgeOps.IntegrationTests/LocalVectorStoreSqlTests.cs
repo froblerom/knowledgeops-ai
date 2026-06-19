@@ -32,6 +32,103 @@ public sealed class LocalVectorStoreSqlTests
         });
     }
 
+    // ── Bug regression: indexing must work during Worker processing ──────────────
+
+    [SqlServerFact]
+    public async Task LocalVectorStore_IndexesReadyEmbeddingsWhileDocumentIsProcessing()
+    {
+        // This test covers the root cause: IndexAsync previously required
+        // ProcessingStatus == Processed, so it found 0 eligible embeddings during
+        // the Worker's indexing step (which runs before MarkProcessedAsync).
+        await RunInDatabaseAsync(async (_, context, retrievalIndex, _, _) =>
+        {
+            var (orgId, userId) = await SeedOrganizationAndUserAsync(context);
+            var seeded = await SeedCandidateAsync(
+                context, orgId, userId, [1, 0],
+                processingStatus: "Processing",   // document still in Processing
+                retrievalEnabled: false);          // retrieval disabled (default)
+
+            var result = await retrievalIndex.IndexAsync(
+                new VectorIndexRequest(orgId, seeded.DocumentId));
+            var stored = await context.ChunkEmbeddings.SingleAsync(e => e.Id == seeded.EmbeddingId);
+
+            Assert.Equal(1, result.EligibleEmbeddingCount);
+            Assert.Equal(1, result.IndexedCount);
+            Assert.Equal(0, result.FailedCount);
+            Assert.Equal(EmbeddingIndexStatus.Indexed, stored.IndexStatus);
+            Assert.NotNull(stored.IndexedAt);
+        });
+    }
+
+    [SqlServerFact]
+    public async Task LocalVectorStore_IndexesReadyEmbeddingsWhenRetrievalIsDisabled()
+    {
+        // This test covers the second root cause: IndexAsync previously required
+        // IsRetrievalEnabled == true. Newly uploaded documents have it false by default.
+        await RunInDatabaseAsync(async (_, context, retrievalIndex, _, _) =>
+        {
+            var (orgId, userId) = await SeedOrganizationAndUserAsync(context);
+            var seeded = await SeedCandidateAsync(
+                context, orgId, userId, [1, 0],
+                processingStatus: "Processed",
+                retrievalEnabled: false);          // retrieval not yet enabled
+
+            var result = await retrievalIndex.IndexAsync(new VectorIndexRequest(orgId));
+            var stored = await context.ChunkEmbeddings.SingleAsync(e => e.Id == seeded.EmbeddingId);
+
+            Assert.Equal(1, result.IndexedCount);
+            Assert.Equal(EmbeddingIndexStatus.Indexed, stored.IndexStatus);
+        });
+    }
+
+    [SqlServerFact]
+    public async Task LocalVectorStore_SearchStillExcludesRetrievalDisabledDocuments()
+    {
+        // Regression guard: fixing IndexAsync must not weaken SearchAsync eligibility.
+        await RunInDatabaseAsync(async (_, context, _, searchProvider, _) =>
+        {
+            var (orgId, userId) = await SeedOrganizationAndUserAsync(context);
+            var included = await SeedCandidateAsync(
+                context, orgId, userId, [1, 0],
+                processingStatus: "Processed", retrievalEnabled: true,
+                indexStatus: EmbeddingIndexStatus.Indexed);
+            await SeedCandidateAsync(
+                context, orgId, userId, [1, 0],
+                processingStatus: "Processed", retrievalEnabled: false,
+                indexStatus: EmbeddingIndexStatus.Indexed);
+
+            var result = await searchProvider.SearchAsync(
+                new SemanticQueryRequest(orgId, [1, 0], TopK: 10));
+
+            var candidate = Assert.Single(result.Candidates);
+            Assert.Equal(included.EmbeddingId, candidate.ChunkEmbeddingId);
+        });
+    }
+
+    [SqlServerFact]
+    public async Task LocalVectorStore_SearchStillExcludesProcessingDocuments()
+    {
+        // Regression guard: SearchAsync must still exclude non-Processed documents.
+        await RunInDatabaseAsync(async (_, context, _, searchProvider, _) =>
+        {
+            var (orgId, userId) = await SeedOrganizationAndUserAsync(context);
+            var included = await SeedCandidateAsync(
+                context, orgId, userId, [1, 0],
+                processingStatus: "Processed", retrievalEnabled: true,
+                indexStatus: EmbeddingIndexStatus.Indexed);
+            await SeedCandidateAsync(
+                context, orgId, userId, [1, 0],
+                processingStatus: "Processing", retrievalEnabled: true,
+                indexStatus: EmbeddingIndexStatus.Indexed);
+
+            var result = await searchProvider.SearchAsync(
+                new SemanticQueryRequest(orgId, [1, 0], TopK: 10));
+
+            var candidate = Assert.Single(result.Candidates);
+            Assert.Equal(included.EmbeddingId, candidate.ChunkEmbeddingId);
+        });
+    }
+
     [SqlServerFact]
     public async Task LocalVectorStore_DoesNotIndexFailedEmbeddings()
     {

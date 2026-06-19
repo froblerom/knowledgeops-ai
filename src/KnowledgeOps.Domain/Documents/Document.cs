@@ -68,6 +68,16 @@ public sealed class Document
         return true;
     }
 
+    public bool EnableRetrieval()
+    {
+        if (ProcessingStatus != DocumentProcessingStatus.Processed)
+            throw new InvalidOperationException("Only processed documents can be enabled for retrieval.");
+        if (IsRetrievalEnabled)
+            return false;
+        IsRetrievalEnabled = true;
+        return true;
+    }
+
     public bool IsEligibleForRetrieval() =>
         ProcessingStatus == DocumentProcessingStatus.Processed
         && IsRetrievalEnabled

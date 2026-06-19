@@ -48,7 +48,10 @@ public sealed record ChatRetrievalMetadataDto(
     long? TotalLatencyMs,
     int? TokenUsageInput,
     int? TokenUsageOutput,
-    decimal? EstimatedCost);
+    decimal? EstimatedCost,
+    string? AiProvider,
+    string? AiModel,
+    string? ProviderFailureCode);
 
 public sealed record ChatCitationHistoryDto(
     Guid CitationId,
@@ -67,7 +70,9 @@ public sealed record AnswerGenerationRequest(
     IReadOnlyList<AuthorizedChunkContext> AuthorizedChunks,
     string UserQuestion,
     string? PromptVersion = null,
-    string? ModelName = null);
+    string? ModelName = null,
+    string? SystemInstruction = null,
+    string? FormattedContext = null);
 
 public sealed record AuthorizedChunkContext(
     Guid ChunkId,

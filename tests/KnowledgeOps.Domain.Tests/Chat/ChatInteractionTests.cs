@@ -90,7 +90,7 @@ public sealed class ChatInteractionTests
     }
 
     [Fact]
-    public void RecordProviderFailedOutcome_StoresOnlySafeFailureCode()
+    public void RecordProviderFailedOutcome_StoresFailureCodeAndProviderInfo()
     {
         var interaction = MakeInteraction();
         var retrievalQueryId = Guid.Parse("66666666-6666-4666-8666-666666666666");
@@ -98,17 +98,44 @@ public sealed class ChatInteractionTests
         interaction.RecordProviderFailedOutcome(
             "ProviderUnavailable",
             retrievalQueryId,
+            candidateCount: 3,
             retrievalMs: 20,
             generationMs: 40,
-            totalMs: 60);
+            totalMs: 60,
+            aiProvider: "QwenLocal",
+            aiModel: "qwen3:8b");
 
         Assert.Equal(AnswerState.ProviderFailed, interaction.AnswerState);
         Assert.Null(interaction.AnswerText);
         Assert.Equal("ProviderUnavailable", interaction.ProviderFailureCode);
+        Assert.Equal("QwenLocal", interaction.AiProvider);
+        Assert.Equal("qwen3:8b", interaction.AiModel);
         Assert.Equal(retrievalQueryId, interaction.RetrievalQueryId);
+        Assert.Equal(3, interaction.RetrievalCandidateCount);
         Assert.Equal(20, interaction.RetrievalLatencyMs);
         Assert.Equal(40, interaction.GenerationLatencyMs);
         Assert.Equal(60, interaction.TotalLatencyMs);
+    }
+
+    [Fact]
+    public void RecordProviderFailedOutcome_AcceptsNullProviderInfo()
+    {
+        var interaction = MakeInteraction();
+
+        interaction.RecordProviderFailedOutcome(
+            "RetrievalFailed",
+            retrievalQueryId: null,
+            candidateCount: 0,
+            retrievalMs: 10,
+            generationMs: null,
+            totalMs: 10,
+            aiProvider: null,
+            aiModel: null);
+
+        Assert.Equal(AnswerState.ProviderFailed, interaction.AnswerState);
+        Assert.Equal("RetrievalFailed", interaction.ProviderFailureCode);
+        Assert.Null(interaction.AiProvider);
+        Assert.Null(interaction.AiModel);
     }
 
     private static ChatInteraction MakeInteraction() =>

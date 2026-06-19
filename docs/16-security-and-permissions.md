@@ -217,7 +217,7 @@ System.ViewHealthDetails
 | Documents.ViewProcessingStatus | View document processing status. |
 | Documents.ViewChunks | View document chunks or previews. |
 | Documents.Disable | Disable document from retrieval. |
-| Documents.Enable | Re-enable document for retrieval when eligible (Phase 2). |
+| Documents.Enable | Re-enable document for retrieval when eligible (Processed status required). |
 | Documents.RetryProcessing | Retry failed document processing (Phase 2). |
 | Documents.ViewUsage | View document retrieval or citation usage. |
 
@@ -287,7 +287,7 @@ These permissions are reserved for Phase 2. MVP captures scoped insufficient-con
 | Documents.ViewProcessingStatus | No | No | Yes | Yes | Yes |
 | Documents.ViewChunks | No | No | Yes | No | Yes |
 | Documents.Disable | No | No | Yes | No | Yes |
-| Documents.Enable (Phase 2) | No | No | No | No | No |
+| Documents.Enable | No | No | Yes | No | Yes |
 | Documents.RetryProcessing (Phase 2) | No | No | No | No | No |
 | Documents.ViewUsage | No | No | Yes | Yes | Yes |
 | Chat.AskQuestion | Yes | Yes | Yes | Yes | Yes |
@@ -544,7 +544,7 @@ The following actions should create audit or operational log records.
 | Document processing completed | Ingestion lifecycle traceability. |
 | Document processing failed | Operational diagnostics. |
 | Document disabled from retrieval | Knowledge governance. |
-| Document re-enabled (Phase 2) | Knowledge governance if the deferred operation is introduced. |
+| Document re-enabled for retrieval | Knowledge governance. |
 | Chat question submitted | Usage traceability, without unnecessary sensitive content. |
 | RAG answer generated | AI usage traceability. |
 | Insufficient-context response generated | Knowledge gap visibility. |
@@ -725,7 +725,7 @@ Operational behavior must support:
 | GET | `/api/v1/documents/{documentId}/processing-status` | Documents.ViewProcessingStatus |
 | GET | `/api/v1/documents/{documentId}/chunks` | Documents.ViewChunks |
 | POST | `/api/v1/documents/{documentId}/disable` | Documents.Disable |
-| POST | `/api/v1/documents/{documentId}/enable` (Phase 2) | Documents.Enable |
+| POST | `/api/v1/documents/{documentId}/enable` | Documents.Enable |
 | POST | `/api/v1/documents/{documentId}/retry-processing` (Phase 2) | Documents.RetryProcessing |
 
 MVP supports document retrieval disablement; re-enable and processing-retry operations are deferred to Phase 2.

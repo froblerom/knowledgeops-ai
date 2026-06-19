@@ -51,21 +51,17 @@
               }
 
               @if (item.citations.length > 0) {
-                <div class="citations" aria-label="Citations">
-                  <h2>Citations</h2>
+                <div class="citations" aria-label="Sources">
+                  <h2>Sources</h2>
                   <ul>
                     @for (citation of item.citations; track citation.citationId) {
                       <li>
                         <span class="citation-title">{{ citation.documentTitle || 'Untitled document' }}</span>
-                        <span>Rank {{ citation.rank }}</span>
                         @if (citation.pageNumber != null) {
                           <span>Page {{ citation.pageNumber }}</span>
                         }
                         @if (citation.sectionLabel) {
-                          <span>Section {{ citation.sectionLabel }}</span>
-                        }
-                        @if (citation.score != null) {
-                          <span>Score {{ citation.score | number:'1.2-2' }}</span>
+                          <span>{{ citation.sectionLabel }}</span>
                         }
                       </li>
                     }

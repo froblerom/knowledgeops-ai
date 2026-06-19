@@ -1,6 +1,6 @@
 # Open Implementation Risks
 
-Last updated: 2026-06-02 (updated for Sprint 29 Issue #49)
+Last updated: 2026-06-18 (updated for Issue B — AiProvider/AiModel/ProviderFailureCode metadata visibility)
 
 | Risk | Severity | Related Area | Mitigation | Status |
 | --- | --- | --- | --- | --- |
@@ -255,6 +255,39 @@ Pre-existing open risks (from Sprint 27 disposition) remain applicable:
 - `--health-cmd` path may vary — fix allowed if health check fails at CI run.
 
 **No new source code risks introduced by Issue #49** (documentation-only changes).
+
+## Post-Sprint-29 Issue B Disposition
+
+Provider metadata visibility (AiProvider, AiModel, ProviderFailureCode) implemented end-to-end across Domain → Application → API → Angular.
+
+Root cause of hardcoded ProviderName was `static ProviderFailed(string code)` helpers in both `LocalOpenAICompatibleAnswerGenerator` and `OpenAIAnswerGenerator` that embedded the provider name as a string literal. Fixed by making each an instance method using `ProviderName` with optional `model` parameter.
+
+`ChatInteraction.RecordProviderFailedOutcome` extended with optional `aiProvider`/`aiModel` params. All 5 call sites in `RagChatOrchestrationService` updated: pre-generator failures (retrieval, prompt build) pass `null, null`; post-generator failures pass real values from `generationResult` or `answerGenerator.ProviderName`.
+
+**Security validation**: Only the three pre-approved safe fields are exposed (AiProvider, AiModel, ProviderFailureCode). No API keys, auth headers, SystemInstruction, FormattedContext, raw provider error body, or stack traces are exposed at any layer. Confirmed by code review and API response inspection.
+
+**Validation evidence** (2026-06-18):
+- Build: 0 errors, 0 warnings.
+- Backend tests: 822 passed, 61 SQL-gated skipped (+3 new domain tests, +1 orchestration, +2 API).
+- Angular TypeScript: no errors in new files.
+
+**Grounded case** — SQL interaction `8CC25CB0` (created_at 03:31:59):
+- `answer_state=0, ai_provider=QwenLocal, ai_model=qwen3:8b, provider_failure_code=NULL`
+- API: `GET /chat/interactions/8CC25CB0-...` → `aiProvider: "QwenLocal", aiModel: "qwen3:8b", providerFailureCode: null` ✓
+
+**ProviderFailed case** — SQL interaction `0E5EF1C5` (created_at 17:06:16, fresh row created with Issue B code using intentional bad BaseUrl `http://localhost:19999`):
+- `answer_state=2, ai_provider=QwenLocal, ai_model=qwen3:8b, provider_failure_code=ProviderUnavailable`
+- API: `GET /chat/interactions/0E5EF1C5-...` → `aiProvider: "QwenLocal", aiModel: "qwen3:8b", providerFailureCode: "ProviderUnavailable"` ✓
+
+**Invalid evidence discarded** — interaction `DF882C96` (created_at 02:45:07): has `ai_provider=NULL, ai_model=NULL, provider_failure_code=ProviderMalformedResponse`. This row was created with pre-Issue-B code and is NOT valid evidence of the fix. Confirmed by timeline: the first post-fix interaction (`8CC25CB0`) was created at 03:31:59, after DF882C96.
+
+**Pre-generation failure paths confirmed by code** (`aiProvider`/`aiModel` = null is correct by design): `QueryEmbeddingFailed`, `SemanticSearchFailed`, `EligibilityRevalidationFailed`, `PromptBuildFailed`/`NoAuthorizedChunks` — the AI provider is never invoked on these paths (all in `EligibleSemanticRetrievalService` and the orchestrator's Step 11b).
+
+**FK Constraint Bug (diagnosed 2026-06-18, RESOLVED 2026-06-18)**: A pre-existing FK constraint error in the audit event write (`FK_citations_chat_interactions_chat_interaction_id`) was diagnosed and fixed. Root cause: `MapAndTrackCitationsAsync` (Step 13.5) tracked citations in the shared `KnowledgeOpsDbContext` BEFORE the interaction was persisted. The `ChatAnswerGenerationCompleted` audit write called `dbContext.SaveChangesAsync()` on the same context, which EF Core batched as a single multi-statement command (`INSERT INTO audit_log_entries; INSERT INTO citations;`). Without an explicit transaction, SQL Server auto-committed the AuditLogEntry INSERT, then failed on the Citations INSERT with FK_citations_chat_interactions_chat_interaction_id. Fix applied: moved `AuditAsync(ChatAnswerGenerationCompleted, ...)` in `RagChatOrchestrationService.cs` to after `PersistAsync`. One-line comment added explaining the deferral invariant. New test `RagChatOrchestration_GroundedAnswer_ChatAnswerGenerationCompletedAuditedAfterPersist` added to lock in the correct ordering. Suite: 823 passed, 61 skipped. No migration required. Risk CLOSED.
+
+**No new risks introduced by Issue B.** No migration added; no org-scope or authorization behavior changed; no sensitive fields exposed.
+
+**3 pre-existing Angular spec failures (discovered 2026-06-18, RESOLVED 2026-06-18)**: Surfaced when the `login-page.spec.ts` compile error was fixed. All 3 were type (A) — outdated tests, no production bugs. Fixes: (1) `app.spec.ts` `.app-title` → `.brand span` selector; added `AuthService` mock with `isAuthenticated: () => true` + missing `canViewDocuments`/`canViewDashboard` stubs; assertion changed to `links.some(l => l?.includes('Chat'))` because `mat-icon` renders ligature text in jsdom making link text `'chat Chat'` instead of `'Chat'`. (2) `documents-page.spec.ts` `flush([])` → `flush([doc])` so `ngOnInit` keeps the document in the array for `findIndex` to find. Suite: 207 passed, 0 failed. Risk CLOSED.
 
 ## Update Rule
 

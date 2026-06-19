@@ -1,5 +1,8 @@
 import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
+import { AuthService } from './core/services/auth.service';
 import { RoleVisibilityService } from './core/services/role-visibility.service';
 import { App } from './app';
 
@@ -11,7 +14,16 @@ describe('App', () => {
     await TestBed.configureTestingModule({
       imports: [App],
       providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
         provideRouter([]),
+        {
+          provide: AuthService,
+          useValue: {
+            isAuthenticated: () => true,
+            currentUser: () => ({ displayName: 'Test User' })
+          }
+        },
         {
           provide: RoleVisibilityService,
           useValue: {
@@ -23,6 +35,8 @@ describe('App', () => {
               roles.some(role =>
                 ['Agent', 'Supervisor', 'KnowledgeAdmin', 'Manager', 'Admin'].includes(role)
               ),
+            canViewDocuments: () => false,
+            canViewDashboard: () => false,
             canViewProcessingFailures: () => roles.some(role => ['KnowledgeAdmin', 'Admin'].includes(role)),
             canViewAuditLog: () => roles.includes('Admin'),
             canViewAdmin: () => false
@@ -42,7 +56,7 @@ describe('App', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.app-title')?.textContent?.trim()).toContain('KnowledgeOps-AI');
+    expect(compiled.querySelector('.brand span')?.textContent?.trim()).toContain('KnowledgeOps-AI');
   });
 
   it('shows Chat navigation for all MVP roles', () => {
@@ -54,7 +68,8 @@ describe('App', () => {
 
         const compiled = fixture.nativeElement as HTMLElement;
         const links = Array.from(compiled.querySelectorAll('a')).map(link => link.textContent?.trim());
-        expect(links).toContain('Chat');
+        // mat-icon renders ligature text in jsdom, so link text is e.g. 'chat Chat' not 'Chat'
+        expect(links.some(l => l?.includes('Chat'))).toBe(true);
       } finally {
         fixture.destroy();
       }

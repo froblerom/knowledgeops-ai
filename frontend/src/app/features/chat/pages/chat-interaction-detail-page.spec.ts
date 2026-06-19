@@ -23,7 +23,8 @@ describe('ChatInteractionDetailPage', () => {
     metadata: {
       retrievalCandidateCount: 1,
       retrievalLatencyMs: 200, generationLatencyMs: 800, totalLatencyMs: 1000,
-      tokenUsageInput: 100, tokenUsageOutput: 50, estimatedCost: null
+      tokenUsageInput: 100, tokenUsageOutput: 50, estimatedCost: null,
+      aiProvider: 'TestProvider', aiModel: 'test-model-v1', providerFailureCode: null
     },
     citations: [{
       citationId: 'citation-1', chatInteractionId: interactionId,
@@ -115,15 +116,51 @@ describe('ChatInteractionDetailPage', () => {
     expect(component.interaction?.metadata.totalLatencyMs).toBe(1000);
   });
 
-  it('does not expose providerFailureCode, questionTextHash, or retrievalQueryId in state', () => {
+  it('does not expose questionTextHash or retrievalQueryId in top-level interaction state', () => {
     const fixture = TestBed.createComponent(ChatInteractionDetailPage);
     fixture.detectChanges(false);
     http.expectOne(endpoint).flush(groundedResponse());
     const component = fixture.componentInstance;
-    // ChatInteractionDetail model has no providerFailureCode, questionTextHash, or retrievalQueryId
-    expect((component.interaction as any)?.providerFailureCode).toBeUndefined();
+    // questionTextHash and retrievalQueryId are internal fields never returned by the API
     expect((component.interaction as any)?.questionTextHash).toBeUndefined();
     expect((component.interaction as any)?.retrievalQueryId).toBeUndefined();
+    // providerFailureCode is now intentionally in metadata (not a top-level field)
+    expect((component.interaction as any)?.providerFailureCode).toBeUndefined();
+    expect(component.interaction?.metadata.providerFailureCode).toBeNull();
+  });
+
+  it('shows providerFailureCode in metadata for ProviderFailure interactions', () => {
+    const fixture = TestBed.createComponent(ChatInteractionDetailPage);
+    fixture.detectChanges(false);
+    http.expectOne(endpoint).flush({
+      chatInteractionId: interactionId, chatSessionId: 'session-1',
+      answerState: 'ProviderFailure', insufficientContext: false,
+      questionText: 'What is the policy?', answerText: null,
+      promptVersion: null, correlationId: null,
+      metadata: {
+        retrievalCandidateCount: 1,
+        retrievalLatencyMs: 100, generationLatencyMs: 5000, totalLatencyMs: 5100,
+        tokenUsageInput: null, tokenUsageOutput: null, estimatedCost: null,
+        aiProvider: 'QwenLocal', aiModel: 'qwen3:8b',
+        providerFailureCode: 'ProviderMalformedResponse'
+      },
+      citations: [], createdAt: new Date().toISOString()
+    });
+    const component = fixture.componentInstance;
+    expect(component.interaction?.answerState).toBe('ProviderFailure');
+    expect(component.interaction?.metadata.providerFailureCode).toBe('ProviderMalformedResponse');
+    expect(component.interaction?.metadata.aiProvider).toBe('QwenLocal');
+    expect(component.interaction?.metadata.aiModel).toBe('qwen3:8b');
+  });
+
+  it('shows aiProvider and aiModel in metadata for grounded interactions', () => {
+    const fixture = TestBed.createComponent(ChatInteractionDetailPage);
+    fixture.detectChanges(false);
+    http.expectOne(endpoint).flush(groundedResponse());
+    const component = fixture.componentInstance;
+    expect(component.interaction?.metadata.aiProvider).toBe('TestProvider');
+    expect(component.interaction?.metadata.aiModel).toBe('test-model-v1');
+    expect(component.interaction?.metadata.providerFailureCode).toBeNull();
   });
 
   it('sets error state on API failure', () => {

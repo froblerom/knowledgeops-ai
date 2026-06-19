@@ -31,6 +31,13 @@ public sealed class DocumentsController(DocumentService service, ICurrentUser cu
         CancellationToken ct) =>
         Ok(ToStatusResponse(await service.GetProcessingStatusAsync(Actor(), documentId, ct)));
 
+    [HttpPost("{documentId:guid}/enable")]
+    [RequirePermission(KnowledgeOpsPermissions.Documents.Enable)]
+    public async Task<ActionResult<DocumentResponse>> EnableRetrieval(
+        Guid documentId,
+        CancellationToken ct) =>
+        Ok(ToResponse(await service.EnableRetrievalAsync(Actor(), documentId, ct)));
+
     [HttpPost("{documentId:guid}/disable")]
     [RequirePermission(KnowledgeOpsPermissions.Documents.Disable)]
     public async Task<ActionResult<DocumentResponse>> DisableRetrieval(

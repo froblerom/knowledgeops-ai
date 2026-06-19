@@ -233,6 +233,73 @@ public sealed class DocumentTests
             UpdatedAt = UploadedAt
         };
 
+    [Fact]
+    public void EnableRetrieval_WhenProcessed_SetsEnabledAndReturnsTrue()
+    {
+        var doc = MakeDocument();
+        doc.StartProcessing(UploadedAt.AddMinutes(1));
+        doc.MarkProcessed(UploadedAt.AddMinutes(2));
+
+        Assert.True(doc.EnableRetrieval());
+        Assert.True(doc.IsRetrievalEnabled);
+        Assert.Equal(DocumentProcessingStatus.Processed, doc.ProcessingStatus);
+    }
+
+    [Fact]
+    public void EnableRetrieval_WhenAlreadyEnabled_IsIdempotentAndReturnsFalse()
+    {
+        var doc = MakeDocumentWithRetrievalEnabled();
+        doc.StartProcessing(UploadedAt.AddMinutes(1));
+        doc.MarkProcessed(UploadedAt.AddMinutes(2));
+
+        // Already enabled: first and subsequent calls both return false (no change)
+        Assert.False(doc.EnableRetrieval());
+        Assert.False(doc.EnableRetrieval());
+        Assert.True(doc.IsRetrievalEnabled);
+    }
+
+    [Theory]
+    [InlineData(false)] // Uploaded
+    [InlineData(true)]  // Processing (StartProcessing called, not yet Processed)
+    public void EnableRetrieval_WhenNotProcessed_Throws(bool inProcessing)
+    {
+        var doc = MakeDocument();
+        if (inProcessing)
+            doc.StartProcessing(UploadedAt.AddMinutes(1));
+
+        Assert.Throws<InvalidOperationException>(() => doc.EnableRetrieval());
+    }
+
+    [Fact]
+    public void EnableRetrieval_WhenFailed_Throws()
+    {
+        var doc = MakeDocument();
+        doc.StartProcessing(UploadedAt.AddMinutes(1));
+        doc.MarkFailed("Some reason.", UploadedAt.AddMinutes(2));
+
+        Assert.Throws<InvalidOperationException>(() => doc.EnableRetrieval());
+    }
+
+    [Fact]
+    public void EnableThenDisableRetrieval_RoundTripWorks()
+    {
+        var doc = MakeDocument();
+        doc.StartProcessing(UploadedAt.AddMinutes(1));
+        doc.MarkProcessed(UploadedAt.AddMinutes(2));
+
+        Assert.True(doc.EnableRetrieval());
+        Assert.True(doc.IsRetrievalEnabled);
+        Assert.True(doc.IsEligibleForRetrieval());
+
+        Assert.True(doc.DisableRetrieval());
+        Assert.False(doc.IsRetrievalEnabled);
+        Assert.False(doc.IsEligibleForRetrieval());
+
+        Assert.True(doc.EnableRetrieval());
+        Assert.True(doc.IsRetrievalEnabled);
+        Assert.True(doc.IsEligibleForRetrieval());
+    }
+
     private static Document MakeDocumentWithRetrievalEnabled()
     {
         var doc = MakeDocument();

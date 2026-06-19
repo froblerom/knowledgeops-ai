@@ -37,6 +37,9 @@
           <p>{{ interaction.answerText || 'I could not find sufficient information to answer this question.' }}</p>
         } @else if (interaction.answerState === 'ProviderFailure') {
           <p>The assistant could not generate an answer for this interaction.</p>
+          @if (interaction.metadata.providerFailureCode) {
+            <p class="provider-failure-code">Failure code: {{ interaction.metadata.providerFailureCode }}</p>
+          }
         } @else if (interaction.answerState === 'GroundedAnswer' && interaction.citations.length === 0) {
           <p>No safe cited answer was recorded for this interaction.</p>
         } @else {
@@ -99,6 +102,14 @@
           @if (interaction.promptVersion) {
             <dt>Prompt version</dt>
             <dd>{{ interaction.promptVersion }}</dd>
+          }
+          @if (interaction.metadata.aiProvider) {
+            <dt>AI provider</dt>
+            <dd>{{ interaction.metadata.aiProvider }}</dd>
+          }
+          @if (interaction.metadata.aiModel) {
+            <dt>Model</dt>
+            <dd>{{ interaction.metadata.aiModel }}</dd>
           }
         </dl>
       </aside>

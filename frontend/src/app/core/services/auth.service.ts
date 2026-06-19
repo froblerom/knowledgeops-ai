@@ -62,4 +62,8 @@ export class AuthService {
   isAuthenticated(): boolean {
     return this.session.isAuthenticated();
   }
+
+  currentUser() {
+    return this.session.getSession();
+  }
 }

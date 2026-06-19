@@ -56,7 +56,10 @@ public sealed record ChatInteractionMetadataResponse(
     long? TotalLatencyMs,
     int? TokenUsageInput,
     int? TokenUsageOutput,
-    decimal? EstimatedCost);
+    decimal? EstimatedCost,
+    string? AiProvider,
+    string? AiModel,
+    string? ProviderFailureCode);
 
 public sealed record ChatCitationHistoryResponse(
     Guid CitationId,

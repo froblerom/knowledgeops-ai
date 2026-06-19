@@ -1,6 +1,7 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { finalize } from 'rxjs/operators';
 import { DocumentService } from '../../../core/services/document.service';
 import { RoleVisibilityService } from '../../../core/services/role-visibility.service';
 import { ApiErrorService, ApiRequestError } from '../../../core/services/api-error.service';
@@ -16,6 +17,7 @@ export class DocumentUploadPage {
   private readonly documentsApi = inject(DocumentService);
   private readonly router = inject(Router);
   private readonly apiError = inject(ApiErrorService);
+  private readonly cdr = inject(ChangeDetectorRef);
   readonly roleVisibility = inject(RoleVisibilityService);
 
   title = '';
@@ -65,7 +67,9 @@ export class DocumentUploadPage {
     }
 
     this.submitting = true;
-    this.documentsApi.upload(this.title.trim(), this.selectedFile!).subscribe({
+    this.documentsApi.upload(this.title.trim(), this.selectedFile!).pipe(
+      finalize(() => this.cdr.markForCheck())
+    ).subscribe({
       next: () => {
         this.submitting = false;
         this.router.navigate(['/documents']);

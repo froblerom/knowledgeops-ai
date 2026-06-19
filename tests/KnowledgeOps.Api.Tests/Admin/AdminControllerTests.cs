@@ -331,6 +331,9 @@ public sealed class AdminApiTestFactory : WebApplicationFactory<Program>
         public Task<DocumentDisableResult?> DisableRetrievalAsync(Guid documentId, Guid organizationId, DateTimeOffset updatedAt, CancellationToken ct = default) =>
             Task.FromResult<DocumentDisableResult?>(null);
 
+        public Task<DocumentEnableResult?> EnableRetrievalAsync(Guid documentId, Guid organizationId, DateTimeOffset updatedAt, CancellationToken ct = default) =>
+            Task.FromResult<DocumentEnableResult?>(null);
+
         public Task<IReadOnlyList<ManagedDocument>> FindPendingForProcessingAsync(int maxCount, CancellationToken ct = default) =>
             Task.FromResult<IReadOnlyList<ManagedDocument>>([]);
 
